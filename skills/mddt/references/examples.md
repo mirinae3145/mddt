@@ -5,7 +5,7 @@ Read them when it is unclear how a rule applies to the text at hand.
 
 ## Structure within a file
 
-These examples show how headings, overviews, and siblings change as content grows inside one file.
+These examples show how headings, overviews, and siblings change as content grows inside one file, and when content stays in one file.
 
 ### Promotion
 
@@ -139,6 +139,47 @@ If it stops with an error, see [Windows installer errors](windows-installer-erro
 ```
 
 The troubleshooting was a different level of detail from the installation steps, so it became its own topic.
+
+### Keeping related topics together
+
+Short topics that the same reader needs for the same task stay in one file.
+
+Before:
+
+```text
+docs/
+  exit-codes.md      (8 lines)
+  logging.md         (7 lines)
+  scheduled-runs.md  (9 lines)
+```
+
+After, in `docs/unattended-runs.md`:
+
+```markdown
+# Running pixtwin unattended
+
+Scheduled and scripted runs rely on exit codes and logs instead of a person watching the output.
+This document covers scheduling, the exit codes a script can act on, and where logs go.
+
+## Scheduled runs
+
+A weekly job runs `pixtwin scan` and then `pixtwin report --json`, and never calls `move`.
+
+## Exit codes
+
+A script can act on these exit codes:
+
+- **0**: No duplicates were found.
+- **1**: Duplicates were found; a scheduled job can alert on this code.
+
+## Logs
+
+Without `--log-file`, logs go to `~/.cache/pixtwin/logs/`.
+```
+
+A reader setting up a scheduled run needs all three, so they became parts of one topic.
+A part that later grows subsections becomes a topic H2 with H3s, and the file becomes a topic set.
+A topic moves to its own file only when it serves another reader or task, outgrows its siblings, or needs deeper headings.
 
 ### Blocks of another kind
 

@@ -13,6 +13,8 @@ Before writing, decide where the content sits in the tree:
    If it does not fit in two or three sentences, the content probably holds several topics or kinds.
 1. Find the parent document that will introduce it, and plan the summary and link that the parent will carry.
 1. Decide whether the content is a part of an existing topic, a new topic in an existing file, or a file of its own.
+   Short topics that the same reader needs for the same task stay together in one file, as parts or as topic H2s.
+   A topic gets its own file when it serves another reader or task, outgrows its siblings, or needs more than two heading levels.
    A new file goes into its parent's folder, or into the parent's companion folder when the parent is not an index file.
 1. Decide each new topic's kind with [document kinds](kinds.md#document-kinds), using the vocabulary in [common uses](uses.md).
 1. For a new topic set or a large file, sketch the [topic-by-type review](kinds.md#topic-by-type-review) to see which blocks each subject needs.
