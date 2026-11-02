@@ -1,14 +1,14 @@
 # Applying the document model to common uses
 
 This document applies the [document model](model.md) to three common uses: repository documentation, project records, and agent instructions and skills.
-Each use has its own vocabulary of document kinds and its own entry documents, while the model and the [information types](kinds.md#information-types) stay the same.
+Each use decides which vocabulary of document kinds and which entry documents apply, while the model and the [information types](kinds.md#information-types) stay the same.
 
 ## Repository documentation
 
 Repository documentation serves the users and contributors of one repository.
 It is organized as follows.
 
-- **Kinds**: Judge each topic with the Diátaxis compass described in [document kinds](kinds.md#document-kinds), which yields action, reference, and explanation.
+- **Kinds**: Each topic is judged with the Diátaxis compass described in [document kinds](kinds.md#document-kinds), which yields action, reference, and explanation.
 - **README**: The root README is the entry document and a landing page.
   It says what the project is, whom it serves, and how to start.
   It links with summaries to CONTRIBUTING, to `docs/README.md`, and to other top-level documents.
@@ -45,7 +45,7 @@ Projects that keep the following common roles structure them like this:
 Agent instructions and skills are read by agents, often only in part, so their entry documents decide what else gets read.
 They are organized as follows.
 
-- **Kinds**: Use the repository kinds.
+- **Kinds**: Agent documents use the repository kinds.
   Workflows are action with numbered steps, rule sets and option lists are reference made mostly of principle blocks, and rationale is explanation.
 - **Skills**: `SKILL.md` is the entry document and a landing page, and the documents in `references/` are its children.
   The summary next to each link says when to read that document, so an agent loads only what its task needs.

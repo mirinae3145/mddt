@@ -1,8 +1,8 @@
 # Writing and restructuring
 
 This procedure applies the [document model](model.md) when creating a document or changing its structure.
-It covers placing a document in the tree, choosing forms, growing and shrinking structure, and checking the result.
-The model holds the rules; this document adds only the steps and the rules that apply in one direction.
+It covers placing a document in the tree, choosing forms, rules for new writing, growing and shrinking structure, and checking the result.
+The model holds the rules, and this document adds only the steps and the rules that apply only when writing.
 
 ## Placing a document
 
@@ -25,7 +25,7 @@ Start from each block's information type and its [default form](kinds.md#default
 Then adjust with the criteria in [sections, lists, and tables](model.md#sections-lists-and-tables).
 When a choice stays unclear, compare with the [examples](examples.md).
 
-The same content can be a part with sections or a list with names.
+The same content can be a topic with sections or a list with names.
 A short set of parallel options reads best as a list:
 
 ```markdown
@@ -56,6 +56,7 @@ Each finding is an object with ...
 Some rules apply only when writing, not when judging existing text:
 
 - **Bold names**: Write names in list items in bold, even though the model accepts other forms.
+  Link text is the exception, because its wording follows its target.
 - **Named references**: Refer to other content by linking to its heading, not by position words such as "above" or "below".
   Use the target's title as the link text where the link introduces it, such as a parent's link to a child.
   Where the sentence already says what the reader will find, a shorter text that still identifies the target is enough.
@@ -90,6 +91,7 @@ Use it as follows:
 
 Findings apply to what the current task created or made worse.
 For example, adding items that push a list past seven makes that warning part of the task.
+Findings the task did not cause, and requests to restructure, are handled as follows:
 
 - **Existing warnings**: Leave them, or reconsider them while giving the existing structure priority.
 - **Existing errors**: Fix them inside the section you are editing, and report the rest without fixing them.

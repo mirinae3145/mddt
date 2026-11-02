@@ -58,9 +58,9 @@ Prose follows these rules about lines, paragraphs, and sentences.
 - **One sentence per line**: Each sentence of prose starts on its own line, including in list items. <!-- code: line-sentences -->
   Later sentences of a list item go on indented continuation lines.
   Tools can then find sentence boundaries at line ends instead of guessing at periods in abbreviations, versions, file names, and URLs.
-- **Paragraph size**: A paragraph has at most five sentences. <!-- code: paragraph-length, paragraph-run -->
+- **Paragraph size**: A paragraph usually has at most five sentences, and a longer one that carries a single line of argument can stay. <!-- code: paragraph-length, paragraph-run -->
   Four or more paragraphs in a row without a list, table, heading, or code block suggest structure that has not been made visible.
-- **Sentence length**: A sentence has at most 25 words, counted as whitespace-separated tokens that contain a letter or digit. <!-- code: sentence-length -->
+- **Sentence length**: A sentence usually has at most 25 words, counted as whitespace-separated tokens that contain a letter or digit. <!-- code: sentence-length -->
   A long sentence can usually be split, or holds content that belongs in separate sections.
   Languages written without spaces between words are not measured.
 - **Condition placement**: A condition that decides whether an instruction applies comes before the instruction, so readers it does not concern can skip it.
@@ -108,7 +108,7 @@ The following rules apply to them.
 
 - **Same level of detail**: Siblings have a comparable level of detail. <!-- code: sibling-imbalance -->
   When one sibling grows much deeper or larger than the others, it probably holds content of another level.
-- **Number of sibling sections**: Sibling headings follow the same limit as list items, about seven unless in mechanical order. <!-- code: section-count -->
+- **Number of sibling sections**: Sibling headings follow [the same limit as list items](#length-and-order), about seven unless in mechanical order. <!-- code: section-count -->
 - **Divisions**: A sibling set is a division when it claims to cover a whole.
   Decision tables, divisions of a concept into kinds, and introductions that state a count or say "one of the following" make that claim.
   A division uses one criterion and covers the whole without gaps or overlaps.
@@ -156,7 +156,7 @@ A name is any lead-in that says what an item is about: a bold term, a short phra
 Only an item without named descendants carries a name, at every heading level. <!-- code: name-nesting -->
 An item whose children need names is promoted as described in [headings and promotion](#headings-and-promotion).
 
-An unnumbered item of several sentences is a block of its own and carries a name where the rule above allows one. <!-- code: item-name, nested-block -->
+An unnumbered item of several sentences is a block of its own and carries a name where the name-nesting rule allows one. <!-- code: item-name, nested-block -->
 Where the rule forbids it, a block sits inside another block, which suggests promoting the enclosing item.
 A numbered step is labeled by its position and needs no name.
 Names within one topic use one form, not counting link text, whose wording follows its target. <!-- code: name-form-mix -->

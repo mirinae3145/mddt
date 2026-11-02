@@ -13,6 +13,7 @@ Information types and default forms stay the same everywhere.
 
 The Diátaxis compass judges a topic by two questions: whether it informs action or cognition, and whether it serves study or work.
 Tutorials and how-to guides have the same dominant type and default form, so this skill treats them as one kind, action.
+A topic that informs cognition is reference when it serves work and explanation when it serves study.
 The remaining kinds are reference and explanation, and each kind has dominant information types:
 
 | Kind | Dominant types | Types that may accompany them |
