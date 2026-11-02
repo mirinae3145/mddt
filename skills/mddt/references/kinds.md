@@ -7,22 +7,12 @@ The structural rules that these choices operate within are in the [document mode
 
 ## Document kinds
 
-The vocabulary of kinds depends on what the documents are for, while information types and default forms stay the same everywhere.
+A topic's kind says what the reader is doing with it, and the vocabulary of kinds depends on what the documents are for.
+[Uses](uses.md) gives that vocabulary for repository documentation, project records, and agent instructions and skills, while information types and default forms stay the same everywhere.
 
-- **Repository documentation**: Judge each topic with the Diátaxis compass, which asks whether the content informs action or cognition, and serves study or work.
-  Tutorials and how-to guides have the same dominant type and default form, so they form one kind here: action.
-  The remaining kinds are reference and explanation.
-- **Project records**: Use record roles as kinds, because a current-state record mixes Diátaxis kinds by nature and a history fits none of them.
-  What a record must contain is decided by the project's workflow; this skill decides only its structure.
-- **Agent instructions and skills**: Use the repository kinds.
-  Workflows are action, rule sets and option lists are reference, and rationale is explanation.
-  The entry file of a skill or instruction set is a landing page that introduces its reference documents.
-
-Topic sets have no rule about mixing kinds.
-A set may be divided by kind at any level, or by subject with several kinds below.
-Each topic still keeps one kind, and each landing page reads as an overview.
-
-Each kind has dominant information types:
+The Diátaxis compass judges a topic by two questions: whether it informs action or cognition, and whether it serves study or work.
+Tutorials and how-to guides have the same dominant type and default form, so this skill treats them as one kind, action.
+The remaining kinds are reference and explanation, and each kind has dominant information types:
 
 | Kind | Dominant types | Types that may accompany them |
 | --- | --- | --- |
@@ -30,13 +20,9 @@ Each kind has dominant information types:
 | Reference | Fact, structure | Principle as a rule |
 | Explanation | Concept, principle, process | Structure |
 
-Project records use their roles in the same way:
-
-| Record role | Dominant types | Structure |
-| --- | --- | --- |
-| Current state | Fact, principle | Named lists by category, linking to history and decisions; rewritten rather than appended to |
-| History | Fact, process | Dated headings or items; dates are a mechanical order, so long lists are fine |
-| Decision | Principle, concept | The choice and its rationale; alternatives compared in a table; reconsideration conditions as principles |
+Topic sets have no rule about mixing kinds.
+A set may be divided by kind at any level, or by subject with several kinds below.
+Each topic still keeps one kind, and each landing page reads as an overview.
 
 ## Information types
 

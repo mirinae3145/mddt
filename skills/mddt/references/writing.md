@@ -14,7 +14,7 @@ Before writing, decide where the content sits in the tree:
 1. Find the parent document that will introduce it, and plan the summary and link that the parent will carry.
 1. Decide whether the content is a part of an existing topic, a new topic in an existing file, or a file of its own.
    A new file goes into its parent's folder, or into the parent's companion folder when the parent is not an index file.
-1. Decide each new topic's kind with [document kinds](kinds.md#document-kinds).
+1. Decide each new topic's kind with [document kinds](kinds.md#document-kinds), using the vocabulary for its use in [uses](uses.md).
 1. For a new topic set or a large file, sketch the [topic-by-type review](kinds.md#topic-by-type-review) to see which blocks each subject needs.
 
 ## Choosing forms
