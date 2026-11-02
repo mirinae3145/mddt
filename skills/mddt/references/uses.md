@@ -15,8 +15,8 @@ It is organized as follows.
 - **Kinds within the README**: README sections may differ in kind: installation is action, configuration options are reference, and design is explanation.
   The kind then divides the sections, while each document below `docs/` keeps one kind.
 - **The docs folder**: `docs/README.md` is the folder's index, and a document that gains children gets a companion folder.
-- **Files outside the checks**: Changelogs follow their own conventions and are skipped.
-  Markdown that is not documentation, such as templates and fixtures, is excluded with `--exclude`.
+- **Files outside the checks**: Changelogs follow their own conventions, and Markdown that is not documentation, such as templates and fixtures, is not checked.
+  The [checker reference](checker.md#files-checked) says which files a run skips and how to exclude others.
 
 ## Project records
 

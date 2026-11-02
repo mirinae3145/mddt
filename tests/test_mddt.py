@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: MIT
 """Behavioral checks through the checker's command-line interface."""
 import json
+import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tempfile
 import tomllib
@@ -345,6 +347,18 @@ class Interface(CheckerCase):
         self.assertEqual(sorted(Path(f).name for f in data['files']), ['doc.md', 'x.md'])
         self.assertEqual([Path(f).name for f in data['skipped']], ['CHANGELOG.md'])
 
+    def test_directories_without_git_are_walked_with_a_notice(self):
+        (self.dir / '.git').mkdir()
+        self.write('doc.md', '# T\n\nOverview.\n')
+        bin_dir = self.dir / 'bin'
+        bin_dir.mkdir()
+        (bin_dir / 'uv').symlink_to(shutil.which('uv'))
+        result = subprocess.run([str(bin_dir / 'uv'), 'run', '--quiet', str(SCRIPT), '--format', 'json',
+                                 str(self.dir)], capture_output=True, text=True,
+                                env={**os.environ, 'PATH': str(bin_dir)})
+        self.assertEqual([Path(f).name for f in json.loads(result.stdout)['files']], ['doc.md'])
+        self.assertIn('.gitignore is not applied', result.stderr)
+
     def test_exclude_matches_paths_from_the_root_however_spelled(self):
         (self.dir / 'sub').mkdir()
         deep = self.write('sub/deep.md', 'no heading\n')
@@ -431,6 +445,14 @@ class Registry(unittest.TestCase):
             (summary['section-count'], f'more than {items} sibling sections'),
         ]:
             self.assertIn(phrase, text)
+
+    def test_checker_reference_lists_every_option(self):
+        source = (SCRIPTS / 'mddt.py').read_text(encoding='utf-8')
+        options = re.findall(r"add_argument\('(--[a-z-]+)'", source)
+        self.assertGreater(len(options), 3)
+        reference = (SKILL / 'references' / 'checker.md').read_text(encoding='utf-8')
+        for option in options:
+            self.assertIn(f'`{option}', reference)
 
     def test_example_results_follow_the_model(self):
         # The "After" side of each example must itself conform; snippets are

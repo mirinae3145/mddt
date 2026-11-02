@@ -46,16 +46,10 @@ Run it on the Markdown files you created or changed:
 uv run <skill-dir>/scripts/mddt.py FILE...
 ```
 
-Without uv, install `markdown-it-py` and `mdit-py-plugins` and run the script with Python 3.11 or later.
-Errors make the command exit with status 1, warnings do not, and each finding comes with fix guidance.
-Apply the findings as described in [checking](references/writing.md#checking), which limits them to what the current task changed.
-
-These options adjust a run:
-
-- `--outline` prints how each file was interpreted, which also helps when exploring an unfamiliar document.
-- `--review` adds information for reviewing structure, such as oversized sections and links without summaries.
-
-Run the checker with `--help` for its other options, the files a directory run checks, and its exit statuses.
+Each finding comes with fix guidance, and errors make the command exit with status 1.
+Apply the findings as described in [checking](references/writing.md#checking), which limits them to what the current task created or made worse, unless the user asked for restructuring.
+When a run needs options or other files, or a script reads its output, read the [checker reference](references/checker.md).
+It covers running the checker, its findings and output, its options, the files it checks, and its exit statuses.
 
 ## Scope
 

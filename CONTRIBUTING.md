@@ -30,9 +30,9 @@ A change to a rule updates these together:
 - **Rule text**: the rule in the skill's reference documents, with its code marker.
 - **Checker**: the detection and constants in `mddt.py`, and the code's entries in `rules.toml` and `fixes.toml`.
 - **Summaries**: the overview of `model.md`, which `SKILL.md` and README condense, when what the model covers changes.
-- **Command help**: the `--help` text, which README and `SKILL.md` point to, when options, file selection, output, or exit statuses change.
+- **Checker reference**: `references/checker.md`, which README, `SKILL.md`, and `--help` point to, when options, file selection, output, or exit statuses change.
 
-Tests also check that the numbers in `model.md` and in `rules.toml` summaries match the checker's constants.
+Tests also check that the numbers in `model.md` and in `rules.toml` summaries match the checker's constants, and that the checker reference lists every option.
 The calibration material records one past round, so it is not updated when a rule changes.
 
 ## Licenses

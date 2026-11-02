@@ -29,25 +29,9 @@ It does not represent any source in full or the positions of its authors.
 ## Checker
 
 The checker reads the Markdown files or directories it is given and reports findings by code.
-It needs Python 3.11 or later and [uv](https://docs.astral.sh/uv/), which installs the dependencies declared in the script.
-
-```bash
-uv run skills/mddt/scripts/mddt.py README.md docs/
-```
-
-Without uv, install `markdown-it-py` and `mdit-py-plugins` and run the script with Python.
-
-Errors are violations the parser can decide, and the command exits with status 1 when any are found.
-Warnings mark places that need a writer's judgment, and keeping the original structure is a valid outcome for them.
-Information supports a deliberate review of structure and appears only with `--review`.
-Each code is printed once with its summary and rule location, followed by every location where it occurs and then its fix guidance.
-Codes and their severities are listed in [`rules.toml`](skills/mddt/scripts/rules.toml).
-
-`--outline` prints how each file was interpreted, and files with structural findings get it automatically.
-`--review` adds review information and prints the outline of every file.
-Run the checker with `--help` for its other options, the files a directory run checks, and its exit statuses.
+The [checker reference](skills/mddt/references/checker.md) covers running the checker, its findings and output, its options, the files it checks, and its exit statuses.
 Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes.
-The checker covers structure only, so run your repository's own Markdown linter for formatting rules.
+The checker covers the model's rules, not formatting, so run your repository's own Markdown linter for formatting rules.
 
 ## Limits
 
