@@ -63,7 +63,10 @@ Structure changes as content grows or shrinks, and the promotion ladder in [head
 - **When a list item needs named children**: Promote its name to the heading level the content needs, or remove the names.
 - **When a section needs H4**: Move the topic to its own file, leaving a summary and a link in its place.
 - **When a topic shrinks to one subsection**: Remove the subsection heading so that the topic becomes a part.
-- **When a block of another kind grows**: Move it to a topic of its own kind, as described in [blocks of another kind](kinds.md#blocks-of-another-kind).
+- **When one sibling outgrows the others**: Promote it and leave a summary and a link in its place.
+  Alternatively, move only the excess detail to a topic at that level.
+- **When a block of another kind or level grows**: Move it to a topic of its own.
+  See [blocks of another kind or level](kinds.md#blocks-of-another-kind-or-level).
 
 Restructuring moves content; it does not rewrite it.
 Keep the wording of moved content unless the move itself requires a change, such as replacing a position word with a link.

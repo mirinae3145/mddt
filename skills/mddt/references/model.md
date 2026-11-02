@@ -64,6 +64,11 @@ Documents form a tree through links that follow these rules.
 - **Landing pages**: A document that introduces other documents reads as an overview, not as a bare list of links.
 - **Anchor targets**: A link to an anchor in another file that expects its target to be read alone points to a topic.
   An anchor to a part only locates content inside a file that the reader reads whole.
+- **Lateral links**: A link to a related topic outside the tree path goes in the sentence where the relation matters.
+  The sentence shows why the link is there, such as evidence, the canonical location, or further detail.
+  A separate list of related documents is optional.
+- **Tree before lateral links**: Lateral links do not replace the tree.
+  Every document is reachable from its entry document through downward links alone.
 
 ## Sections, lists, and tables
 
@@ -78,6 +83,23 @@ The following criteria adjust that default.
   Put the condition columns on the left in the order they are decided, and the result column on the right.
   Mark a condition that no longer matters with a dash, cover every combination exactly once, and give each row one result.
 
+## Siblings
+
+Headings at the same level and items in the same list are siblings.
+The following rules apply to them.
+
+- **Same level of detail**: Siblings have a comparable level of detail.
+  When one sibling grows much deeper or larger than the others, it probably holds content of another level.
+- **Divisions**: A sibling set is a division when it claims to cover a whole.
+  Decision tables, divisions of a concept into kinds, and introductions that state a count or say "one of the following" make that claim.
+  A division uses one criterion and covers the whole without gaps or overlaps.
+- **Other sets**: Sets that do not claim to cover a whole need neither one criterion nor complete coverage.
+  Examples, notes, reasons, procedure steps, and rule collections are usually such sets.
+- **No false claims**: When a set cannot cover the whole, drop the claim instead of adding a catch-all item.
+  Introduce the set with words such as "for example" or "includes", so it is no longer a division.
+- **Children answer the parent**: A nested item answers a question that its parent raises, such as how, when, why, or what is excepted.
+  This relation is what justifies nesting.
+
 ## Lists
 
 Lists carry structure through their introductions, length, nesting, and names.
@@ -85,7 +107,7 @@ These rules apply wherever a list appears, under any heading level.
 
 ### Introductions
 
-A list starts with an introductory sentence that says what the list contains. <!-- code: list-intro -->
+A list starts with an introductory sentence that says what the list contains or which question it answers. <!-- code: list-intro -->
 When the list is the only content of a section without subheadings, the section heading introduces it instead.
 Continuation paragraphs, code blocks, and nested lists inside items count as part of the list.
 This exception does not apply directly under an H1 or a topic H2, which start with an overview paragraph.

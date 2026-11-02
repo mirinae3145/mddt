@@ -66,10 +66,11 @@ The first step in choosing a block's form is to start from its type:
 
 The criteria in [sections, lists, and tables](model.md#sections-lists-and-tables) then adjust the default for size and for whether the content is a link target.
 
-## Blocks of another kind
+## Blocks of another kind or level
 
 When a block whose type does not dominate the topic grows large, judge the block itself with the compass.
-If it belongs to another kind, move it to a topic of that kind and link to it instead of keeping it inline.
+When a block goes into much finer or broader detail than its siblings, it belongs to another level.
+In either case, move it to a topic of its own kind or level and link to it instead of keeping it inline.
 For example, a long conceptual explanation inside a how-to guide becomes an explanation topic that the guide links to.
 
 ## Topic-by-type review

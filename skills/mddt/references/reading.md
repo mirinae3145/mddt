@@ -35,11 +35,14 @@ Each property of the model supports a reading strategy:
 | Property | Reading strategy |
 | --- | --- |
 | Documents are reachable through downward links | Start from the entry document instead of scanning folders |
+| Lateral links state why they are there | Follow one when its stated relation, such as evidence or the canonical location, matters to the question |
 | File names are read with the folder tree | Use the tree to locate what an entry link points to |
 | The H1 and its overview identify a file | Decide from the title and first paragraph whether to read the file, then read it whole |
 | Parent summaries condense child overviews | Use summaries to choose a path, and verify facts in the child |
 | A topic H2 has H3 children and an overview | Use topic overviews as summaries, and topic boundaries for dividing large files |
 | Topics stand alone | Interpret a linked topic as a unit; when a link points to a part, read the topic that owns it |
 | A list starts with an introduction, or its heading introduces it | Learn what the list holds, such as decisions, facts, or options, before reading the items |
+| Siblings have a comparable level of detail | When a topic does not reach the detail you need, look for a link to that level instead of reading on |
+| Only a division claims to cover a whole | Treat a division's items as complete and exclusive, and other lists as possibly partial |
 | Conditions and exceptions nest under the item they qualify | Read nested conditions and exceptions before applying the parent item |
 | Names appear only on items without named descendants | Use names to find items, but read them in the context of their part |

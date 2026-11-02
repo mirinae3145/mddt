@@ -154,7 +154,9 @@ class Interface(CheckerCase):
     def test_outline_is_automatic_only_with_structural_findings(self):
         ok = self.write('ok.md', '# T\n\nOverview.\n\n## Part\n\nText.\n')
         self.assertNotIn('outline', run(str(ok)).stdout)
-        self.assertIn('H2 Part  [part]', run('--outline', str(ok)).stdout)
+        outline = run('--outline', str(ok)).stdout
+        self.assertIn('H1 T  [7 lines; overview]', outline)
+        self.assertIn('H2 Part  [3 lines; part]', outline)
         bad = self.write('bad.md', '# T\n')
         self.assertIn('outline', run(str(bad)).stdout)
 

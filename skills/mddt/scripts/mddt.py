@@ -226,6 +226,7 @@ def is_heading_like_emphasis(block: SyntaxTreeNode) -> bool:
 class FileCheck:
     def __init__(self, path: str, text: str):
         self.path = path
+        self.line_count = len(text.splitlines())
         self.root = SyntaxTreeNode(parser().parse(text))
         self.blocks = list(self.root.children)
         self.diagnostics: list[Diagnostic] = []
@@ -384,11 +385,23 @@ class FileCheck:
                 if child.type in LIST_TYPES:
                     self.walk_list(child, depth + 1, deepest, forms)
 
+    def section_lines(self, k: int) -> int:
+        """Lines from a heading to the next heading of the same or a higher level.
+
+        Comparing these sizes among sibling headings shows when one sibling
+        holds content of a different level of detail.
+        """
+        h = self.headings[k]
+        for later in self.headings[k + 1:]:
+            if later.level <= h.level:
+                return later.line - h.line
+        return self.line_count - h.line + 1
+
     def outline(self) -> list[str]:
         lines = [self.path]
-        for h in self.headings:
+        for k, h in enumerate(self.headings):
             label = f'{"  " * (h.level - 1)}H{h.level} {h.text}'
-            notes = []
+            notes = [f'{self.section_lines(k)} lines']
             if h.level == 2:
                 notes.append('topic' if h.is_topic else 'part')
             if h.level == 1 or (h.level == 2 and h.is_topic):
@@ -396,7 +409,7 @@ class FileCheck:
             stats = region_list_stats(h.region)
             if stats:
                 notes.append(stats)
-            lines.append(f'{label}  [{"; ".join(notes)}]' if notes else label)
+            lines.append(f'{label}  [{"; ".join(notes)}]')
         return lines
 
 
