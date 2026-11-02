@@ -930,7 +930,9 @@ def render_text(registry: dict, fixes: dict[str, str], diagnostics: list[Diagnos
     else:
         out.append(f'mddt: no problems in {checked} file(s)')
     if skipped:
-        out.append(f'skipped convention files: {", ".join(skipped)}')
+        # Excluded folders can hold many files, so long lists are only counted.
+        listed = ', '.join(skipped) if len(skipped) <= 5 else f'{len(skipped)} files'
+        out.append(f'skipped: {listed}')
     current = None
     for d in sorted(diagnostics, key=lambda d: sort_key(registry, d)):
         if d.code != current:
