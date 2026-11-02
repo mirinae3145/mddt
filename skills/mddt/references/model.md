@@ -1,6 +1,7 @@
 # Document model
 
 This document describes the structure that a conforming Markdown document has.
+It covers files, headings, paragraphs and sentences, links between documents, sections versus lists and tables, siblings, and lists.
 Writers treat each property as a condition to satisfy, and readers treat it as a guarantee to rely on.
 What a topic contains and which form each block takes by default are described in [document kinds and information types](kinds.md).
 [Examples](examples.md) show the judgment rules applied to sample text.

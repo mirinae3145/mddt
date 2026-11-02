@@ -11,16 +11,8 @@ Link or copy the whole folder into your agent's skill directory, keeping `SKILL.
 
 ## Document model
 
-The skill's [document model](skills/mddt/references/model.md) describes how a conforming Markdown file is organized.
-Its central rules are these.
-
-- **Files and topics**: A file is either one topic or a set of topics, never a set of sets.
-  Its H1 and the overview paragraph below it identify the file.
-- **Topics and parts**: An H2 with H3 children is a topic and needs its own overview paragraph.
-  An H2 without H3 children is a part of its parent.
-  Headings stop at H3; content that needs H4 moves to its own file.
-- **Lists**: A list starts with an introductory sentence unless it is the only content of its section.
-  Lists nest at most three levels, and a named item does not contain named items.
+The skill's [document model](skills/mddt/references/model.md) describes the structure that a conforming Markdown document has.
+It covers files, headings, sentences, links between documents, sections versus lists and tables, siblings, and lists.
 
 The document model draws on these works and style guides:
 
