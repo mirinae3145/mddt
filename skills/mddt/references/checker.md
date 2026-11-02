@@ -24,6 +24,9 @@ Each finding has a code and one of three severities:
 - **Information**: Support for a deliberate review of structure, shown only with `--review`.
 
 The codes, their severities, and their rule locations are listed in `scripts/rules.toml`.
+Information findings rest on approximate detection, so judge each one before acting on it.
+For example, a summary in a table cell beside a link is not recognized.
+An item counts as a block by its number of sentences alone.
 
 ## Output
 

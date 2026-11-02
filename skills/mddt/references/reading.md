@@ -44,5 +44,5 @@ These properties of the model support reading strategies:
 | A list starts with an introduction, or its heading introduces it | Learn what the list holds, such as decisions, facts, or options, before reading the items |
 | Siblings have a comparable level of detail | When a topic does not reach the detail you need, look for a link to that level instead of reading on |
 | Only a division claims to cover a whole | Treat a division's items as complete and exclusive, and other lists as possibly partial |
-| Conditions and exceptions nest under the item they qualify | Read nested conditions and exceptions before applying the parent item |
+| A nested item answers a question its parent raises, such as when or what is excepted | Read nested conditions and exceptions before applying the parent item |
 | Names appear only on items without named descendants | Use names to find items, but read them in the context of their part |
