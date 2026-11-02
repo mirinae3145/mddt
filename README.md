@@ -2,7 +2,7 @@
 
 `mddt` is an agent skill for writing and reading Markdown documents whose hierarchy holds up.
 It covers how documents link into a tree, how far sections nest, and how lists carry structure in their nesting.
-The skill guides an agent through writing, restructuring, and reading such documents, and a checker verifies the structural rules.
+The skill guides an agent through writing, restructuring, and reading such documents, and a checker verifies the model's rules.
 
 ## Install
 
@@ -11,7 +11,7 @@ Link or copy the whole folder into your agent's skill directory, keeping `SKILL.
 
 ## Document model
 
-The skill's [document model](skills/mddt/references/model.md) describes the structure that a conforming Markdown document has.
+The skill's [document model](skills/mddt/references/model.md) describes the properties that a conforming Markdown document has.
 It covers files, headings, sentences, links between documents, sections versus lists and tables, siblings, and lists.
 
 The document model draws on these works and style guides:

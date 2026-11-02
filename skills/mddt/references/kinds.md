@@ -3,7 +3,7 @@
 A topic has one document kind, which says what the reader is doing with it.
 Each block inside the topic, such as a part, a named list item, or a table, carries one information type.
 The kind tells which types dominate a topic, and the type suggests each block's default form.
-The structural rules that these choices operate within are in the [document model](model.md).
+The rules that these choices operate within are in the [document model](model.md).
 
 ## Document kinds
 
