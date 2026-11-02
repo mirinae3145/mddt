@@ -871,11 +871,14 @@ def region_list_stats(region: list[SyntaxTreeNode]) -> str:
     return text
 
 
-def collect(paths: list[str], excludes: list[str]) -> tuple[list[tuple[Path, Path | None]], list[str]]:
+def collect(paths: list[str], excludes: list[str],
+            fixed_root: Path | None = None) -> tuple[list[tuple[Path, Path | None]], list[str]]:
     """Expand arguments into Markdown files, each with the directory it came from.
 
     Convention-bound files such as changelogs and files matching an exclude
-    pattern are skipped even when named explicitly.
+    pattern are skipped even when named explicitly. A pattern matches a file's
+    path relative to its tree root, the same root that decides parents, or the
+    file name, so it works however the file argument is spelled.
     """
     files, skipped = [], []
     for arg in paths:
@@ -887,7 +890,8 @@ def collect(paths: list[str], excludes: list[str]) -> tuple[list[tuple[Path, Pat
         else:
             raise FileNotFoundError(arg)
         for f in candidates:
-            rel = f.relative_to(base).as_posix() if base else arg
+            root = fixed_root or find_root(f) or base
+            rel = os.path.relpath(f, root).replace(os.sep, '/') if root else f.name
             if CONVENTION_FILES.match(f.name) or any(
                     fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(f.name, pattern)
                     for pattern in excludes):
@@ -900,8 +904,9 @@ def collect(paths: list[str], excludes: list[str]) -> tuple[list[tuple[Path, Pat
 def markdown_files(folder: Path) -> list[Path]:
     """List Markdown files under a folder, honoring .gitignore inside a Git repository.
 
-    Hidden folders are skipped, and symbolic links to other trees, such as
-    linked repositories, are not followed.
+    Hidden folders are included, since agent instructions often live in them;
+    .git and node_modules are skipped, and symbolic links to other trees, such
+    as linked repositories, are not followed.
     """
     listed = None
     if find_root(folder / '_') is not None:
@@ -912,7 +917,7 @@ def markdown_files(folder: Path) -> list[Path]:
             listed = {folder / rel for rel in result.stdout.split('\0') if rel}
     found = []
     for current, dirs, names in os.walk(folder):
-        dirs[:] = sorted(d for d in dirs if not d.startswith('.') and d != 'node_modules'
+        dirs[:] = sorted(d for d in dirs if d not in ('.git', 'node_modules')
                          and not os.path.islink(os.path.join(current, d)))
         for name in sorted(names):
             path = Path(current) / name
@@ -1009,15 +1014,17 @@ def main(argv: list[str] | None = None) -> int:
                     help='also report information for reviewing structure, and print every outline')
     ap.add_argument('--format', choices=('text', 'json'), default='text')
     ap.add_argument('--exclude', action='append', default=[], metavar='GLOB',
-                    help='skip files matching GLOB, such as templates or fixtures; repeatable')
+                    help='skip files whose path relative to the tree root, or whose name, matches GLOB, '
+                         'such as templates or fixtures; repeatable')
     ap.add_argument('--root', metavar='DIR',
                     help='top of the document tree; defaults to the Git repository root, '
                          'then to a directory argument')
     args = ap.parse_args(argv)
 
     registry = load_registry()
+    fixed_root = Path(os.path.abspath(args.root)) if args.root else None
     try:
-        files, skipped = collect(args.paths, args.exclude)
+        files, skipped = collect(args.paths, args.exclude, fixed_root)
     except FileNotFoundError as missing:
         print(f'mddt: no such file or directory: {missing}', file=sys.stderr)
         return 2
@@ -1025,7 +1032,6 @@ def main(argv: list[str] | None = None) -> int:
     diagnostics: list[Diagnostic] = []
     outlines: dict[str, list[str]] = {}
     tree = Tree()
-    fixed_root = Path(os.path.abspath(args.root)) if args.root else None
     for f, base in files:
         try:
             text = f.read_text(encoding='utf-8')

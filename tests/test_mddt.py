@@ -268,7 +268,8 @@ class TreeRules(CheckerCase):
             'templates/case.md': 'no heading\n',
         })
         self.assertEqual(found, [('templates/case.md', 'doc-unlinked'), ('templates/case.md', 'h1-missing')])
-        data = json.loads(run('--format', 'json', '--exclude', 'templates/*', str(self.dir)).stdout)
+        data = json.loads(run('--format', 'json', '--root', str(self.dir), '--exclude', 'templates/*',
+                              str(self.dir)).stdout)
         self.assertEqual(data['diagnostics'], [])
 
     def test_anchor_to_part_is_review_information(self):
@@ -333,14 +334,24 @@ class Interface(CheckerCase):
         bad = self.write('bad.md', '# T\n')
         self.assertIn('outline', run(str(bad)).stdout)
 
-    def test_directories_skip_changelogs_and_hidden_folders(self):
+    def test_directories_skip_changelogs_but_not_hidden_folders(self):
         self.write('CHANGELOG.md', '## 1.0\n\n- one\n')
-        (self.dir / '.hidden').mkdir()
-        self.write('.hidden/x.md', '## no h1\n')
+        (self.dir / '.claude').mkdir()
+        self.write('.claude/x.md', '# X\n\nOverview.\n')
+        (self.dir / 'node_modules').mkdir()
+        self.write('node_modules/y.md', '# Y\n\nOverview.\n')
         self.write('doc.md', '# T\n\nOverview.\n')
         data = json.loads(run('--format', 'json', str(self.dir)).stdout)
-        self.assertEqual([Path(f).name for f in data['files']], ['doc.md'])
+        self.assertEqual(sorted(Path(f).name for f in data['files']), ['doc.md', 'x.md'])
         self.assertEqual([Path(f).name for f in data['skipped']], ['CHANGELOG.md'])
+
+    def test_exclude_matches_paths_from_the_root_however_spelled(self):
+        (self.dir / 'sub').mkdir()
+        deep = self.write('sub/deep.md', 'no heading\n')
+        for arg, cwd in [(str(deep), None), ('sub/deep.md', self.dir), ('deep.md', self.dir / 'sub')]:
+            data = json.loads(run('--format', 'json', '--root', str(self.dir), '--exclude', 'sub/*',
+                                  arg, cwd=cwd).stdout)
+            self.assertEqual(data['files'], [], arg)
 
 
 SKILL = ROOT / 'skills/mddt'
