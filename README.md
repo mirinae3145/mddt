@@ -22,6 +22,18 @@ Its central rules are these.
 - **Lists**: A list starts with an introductory sentence unless it is the only content of its section.
   Lists nest at most three levels, and a named item does not contain named items.
 
+The document model draws on these works and style guides:
+
+- **[DITA](https://docs.oasis-open.org/dita/dita/v1.3/dita-v1.3-part0-overview.html) and [Lightweight DITA](https://docs.oasis-open.org/dita/LwDITA/v1.0/cn01/LwDITA-v1.0-cn01.html)**: topic orientation, maps, and information typing.
+- **[Diátaxis](https://diataxis.fr/)** by Daniele Procida: document kinds and the compass that tells them apart.
+- **[Information Mapping](https://informationmapping.com/)** by Robert E. Horn: information types, labeled blocks, and decision tables.
+- **[The Pyramid Principle](https://www.barbaraminto.com/)** by Barbara Minto: questions and answers between levels, and divisions without gaps or overlaps.
+- **[Every Page is Page One](https://everypageispageone.com/the-book/)** by Mark Baker: self-contained topics, siblings at one level of detail, and links within sentences.
+- **[Google](https://developers.google.com/style) and [Microsoft](https://learn.microsoft.com/en-us/style-guide/welcome/) style guides**: conventions for lists and tables.
+
+The model interprets these sources selectively and arranges and reconstructs their ideas into one set of rules.
+It does not represent any source in full or the positions of its authors.
+
 ## Checker
 
 The checker reads the Markdown files or directories it is given and reports findings by code.
@@ -51,7 +63,16 @@ The command accepts these options:
 Changelogs are always skipped.
 The checker covers structure only, so run your repository's own Markdown linter for formatting rules.
 
-## Languages
+## Limits
+
+What makes a document good to read and write can differ between people and agents.
+The model builds on sources that were written with human readers in mind.
+In the maintainer's judgment, the skill is effective at getting agents to write better documents.
+Its effect on agents as readers of those documents has not been tested.
+
+Following the skill can cost more than writing without it.
+An agent reads the reference documents, plans each document's place in the tree, and revises the document after running the checker.
+These steps take more tokens and time than a direct edit.
 
 The checker counts words as whitespace-separated tokens that contain a letter or digit, so one rule covers English words and Korean eojeol.
 Sentence boundaries were reviewed with English and Korean documents, and the sentence length threshold with English documents written to the model, as described in [calibration](calibration/README.md).
