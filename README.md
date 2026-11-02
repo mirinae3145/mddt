@@ -54,7 +54,8 @@ The checker covers structure only, so run your repository's own Markdown linter 
 ## Languages
 
 The checker counts words as whitespace-separated tokens that contain a letter or digit, so one rule covers English words and Korean eojeol.
-Its counts and sentence boundaries have been reviewed with English and Korean documents.
+Sentence boundaries were reviewed with English and Korean documents, and the sentence length threshold with English documents written to the model, as described in [calibration](calibration/README.md).
+Korean sentences written to the same model contain fewer words, so the threshold rarely applies to them.
 Sentence boundaries inside a line are recognized after Korean sentence endings and before capitalized Latin words, so other languages may get incomplete `line-sentences` findings.
 Languages written without spaces between words, such as Chinese, Japanese, and Thai, are not measured meaningfully.
 

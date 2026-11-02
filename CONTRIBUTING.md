@@ -37,4 +37,9 @@ python3 -m unittest discover -s tests -v
 ```
 
 The tests run the checker through `uv run`, so uv must be installed.
+When checking the repository's own documents, exclude the generated material in `calibration/`:
+
+```bash
+uv run skills/mddt/scripts/mddt.py --exclude 'calibration/outputs/*' --exclude 'calibration/briefs/*' --exclude 'calibration/skill/*' .
+```
 Add a test with each new code or behavior change, including a case that must not be reported.
