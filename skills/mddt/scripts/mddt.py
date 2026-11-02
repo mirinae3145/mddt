@@ -208,13 +208,17 @@ def name_of(item: SyntaxTreeNode) -> tuple[str, str] | None:
         if rest is None or (rest.type == 'text' and LINK_NAME_TAIL.match(rest.content)):
             return 'link', plain_text(first).strip()
         return None
-    lead = ''
+    lead, used = '', 0
     for n in nodes:
         if n.type not in ('text', 'code_inline'):
             break
         lead += n.content
+        used += 1
     match = COLON_NAME.match(lead)
-    if match and len(match['name'].split()) <= NAME_MAX_WORDS:
+    # A phrase ending in a colon with nothing after it introduces the item's
+    # content, such as a code block, rather than naming the item.
+    described = bool(lead[match.end():].strip()) or used < len(nodes) if match else False
+    if match and described and len(match['name'].split()) <= NAME_MAX_WORDS:
         return 'colon', match['name'].strip()
     return None
 
@@ -296,6 +300,8 @@ def sentence_breaks(line: str) -> list[int]:
             continue
         if re.fullmatch(r'[A-Z]', previous) or re.search(r'\.\w$', previous):
             continue
+        if re.fullmatch(r'[\sX.,;:()]*', line[m.start(3):]):
+            continue  # Only a code span follows, such as the command a step runs.
         hangul = '\uac00' <= previous[-1] <= '\ud7a3'
         if hangul or m.group(1) in '。！？' or (m.group(4).isupper() and m.group(4).isalpha()):
             breaks.append(m.start(3))

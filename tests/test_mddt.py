@@ -154,6 +154,10 @@ class ListRules(CheckerCase):
                 '## Topic B\n\nOverview.\n\n### Three\n\nList:\n\n- e: x\n- f: y\n\n### Four\n\nText.\n')
         self.assertEqual(self.codes(text), [('name-form-mix', 20)])
 
+    def test_step_ending_in_colon_is_not_a_name(self):
+        self.assertCodes(
+            '# T\n\nOverview.\n\nList:\n\n- **A**: x\n- Install the tool with pipx:\n\n  ```sh\n  pipx install t\n  ```\n- **B**: y\n', [])
+
     def test_prose_starting_with_link_or_time_is_not_a_name(self):
         self.assertCodes(
             '# T\n\nOverview.\n\nList:\n\n- **A**: x\n'
@@ -191,6 +195,7 @@ class ProseRules(CheckerCase):
         self.assertCodes('# T\n\n첫 문장이다. 둘째 문장이다.\n', ['line-sentences'])
         self.assertCodes('# T\n\nUse a tool, e.g. Python, with version 1.2 here.\n', [])
         self.assertCodes('# T\n\nSee `a.b` and [Spec. One](u) now.\n', [])
+        self.assertCodes('# T\n\n보관함을 스캔한다. `tool scan PATH`\n', [])
 
 
 class TreeRules(CheckerCase):
