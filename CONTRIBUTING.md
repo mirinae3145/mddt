@@ -12,6 +12,9 @@ The checker keeps each kind of content in one place.
 - **Fix guidance**: `skills/mddt/scripts/fixes.toml` holds the text printed with each code's findings.
   It is one file so that related codes keep consistent wording and option order.
 
+The rule behind each code is marked in the skill's reference documents with a comment such as `<!-- code: list-intro -->` at the end of the rule's line.
+Tests check that the registry, fix guidance, and markers name the same codes, and that rule locations and links between skill documents resolve.
+
 Codes are permanent identifiers.
 Change a code's severity or wording in the registry instead of renaming it, and add fix guidance with every new code.
 

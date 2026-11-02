@@ -1,6 +1,7 @@
 """Behavioral checks through the checker's command-line interface."""
 import json
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import tomllib
@@ -167,7 +168,63 @@ class Interface(CheckerCase):
         self.assertEqual([Path(f).name for f in data['skipped']], ['CHANGELOG.md'])
 
 
+SKILL = ROOT / 'skills/mddt'
+CODE_COMMENT = re.compile(r'<!-- code: ([^>]*?) -->')
+LINK = re.compile(r'\]\(([^)\s]+)\)')
+
+
+def slug(heading):
+    """GitHub-style anchor for a heading."""
+    text = re.sub(r'[^\w\- ]', '', heading.strip().lower())
+    return text.replace(' ', '-')
+
+
+def anchors(path):
+    in_fence = False
+    found = set()
+    for line in path.read_text(encoding='utf-8').splitlines():
+        if line.startswith('```'):
+            in_fence = not in_fence
+        elif not in_fence and re.match(r'#{1,6} ', line):
+            found.add(slug(line.lstrip('#')))
+    return found
+
+
+def skill_docs():
+    return [SKILL / 'SKILL.md', *sorted((SKILL / 'references').glob('*.md'))]
+
+
 class Registry(unittest.TestCase):
+    def test_rule_documents_mark_every_registered_code(self):
+        with (SCRIPTS / 'rules.toml').open('rb') as f:
+            codes = set(tomllib.load(f))
+        marked = set()
+        for doc in skill_docs():
+            for group in CODE_COMMENT.findall(doc.read_text(encoding='utf-8')):
+                marked.update(code.strip() for code in group.split(','))
+        self.assertEqual(codes, marked)
+
+    def test_registry_rule_locations_exist(self):
+        with (SCRIPTS / 'rules.toml').open('rb') as f:
+            registry = tomllib.load(f)
+        for code, entry in registry.items():
+            name, _, anchor = entry['rule'].partition('#')
+            doc = SKILL / 'references' / name
+            self.assertTrue(doc.is_file(), code)
+            self.assertIn(anchor, anchors(doc), code)
+
+    def test_links_between_skill_documents_resolve(self):
+        for doc in skill_docs():
+            text = re.sub(r'(?ms)^```.*?^```', '', doc.read_text(encoding='utf-8'))
+            for target in LINK.findall(text):
+                if '://' in target:
+                    continue
+                name, _, anchor = target.partition('#')
+                linked = (doc.parent / name).resolve() if name else doc
+                self.assertTrue(linked.is_file(), f'{doc.name}: {target}')
+                if anchor:
+                    self.assertIn(anchor, anchors(linked), f'{doc.name}: {target}')
+
     def test_every_code_has_fix_guidance_and_vice_versa(self):
         with (SCRIPTS / 'rules.toml').open('rb') as f:
             codes = list(tomllib.load(f))
