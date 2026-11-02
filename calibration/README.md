@@ -7,8 +7,9 @@ It holds the English inputs and outputs of the third and last calibration round,
 
 Each writer was a Claude Sonnet agent at medium effort that received only these inputs:
 
-- **Skill copy**: [The skill copy](skill/SKILL.md) is the skill without its numeric thresholds and checker, so writers did not know the values under review.
-  Paragraph and sentence length were left to the writer's judgment.
+- **Skill copy**: [The skill copy](skill/SKILL.md) is the skill without its checker and without the thresholds under review, which had been set without a measured basis.
+  Paragraph and sentence length, file size, and sibling size were left to the writer's judgment.
+  Limits decided earlier on stated grounds stayed in the copy: about seven list items and sibling headings, headings to H3, and lists to three levels.
 - **Brief**: One brief per use lists facts about a fictional subject and leaves the number of files to the writer.
 - **Instruction**: Write the documents, then reread them against the skill and revise them, without running any checker.
 
@@ -49,6 +50,7 @@ The 95th percentile of each measure compares with its threshold as follows:
 | List depth | 1 | 2 | 2 | 3 warns, 4 is an error |
 
 The paragraph and sentence thresholds sit at or above the 95th percentile, so the checker rarely flags writing that follows the model.
+The writers knew the sibling heading and list depth limits, so those two rows show compliance with the limits rather than test them.
 No file grew large enough to test the file size threshold, and no writer used topic H2s with H3s, so those thresholds stay provisional.
 
 Two earlier rounds used shorter briefs and a skill copy that asked for short paragraphs and sentences, and their material is not kept here.
