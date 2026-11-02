@@ -19,6 +19,12 @@ Each file relates to topics as follows.
   Badges and other image-only paragraphs do not count as an overview.
 - **File names identify, titles explain**: A file name is read together with the folder tree, while a title must make sense on its own.
   File names are link targets, so keep them short and stable, and keep the name and the title about the same subject.
+- **Folders follow the tree**: Where a file sits determines its parent document.
+  A folder's index file, `README.md`, `index.md`, or `SKILL.md`, is the parent of the other documents in that folder and its subfolders.
+  A file `x.md` is the parent of the documents in a companion folder `x/` beside it, so a document gains children without moving.
+  A folder with neither belongs to the parent found the same way one level up.
+- **Entry documents**: The root `README.md` and files that tools read by name, such as `SKILL.md` and `AGENTS.md`, are entry documents.
+  They need no parent; every other document, including community files such as `CONTRIBUTING.md`, has one.
 
 ## Headings and promotion
 
@@ -56,7 +62,8 @@ Prose follows these rules about lines, paragraphs, and sentences.
 
 Documents form a tree through links that follow these rules.
 
-- **Downward links**: When a subtopic moves to its own file, its original place keeps a short summary and a link.
+- **Downward links**: A parent document links to each of its child documents with a short summary.
+  When a subtopic moves to its own file, its original place keeps that summary and link.
   The summary condenses the child's overview, which remains the canonical version.
   Upward links are needed only when the folder tree does not show where a document belongs.
 - **Groups of peer documents**: Sibling topics in separate files are introduced together in one part.
@@ -68,7 +75,7 @@ Documents form a tree through links that follow these rules.
   The sentence shows why the link is there, such as evidence, the canonical location, or further detail.
   A separate list of related documents is optional.
 - **Tree before lateral links**: Lateral links do not replace the tree.
-  Every document is reachable from its entry document through downward links alone.
+  Because every document except an entry document is linked from its parent, every document is reachable through downward links alone.
 
 ## Sections, lists, and tables
 

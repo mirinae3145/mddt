@@ -13,6 +13,7 @@ Before writing, decide where the content sits in the tree:
    If it does not fit in two or three sentences, the content probably holds several topics or kinds.
 1. Find the parent document that will introduce it, and plan the summary and link that the parent will carry.
 1. Decide whether the content is a part of an existing topic, a new topic in an existing file, or a file of its own.
+   A new file goes into its parent's folder, or into the parent's companion folder when the parent is not an index file.
 1. Decide each new topic's kind with [document kinds](kinds.md#document-kinds).
 1. For a new topic set or a large file, sketch the [topic-by-type review](kinds.md#topic-by-type-review) to see which blocks each subject needs.
 
@@ -61,7 +62,7 @@ Some rules apply only when writing, not when judging existing text:
 Structure changes as content grows or shrinks, and the promotion ladder in [headings and promotion](model.md#headings-and-promotion) governs both directions.
 
 - **When a list item needs named children**: Promote its name to the heading level the content needs, or remove the names.
-- **When a section needs H4**: Move the topic to its own file, leaving a summary and a link in its place.
+- **When a section needs H4**: Move the topic to its own file in the companion folder, leaving a summary and link behind.
 - **When a topic shrinks to one subsection**: Remove the subsection heading so that the topic becomes a part.
 - **When one sibling outgrows the others**: Promote it and leave a summary and a link in its place.
   Alternatively, move only the excess detail to a topic at that level.

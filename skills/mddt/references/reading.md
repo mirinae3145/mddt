@@ -36,7 +36,7 @@ Each property of the model supports a reading strategy:
 | --- | --- |
 | Documents are reachable through downward links | Start from the entry document instead of scanning folders |
 | Lateral links state why they are there | Follow one when its stated relation, such as evidence or the canonical location, matters to the question |
-| File names are read with the folder tree | Use the tree to locate what an entry link points to |
+| The folder tree is the document tree | Find a document's parent and children from where its file sits |
 | The H1 and its overview identify a file | Decide from the title and first paragraph whether to read the file, then read it whole |
 | Parent summaries condense child overviews | Use summaries to choose a path, and verify facts in the child |
 | A topic H2 has H3 children and an overview | Use topic overviews as summaries, and topic boundaries for dividing large files |
