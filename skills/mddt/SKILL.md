@@ -7,36 +7,37 @@ description: >
   instructions, or skills; when restructuring documents that have grown; and
   when navigating a set of Markdown documents to find or verify information.
   Includes a checker for the model's rules.
-license: CC-BY-4.0 for the instructions and references; MIT for the scripts
+license: CC-BY-4.0 for the instructions and references; MIT for the scripts; copyright 2026 Taeha Shin
 ---
 
 # mddt
 
 mddt treats a set of Markdown documents as one tree.
 Files link downward to the files they introduce, headings divide each file into topics and parts, and lists nest only where nesting carries meaning.
-This file is the entry point; the rules and procedures live in the reference documents linked below.
+This file is the entry point, and the rules and procedures live in the reference documents that its parts introduce.
 
 ## Document model
 
 The [document model](references/model.md) states the properties a conforming document has.
 Writers treat each property as a condition to satisfy, and readers treat it as a guarantee to rely on.
 It covers files, headings, sentences, links between documents, sections versus lists and tables, siblings, and lists.
-[Examples](references/examples.md) show its judgment rules as before-and-after pairs; read them when a rule's application is unclear.
+[Examples](references/examples.md) show its judgment rules as before-and-after pairs, and they help when a rule's application is unclear.
 
-[Document kinds and information types](references/kinds.md) decide what a topic contains and which form each block takes by default.
-Read [applying the document model to common uses](references/uses.md) when writing repository documentation, project records, or agent instructions and skills.
+When deciding a topic's kind or a block's form, read [document kinds and information types](references/kinds.md).
+When writing repository documentation, project records, or agent instructions and skills, read [applying the document model to common uses](references/uses.md).
 When a term such as part or division is unclear, look it up in the [terms](references/terms.md), which point to where each term is defined.
 
 ## Writing and restructuring
 
-Read [writing and restructuring](references/writing.md) before creating a document or substantially editing one.
-It covers planning a document's place in the tree, choosing forms, growing and shrinking structure, and checking the result.
+Before creating a document or substantially editing one, read [writing and restructuring](references/writing.md).
+It covers planning a document's place in the tree, choosing forms, rules for new writing, growing and shrinking structure, and checking the result.
 Read the document model as well, since the writing procedure applies it rather than repeating it.
 
 ## Reading
 
-Read [reading a document tree](references/reading.md) before exploring a set of Markdown documents to answer a question or verify a fact.
-It explains how to choose files from the tree, why to read chosen files whole, and how to treat documents outside the model.
+Before exploring a set of Markdown documents to answer a question or verify a fact, read [reading a document tree](references/reading.md).
+It explains how to choose files from the tree, why to read them whole, and how to treat documents outside the model.
+It also shows which reading strategy each guarantee of the model supports.
 
 ## Checking
 

@@ -1,7 +1,7 @@
-# Examples
+# Examples of the judgment rules
 
-These examples show how the judgment rules of the [document model](model.md) apply, mostly as before-and-after pairs.
-Read them when it is unclear how a rule applies to the text at hand.
+These examples show how the judgment rules of the [document model](model.md), the [document kinds](kinds.md), and the [writing procedure](writing.md) apply, mostly as before-and-after pairs.
+When it is unclear how a rule applies to the text at hand, compare it with them.
 
 ## Structure within a file
 
@@ -183,7 +183,7 @@ A topic moves to its own file when it serves another reader or task, outgrows it
 
 ### Blocks of another kind
 
-A block whose kind differs from its topic's moves to a topic of that kind.
+A block of another kind that grows large moves to a topic of that kind.
 
 Before:
 
@@ -356,7 +356,8 @@ A link outside the tree path says why it is there.
 Before:
 
 ```markdown
-Restores can take a while. See [snapshots](snapshots.md).
+Restores can take a while.
+See [snapshots](snapshots.md).
 ```
 
 After:

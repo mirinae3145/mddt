@@ -1,4 +1,4 @@
-# Calibration
+# Calibration of the checker's thresholds
 
 This folder keeps the material used to review the checker's numeric thresholds against documents written to the model.
 It holds the English inputs and outputs of the third and last calibration round, and the outputs are kept exactly as the writers left them.
@@ -34,7 +34,7 @@ The outputs are AI-generated test material, not documentation of mddt, and the c
 
 ## Results
 
-[`measure.py`](measure.py) computes the distributions below with the checker's own parsing:
+[`measure.py`](measure.py) computes each measure's distribution with the checker's own parsing:
 
 ```bash
 uv run calibration/measure.py calibration/outputs

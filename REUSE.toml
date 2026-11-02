@@ -19,3 +19,8 @@ SPDX-License-Identifier = "CC0-1.0"
 path = ["calibration/**"]
 SPDX-FileCopyrightText = "2026 Taeha Shin"
 SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = ["calibration/measure.py"]
+SPDX-FileCopyrightText = "2026 Taeha Shin"
+SPDX-License-Identifier = "MIT"

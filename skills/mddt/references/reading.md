@@ -1,7 +1,7 @@
 # Reading a document tree
 
 This procedure uses the guarantees of the [document model](model.md) to find and verify information in a set of Markdown documents.
-It covers choosing files, reading them, and handling documents that do not follow the model.
+It covers choosing files, reading them, handling documents that do not follow the model, and which reading strategy each guarantee supports.
 
 ## Choosing files
 
@@ -30,7 +30,7 @@ When it is unclear whether a document follows the model, run the checker on it.
 
 ## Using the model's guarantees
 
-Each property of the model supports a reading strategy:
+These properties of the model support reading strategies:
 
 | Property | Reading strategy |
 | --- | --- |
