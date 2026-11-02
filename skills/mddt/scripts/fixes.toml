@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Taeha Shin
+# SPDX-License-Identifier: MIT
 # Fix guidance printed with each code's findings.
 # Kept in one file so that related codes can share consistent wording and option order.
 # Keys match the codes in rules.toml.

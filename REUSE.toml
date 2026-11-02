@@ -1,0 +1,16 @@
+version = 1
+
+[[annotations]]
+path = ["skills/mddt/scripts/**", "tests/**"]
+SPDX-FileCopyrightText = "2026 Taeha Shin"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = ["README.md", "CONTRIBUTING.md", "skills/mddt/SKILL.md", "skills/mddt/references/**"]
+SPDX-FileCopyrightText = "2026 Taeha Shin"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+[[annotations]]
+path = [".gitignore"]
+SPDX-FileCopyrightText = "2026 Taeha Shin"
+SPDX-License-Identifier = "CC0-1.0"

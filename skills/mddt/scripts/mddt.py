@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Taeha Shin
+# SPDX-License-Identifier: MIT
 # /// script
 # requires-python = ">=3.11"
 # dependencies = ["markdown-it-py>=3", "mdit-py-plugins>=0.4"]

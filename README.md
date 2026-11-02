@@ -61,3 +61,15 @@ Languages written without spaces between words, such as Chinese, Japanese, and T
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how the checker is organized and how to run its tests.
+
+## License
+
+The checker and its tests are licensed under the MIT License.
+The documentation, including the skill's instructions and reference documents, is licensed under CC BY 4.0.
+[`REUSE.toml`](REUSE.toml) assigns each path its license, following the [REUSE](https://reuse.software/) specification, and the license texts are in [`LICENSES/`](LICENSES/).
+
+## AI disclosure
+
+Claude by Anthropic assisted with the design, implementation, documentation, and tests of this project.
+The maintainer directed the design and decided its rules.
+The skill is written for AI agents, and the checker's findings support a writer's judgment rather than replace it.

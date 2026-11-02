@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Taeha Shin
+# SPDX-License-Identifier: MIT
 """Behavioral checks through the checker's command-line interface."""
 import json
 from pathlib import Path

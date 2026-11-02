@@ -7,6 +7,7 @@ description: >
   instructions, or skills; when restructuring documents that have grown; and
   when navigating a set of Markdown documents to find or verify information.
   Includes a checker for the structural rules.
+license: CC-BY-4.0 for the instructions and references; MIT for the scripts
 ---
 
 # mddt

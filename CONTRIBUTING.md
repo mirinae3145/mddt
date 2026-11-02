@@ -21,6 +21,13 @@ Change a code's severity or wording in the registry instead of renaming it, and 
 The checker reports only what a parser can decide or flag for judgment.
 Choices that depend on meaning, such as whether content belongs in a section, list, or table, stay with the writer.
 
+## Licenses
+
+Every file is covered by a license entry in `REUSE.toml`.
+Code and checker data are MIT, documentation is CC BY 4.0, and trivial configuration such as `.gitignore` is CC0.
+Place a new file under a covered path, or add it to the matching entry.
+Running `reuse lint` from the [REUSE tool](https://reuse.software/) confirms that every file is covered.
+
 ## Verification
 
 Run the behavioral checks from the repository root:

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Taeha Shin
+# SPDX-License-Identifier: MIT
 # Detection registry for mddt.py.
 # Codes are permanent identifiers; severity may change without renaming a code.
 # `rule` is a path under the skill's references/ directory.
