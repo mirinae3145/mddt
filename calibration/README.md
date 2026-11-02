@@ -2,12 +2,15 @@
 
 This folder keeps the material used to review the checker's numeric thresholds against documents written to the model.
 It holds the English inputs and outputs of the third and last calibration round, and the outputs are kept exactly as the writers left them.
+The inputs and outputs record that round, so they are not updated when the skill changes.
 
 ## Inputs
 
 Each writer was a Claude Sonnet agent at medium effort that received only these inputs:
 
-- **Skill copy**: [The skill copy](skill/SKILL.md) is the skill without its checker and without the thresholds under review, which had been set without a measured basis.
+- **Skill copy**: [The skill copy](skill/SKILL.md) is the skill as it stood when the round ran, without its checker and without the thresholds under review.
+  Those thresholds had been set without a measured basis.
+  Rules added later, such as making completeness claims only where needed, are missing from the copy.
   Paragraph and sentence length, file size, and sibling size were left to the writer's judgment.
   Limits decided earlier on stated grounds stayed in the copy: about seven list items and sibling headings, headings to H3, and lists to three levels.
 - **Brief**: One brief per use lists facts about a fictional subject and leaves the number of files to the writer.
@@ -37,9 +40,9 @@ The outputs are AI-generated test material, not documentation of mddt, and the c
 uv run calibration/measure.py calibration/outputs
 ```
 
-The 95th percentile of each measure compares with its threshold as follows:
+The 95th percentile of each measure compares with the checker's threshold at the time of the round:
 
-| Measure | Median | 95th percentile | Maximum | Threshold |
+| Measure | Median | 95th percentile | Maximum | Threshold at the time |
 | --- | --- | --- | --- | --- |
 | Sentences per paragraph | 1 | 3 | 5 | More than 5 warns |
 | Paragraphs in a row | 1 | 2 | 3 | 4 or more warn |
