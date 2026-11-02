@@ -3,7 +3,7 @@
 # Detection registry for mddt.py.
 # Codes are permanent identifiers; severity may change without renaming a code.
 # `rule` is a path under the skill's references/ directory.
-# Fix guidance for each code lives in fixes/<code>.md.
+# Fix guidance for each code lives in fixes.toml under the same key.
 
 [h1-missing]
 severity = "error"

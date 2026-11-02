@@ -179,7 +179,7 @@ Without `--log-file`, logs go to `~/.cache/pixtwin/logs/`.
 
 A reader setting up a scheduled run needs all three, so they became parts of one topic.
 A part that later grows subsections becomes a topic H2 with H3s, and the file becomes a topic set.
-A topic moves to its own file only when it serves another reader or task, outgrows its siblings, or needs deeper headings.
+A topic moves to its own file when it serves another reader or task, outgrows its siblings, or needs deeper headings.
 
 ### Blocks of another kind
 

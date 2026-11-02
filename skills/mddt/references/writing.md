@@ -67,7 +67,7 @@ Some rules apply only when writing, not when judging existing text:
 Structure changes as content grows or shrinks, and the promotion ladder in [headings and promotion](model.md#headings-and-promotion) governs both directions.
 
 - **When a list item needs named children**: Promote its name to the heading level the content needs, or remove the names.
-- **When a section needs H4**: Move the topic to its own file in the companion folder, leaving a summary and link behind.
+- **When a section needs H4**: Move the topic to its own file, placed as [placing a document](#placing-a-document) describes, and leave a summary and link behind.
 - **When a topic shrinks to one subsection**: Remove the subsection heading so that the topic becomes a part.
 - **When one sibling outgrows the others**: Promote it and leave a summary and a link in its place.
   Alternatively, move only the excess detail to a topic at that level.

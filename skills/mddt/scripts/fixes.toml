@@ -50,7 +50,7 @@ Avoid moving the first H3's opening text up as a stand-in.
 """
 
 name-nesting = """
-Fix, in order of preference:
+Fix in one of these ways:
 1. Promote the outer name to a heading so that the named children become its content.
 2. Remove the names from the inner items.
 3. Remove the outer name and turn it into an introductory sentence.
@@ -191,7 +191,7 @@ Information for structural review; siblings may differ in size for good reasons.
 
 file-size = """
 Information for structural review; a long file may still be one coherent topic set.
-1. Move topics that are read on their own into files in the companion folder, leaving summaries and links.
+1. Move topics that serve another reader or task into their own files, placed as writing.md's Placing a document describes, leaving summaries and links.
 2. Check whether parts of the file belong to another kind or level.
 """
 
@@ -202,6 +202,6 @@ An item of several sentences is a block of its own; give it a bold name that say
 
 nested-block = """
 Information for structural review; blocks nested in blocks suggest a missing heading.
-1. Promote the enclosing named item to a heading so that the inner items can carry names.
-2. Shorten the inner item into a single sentence when it is only a detail.
+1. Promote the enclosing item, named or not, to a heading so that the inner items can carry names.
+2. Shorten the item of several sentences into one sentence when it is only a detail.
 """

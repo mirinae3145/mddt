@@ -8,7 +8,8 @@
 """Check Markdown files against the mddt document-tree model.
 
 The checker reports only the outer boundary of the model: violations a parser
-can decide (errors) and signals that need a writer's judgment (warnings).
+can decide (errors), signals that need a writer's judgment (warnings), and,
+with --review, information for a deliberate review of structure.
 Choosing between sections, lists, and tables inside that boundary is left to
 the writer.
 

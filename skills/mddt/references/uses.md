@@ -28,7 +28,7 @@ This skill only describes how records that a project does keep are structured.
   A record's role follows from what its reader does with it, such as checking status, tracing events, or understanding a choice.
 - **Roles not listed here**: Plans, validation logs, handoff notes, and other roles take the dominant types that match their reader's task.
 - **Files and sections**: Several roles may share one file as sections.
-  A role moves to its own file when it grows or when other documents link to it.
+  A role moves to its own file under the same conditions as any topic, as [placing a document](writing.md#placing-a-document) describes.
 - **Links between roles**: A link from one record to evidence in another, such as from a current state to its decision, is a lateral link.
   Its sentence says why the link is there.
 
