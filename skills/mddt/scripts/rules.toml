@@ -63,6 +63,12 @@ group = "structure"
 summary = "list does not start with an introductory paragraph"
 rule = "model.md#lists"
 
+[table-intro]
+severity = "error"
+group = "structure"
+summary = "table does not start with an introductory paragraph"
+rule = "model.md#sections-lists-and-tables"
+
 [list-single]
 severity = "error"
 group = "structure"

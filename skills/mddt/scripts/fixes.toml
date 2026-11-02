@@ -71,6 +71,13 @@ Fix, in order of preference:
 Avoid a filler sentence such as "The following:" that does not say what the list is.
 """
 
+table-intro = """
+Fix, in order of preference:
+1. Add a sentence before the table that says what it compares or lists.
+2. Move the table into its own section so that it is the section's only content and the heading introduces it.
+Avoid a filler sentence that does not say what the table holds.
+"""
+
 list-single = """
 Write the item as a sentence or paragraph.
 """

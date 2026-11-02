@@ -518,10 +518,15 @@ class FileCheck:
             self.check_list_intros(h)
 
     def check_list_intros(self, h: Heading) -> None:
+        """Check that lists and tables start with an introductory paragraph."""
         blocks = meaningful(h.region)
         needs_overview = h.level == 1 or (h.level == 2 and h.is_topic)
         for pos, block in enumerate(blocks):
-            if block.type not in LIST_TYPES:
+            if block.type in LIST_TYPES:
+                code, what = 'list-intro', 'list'
+            elif block.type == 'table':
+                code, what = 'table-intro', 'table'
+            else:
                 continue
             previous = blocks[pos - 1] if pos else None
             if previous is not None and previous.type == 'paragraph':
@@ -529,9 +534,11 @@ class FileCheck:
             if previous is None and needs_overview:
                 continue  # The missing overview is reported for the heading.
             if previous is None and len(blocks) == 1 and h.level >= 2:
-                continue  # The heading introduces a list that is its only content.
+                continue  # The heading introduces a block that is its only content.
             kind = KIND.get(previous.type, previous.type) if previous else 'the heading'
-            self.report('list-intro', start_line(block), f'list follows {kind}')
+            if previous is not None and previous.type == 'table':
+                kind = 'another table' if what == 'table' else 'a table'
+            self.report(code, start_line(block), f'{what} follows {kind}')
 
     def check_lists(self) -> None:
         forms: dict[str, dict[str, list[int]]] = {}

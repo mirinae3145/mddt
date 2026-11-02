@@ -85,6 +85,12 @@ class ListRules(CheckerCase):
         self.assertCodes('# T\n\nOverview.\n\n| a |\n| - |\n| b |\n\n- x\n- y\n', ['list-intro'])
         self.assertCodes('# T\n\nOverview.\n\nThe list:\n\n- x\n- y\n', [])
 
+    def test_table_intro_follows_list_rules(self):
+        table = '| a | b |\n| - | - |\n| 1 | 2 |\n'
+        self.assertCodes(f'# T\n\nOverview.\n\n```\ncode\n```\n\n{table}', ['table-intro'])
+        self.assertCodes(f'# T\n\nOverview.\n\nThe values:\n\n{table}', [])
+        self.assertCodes(f'# T\n\nOverview.\n\n## Values\n\n{table}', [])
+
     def test_sole_list_in_part_needs_no_intro(self):
         self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n  - detail\n  - more\n- y\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\nAfter.\n', ['list-intro'])
