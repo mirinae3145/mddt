@@ -253,6 +253,15 @@ class TreeRules(CheckerCase):
         })
         self.assertEqual(found, [])
 
+    def test_skill_file_outranks_readme_beside_it(self):
+        found = self.tree({
+            'README.md': '# R\n\nOverview.\n',
+            'skills/x/SKILL.md': '# X\n\nSee [guide](references/guide.md).\n',
+            'skills/x/README.md': '# X for people\n\nOverview.\n',
+            'skills/x/references/guide.md': '# Guide\n\nOverview.\n',
+        })
+        self.assertEqual(found, [])
+
     def test_exclude_skips_non_documents(self):
         found = self.tree({
             'README.md': '# R\n\nOverview.\n',

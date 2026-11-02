@@ -22,10 +22,12 @@ Each file relates to topics as follows.
 - **File names identify, titles explain**: A file name is read together with the folder tree, while a title must make sense on its own.
   File names are link targets, so keep them short and stable, and keep the name and the title about the same subject.
 - **Folders follow the tree**: Where a file sits determines its parent document.
-  A folder's index file, `README.md`, `index.md`, or `SKILL.md`, is the parent of the other documents in that folder and its subfolders.
+  A folder's index file is the parent of the other documents in that folder and its subfolders.
+  It is the first of `SKILL.md`, `README.md`, and `index.md` that the folder holds.
   A file `x.md` is the parent of the documents in a companion folder `x/` beside it, so a document gains children without moving.
   A folder with neither belongs to the parent found the same way one level up.
 - **Entry documents**: The root `README.md` and files that tools read by name, such as `SKILL.md` and `AGENTS.md`, are entry documents.
+  So is a `README.md` beside a `SKILL.md`, which introduces the folder to people browsing it.
   They need no parent; every other document, including community files such as `CONTRIBUTING.md`, has one.
 
 ## Headings and promotion

@@ -54,8 +54,9 @@ CONVENTION_FILES = re.compile(r'^changelog(\..*)?$', re.IGNORECASE)
 SECTION_NUMBER = re.compile(r'^(?:(?P<arabic>\d+(?:\.\d+)*)(?P<punct>[.)])?|(?P<alpha>[A-Z])[.)]|(?P<roman>[IVXLC]+)[.)])\s+\S')
 ROMAN = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100}
 
-# A folder's index file is the parent of the folder's other documents.
-INDEX_NAMES = ('readme.md', 'index.md', 'skill.md')
+# A folder's index file is the parent of the folder's other documents; the
+# first name present wins, so a skill's SKILL.md outranks a README beside it.
+INDEX_NAMES = ('skill.md', 'readme.md', 'index.md')
 # Tools read these files by name, so they need no parent document.
 ENTRY_NAMES = {'skill.md', 'agents.md', 'claude.md', 'gemini.md'}
 URL_SCHEME = re.compile(r'^[a-z][a-z0-9+.-]*:', re.IGNORECASE)
@@ -812,6 +813,9 @@ class Tree:
 
     def check_parent(self, path: Path, check: FileCheck, root: Path) -> None:
         if path.name.lower() in ENTRY_NAMES or path == index_file(root):
+            return
+        # A README beside a SKILL.md introduces the folder to people browsing it.
+        if path.name.lower() == 'readme.md' and index_file(path.parent).name.lower() == 'skill.md':
             return
         parent = parent_of(path, root)
         if parent is None:
