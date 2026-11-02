@@ -223,13 +223,12 @@ def item_key(item: SyntaxTreeNode) -> str:
     return ''
 
 
-def is_mechanically_ordered(items: list[SyntaxTreeNode]) -> bool:
-    """True when items are sorted by name or number, in either direction.
+def is_mechanically_ordered(keys: list[str]) -> bool:
+    """True when keys are sorted by name or number, in either direction.
 
-    Such lists can be scanned without understanding their content, so their
-    length is not a structural problem.
+    Lists and headings in such an order can be scanned without understanding
+    their content, so their length is not a structural problem.
     """
-    keys = [item_key(i) for i in items]
     if not all(keys):
         return False
     if all(re.match(r'\d', k) for k in keys):
@@ -363,7 +362,12 @@ class FileCheck:
         for k, h in enumerate(self.headings):
             owner = next((j for j in range(k - 1, -1, -1) if self.headings[j].level < h.level), -1)
             groups.setdefault((owner, h.level), []).append(k)
-        for siblings in groups.values():
+        for (owner, level), siblings in groups.items():
+            keys = [self.headings[k].text for k in siblings]
+            if level > 1 and len(siblings) > MAX_LIST_ITEMS and not is_mechanically_ordered(keys):
+                where = f'"{self.headings[owner].text}"' if owner >= 0 else 'the file'
+                self.report('section-count', self.headings[siblings[MAX_LIST_ITEMS]].node,
+                            f'{where} has {len(siblings)} H{level} sections without mechanical order')
             if len(siblings) < 2:
                 continue
             sizes = {k: self.section_lines(k) for k in siblings}
@@ -560,27 +564,53 @@ class FileCheck:
             first_other = min(line for f, lines in by_form.items() if f != majority for line in lines)
             self.report('name-form-mix', first_other, f'{scope} mixes name forms ({counts})')
 
-    def walk_list(self, node: SyntaxTreeNode, depth: int,
-                  deepest: dict[int, SyntaxTreeNode], forms: dict[str, list[int]]) -> None:
+    def walk_list(self, node: SyntaxTreeNode, depth: int, deepest: dict[int, SyntaxTreeNode],
+                  forms: dict[str, list[int]], named_ancestor: str | None = None) -> None:
         deepest.setdefault(depth, node)
         items = [c for c in node.children if c.type == 'list_item']
         # A single nested item still marks a detail or exception of its parent.
         if len(items) == 1 and depth == 1:
             self.report('list-single', node, 'list has one item')
-        if len(items) > MAX_LIST_ITEMS and not is_mechanically_ordered(items):
+        if len(items) > MAX_LIST_ITEMS and not is_mechanically_ordered([item_key(i) for i in items]):
             self.report('list-length', node, f'{len(items)} items without mechanical order')
         for item in items:
             named = name_of(item)
+            descendant = first_named_descendant(item)
             if named:
                 forms.setdefault(named[0], []).append(start_line(item))
-                descendant = first_named_descendant(item)
                 if descendant:
                     self.report('name-nesting', item,
                                 f'"{named[1]}" has named descendant "{descendant[1]}" '
                                 f'at line {descendant[0]}')
+            self.check_item_block(item, named, descendant, named_ancestor,
+                                  numbered=node.type == 'ordered_list')
             for child in item.children:
                 if child.type in LIST_TYPES:
-                    self.walk_list(child, depth + 1, deepest, forms)
+                    self.walk_list(child, depth + 1, deepest, forms,
+                                   named[1] if named else named_ancestor)
+
+    def check_item_block(self, item: SyntaxTreeNode, named, descendant, ancestor: str | None,
+                         numbered: bool) -> None:
+        """Treat a list item of several sentences as a block that deserves a name.
+
+        Where the name rules forbid a name, because a named item encloses this
+        one or this one encloses named items, blocks are nested inside blocks,
+        which suggests promoting the enclosing item to a heading. A numbered
+        step is labeled by its position, so it needs no name of its own.
+        """
+        if named and descendant:
+            return  # Reported as name-nesting.
+        count = sum(len(self.sentences(c)) for c in item.children if c.type == 'paragraph')
+        if count < 2:
+            return
+        if ancestor:
+            self.report('nested-block', item,
+                        f'item of {count} sentences sits inside named item "{ancestor}"')
+        elif descendant and not named:
+            self.report('nested-block', item,
+                        f'item of {count} sentences holds named item "{descendant[1]}"')
+        elif not named and not numbered:
+            self.report('item-name', item, f'item of {count} sentences has no name')
 
     def section_lines(self, k: int) -> int:
         """Lines from a heading to the next heading of the same or a higher level.

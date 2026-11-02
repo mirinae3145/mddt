@@ -82,6 +82,13 @@ list-single = """
 Write the item as a sentence or paragraph.
 """
 
+section-count = """
+Many sibling sections are hard to scan unless their order is mechanical; keeping them is a valid outcome.
+1. Group related sections under a topic, or move a group to its own file.
+2. Merge sections that do not need their own heading into lists or tables.
+3. Keep them when restructuring would cost more than it helps.
+"""
+
 part-after-topic = """
 A parent's own parts come before its subtopics.
 Fix, in order of preference:
@@ -174,4 +181,15 @@ file-size = """
 Information for structural review; a long file may still be one coherent topic set.
 1. Move topics that are read on their own into files in the companion folder, leaving summaries and links.
 2. Check whether parts of the file belong to another kind or level.
+"""
+
+item-name = """
+Information for structural review.
+An item of several sentences is a block of its own; give it a bold name that says what it is about.
+"""
+
+nested-block = """
+Information for structural review; blocks nested in blocks suggest a missing heading.
+1. Promote the enclosing named item to a heading so that the inner items can carry names.
+2. Shorten the inner item into a single sentence when it is only a detail.
 """

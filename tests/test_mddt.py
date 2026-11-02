@@ -36,6 +36,11 @@ class CheckerCase(unittest.TestCase):
         self.assertIn(result.returncode, (0, 1), result.stderr)
         return [(d['code'], d['line']) for d in json.loads(result.stdout)['diagnostics']]
 
+    def review(self, text):
+        path = self.write('doc.md', text)
+        result = run('--format', 'json', '--review', str(path))
+        return [d['code'] for d in json.loads(result.stdout)['diagnostics'] if d['severity'] == 'info']
+
     def assertCodes(self, text, expected):
         self.assertEqual(sorted(c for c, _ in self.codes(text)), sorted(expected))
 
@@ -125,6 +130,14 @@ class ListRules(CheckerCase):
         self.assertCodes(
             '# T\n\nOverview.\n\nList:\n\n- **Outer**: text\n  - Inner: text\n  - plain\n- **Other**: x\n',
             ['name-nesting', 'name-form-mix'])
+
+    def test_items_of_several_sentences_are_blocks(self):
+        long = 'First sentence.\n  Second sentence.'
+        self.assertEqual(self.review(f'# T\n\nOverview.\n\nList:\n\n- {long}\n- short\n'), ['item-name'])
+        self.assertEqual(self.review(f'# T\n\nOverview.\n\nSteps:\n\n1. {long}\n1. short\n'), [])
+        self.assertEqual(self.review(f'# T\n\nOverview.\n\nList:\n\n- **Name**: {long}\n- **Other**: x\n'), [])
+        nested = f'# T\n\nOverview.\n\nList:\n\n- **Name**: rule.\n  - {long}\n  - short\n- **Other**: x\n'
+        self.assertEqual(self.review(nested), ['nested-block'])
 
     def test_name_forms_are_compared_per_topic(self):
         text = ('# T\n\nOverview.\n\n## Topic A\n\nOverview.\n\n### One\n\nList:\n\n- **a**: x\n- **b**: y\n\n'
@@ -234,6 +247,12 @@ class TreeRules(CheckerCase):
             'b.md': '# B\n\nSee [A](a.md).\n',
         }, '--review')
         self.assertEqual(found, [('README.md', 'link-without-summary')])
+
+    def test_section_count_unless_mechanically_ordered(self):
+        sections = ''.join(f'## {w}\n\nText.\n\n' for w in 'pear apple fig kiwi plum lime date cherry'.split())
+        self.assertEqual(self.tree({'README.md': f'# T\n\nOverview.\n\n{sections}'}), [('README.md', 'section-count')])
+        dated = ''.join(f'## 2026-10-{d:02d}\n\nText.\n\n' for d in range(20, 10, -1))
+        self.assertEqual(self.tree({'README.md': f'# T\n\nOverview.\n\n{dated}'}), [])
 
     def test_sibling_imbalance_and_file_size(self):
         big = ''.join(f'Line {n}.\n\n' for n in range(30))

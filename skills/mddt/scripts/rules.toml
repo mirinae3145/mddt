@@ -75,6 +75,12 @@ group = "structure"
 summary = "list has only one item"
 rule = "model.md#lists"
 
+[section-count]
+severity = "warning"
+group = "structure"
+summary = "more than seven sibling sections without mechanical order"
+rule = "model.md#siblings"
+
 [part-after-topic]
 severity = "warning"
 group = "structure"
@@ -159,3 +165,14 @@ group = "structure"
 summary = "file is long enough to reconsider its division"
 rule = "model.md#files-and-topics"
 
+[item-name]
+severity = "info"
+group = "structure"
+summary = "list item of several sentences has no name"
+rule = "model.md#names"
+
+[nested-block]
+severity = "info"
+group = "structure"
+summary = "list item of several sentences is nested with named items"
+rule = "model.md#names"

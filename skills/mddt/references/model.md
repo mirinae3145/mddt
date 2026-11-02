@@ -99,6 +99,7 @@ The following rules apply to them.
 
 - **Same level of detail**: Siblings have a comparable level of detail. <!-- code: sibling-imbalance -->
   When one sibling grows much deeper or larger than the others, it probably holds content of another level.
+- **Number of sibling sections**: Sibling headings follow the same limit as list items, about seven unless in mechanical order. <!-- code: section-count -->
 - **Divisions**: A sibling set is a division when it claims to cover a whole.
   Decision tables, divisions of a concept into kinds, and introductions that state a count or say "one of the following" make that claim.
   A division uses one criterion and covers the whole without gaps or overlaps.
@@ -142,5 +143,9 @@ Nested items under one parent may play different roles, such as details, conditi
 A name is any lead-in that says what an item is about: a bold term, a short phrase followed by a colon, or link text.
 Only an item without named descendants carries a name, at every heading level. <!-- code: name-nesting -->
 An item whose children need names is promoted as described in [headings and promotion](#headings-and-promotion).
+
+An unnumbered item of several sentences is a block of its own and carries a name where the rule above allows one. <!-- code: item-name, nested-block -->
+Where the rule forbids it, a block sits inside another block, which suggests promoting the enclosing item.
+A numbered step is labeled by its position and needs no name.
 Names within one topic use one form. <!-- code: name-form-mix -->
 In a file with topic H2s, each topic H2 is one scope, and the parent's own parts together form another.
