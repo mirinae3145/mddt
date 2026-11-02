@@ -42,4 +42,5 @@ When checking the repository's own documents, exclude the generated material in 
 ```bash
 uv run skills/mddt/scripts/mddt.py --exclude 'calibration/outputs/*' --exclude 'calibration/briefs/*' --exclude 'calibration/skill/*' .
 ```
+
 Add a test with each new code or behavior change, including a case that must not be reported.
