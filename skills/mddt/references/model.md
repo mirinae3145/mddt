@@ -72,9 +72,10 @@ Documents form a tree through links that follow these rules.
   When a subtopic moves to its own file, its original place keeps that summary and link.
   The summary condenses the child's overview, which remains the canonical version.
   Upward links are needed only when the folder tree does not show where a document belongs.
-- **Groups of peer documents**: Sibling topics in separate files are introduced together in one part.
+- **Groups of peer documents**: Sibling topics that are parallel instances of one subject, such as one page per backend, are introduced together in one part.
   The part has an introductory sentence followed by a list of links with summaries.
 - **Landing pages**: A document that introduces other documents reads as an overview, not as a bare list of links.
+  It may introduce each of its other children in the part where the reader's task needs it.
 - **Anchor targets**: A link to an anchor in another file that expects its target to be read alone points to a topic. <!-- code: anchor-to-part -->
   An anchor to a part only locates content inside a file that the reader reads whole.
 - **Lateral links**: A link to a related topic outside the tree path goes in the sentence where the relation matters.
