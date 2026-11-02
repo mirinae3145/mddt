@@ -17,7 +17,7 @@ Explore before reading, starting from the entry document rather than scanning ev
 
 Read a chosen file whole rather than in fragments.
 A conforming file is one topic or a set of related topics, so its boundary is also the boundary of what is relevant.
-Fragments lose the context needed to interpret them, such as the H1 overview, the parent topic's own parts, and sibling topics.
+Fragments lose the context needed to interpret them, such as the H1 overview, the parent topic's own [parts](terms.md), and sibling topics.
 
 When a file is too large to read at once, divide it at topic boundaries rather than at arbitrary lines.
 Read the H1 overview and the parent's own parts first, then the topic H2s you need.

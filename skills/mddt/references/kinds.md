@@ -1,7 +1,7 @@
 # Document kinds and information types
 
 A topic has one document kind, which says what the reader is doing with it.
-Each block inside the topic, such as a part, an H3 section, a named list item, or a table, carries one information type.
+Each block inside the topic, such as a part, a named list item, or a table, carries one information type.
 The kind tells which types dominate a topic, and the type suggests each block's default form.
 The structural rules that these choices operate within are in the [document model](model.md).
 
@@ -23,8 +23,8 @@ The remaining kinds are reference and explanation, and each kind has dominant in
 
 A rule set, such as a set of agent instructions made of rules, is reference in which principle dominates.
 
-Topic sets have no rule about mixing kinds.
-A set may be divided by kind at any level, or by subject with several kinds below.
+Document sets, the files that a landing page introduces together, have no rule about mixing kinds.
+A document set may be divided by kind at any level, or by subject with several kinds below.
 Each topic still keeps one kind, and each landing page reads as an overview.
 
 Entry documents and landing pages are the exception, because their short parts may differ in kind.

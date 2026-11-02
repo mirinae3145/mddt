@@ -6,7 +6,7 @@ description: >
   substantially editing Markdown documentation, project records, agent
   instructions, or skills; when restructuring documents that have grown; and
   when navigating a set of Markdown documents to find or verify information.
-  Includes a checker for the structural rules.
+  Includes a checker for the model's rules.
 license: CC-BY-4.0 for the instructions and references; MIT for the scripts
 ---
 
@@ -25,6 +25,7 @@ It covers files, headings, sentences, links between documents, sections versus l
 
 [Document kinds and information types](references/kinds.md) decide what a topic contains and which form each block takes by default.
 Read [applying the document model to common uses](references/uses.md) when writing repository documentation, project records, or agent instructions and skills.
+When a term such as part or division is unclear, look it up in the [terms](references/terms.md), which point to where each term is defined.
 
 ## Writing and restructuring
 
@@ -39,7 +40,7 @@ It explains how to choose files from the tree, why to read chosen files whole, a
 
 ## Checking
 
-The checker decides the structural rules a parser can see and flags the ones that need judgment.
+The checker decides the rules a parser can see and flags the ones that need judgment.
 Run it on the Markdown files you created or changed:
 
 ```bash

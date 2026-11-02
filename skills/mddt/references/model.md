@@ -1,6 +1,6 @@
 # Document model
 
-This document describes the structure that a conforming Markdown document has.
+This document describes the properties that a conforming Markdown document has.
 It covers files, headings, paragraphs and sentences, links between documents, sections versus lists and tables, siblings, and lists.
 Writers treat each property as a condition to satisfy, and readers treat it as a guarantee to rely on.
 What a topic contains and which form each block takes by default are described in [document kinds and information types](kinds.md).
@@ -37,6 +37,7 @@ Each H2 plays one of two roles, and a parser can tell them apart by whether the 
 The roles and the movement between them work as follows.
 
 - **Topics and parts**: An H2 with H3 children is a topic; an H2 without them is a part of the file's topic.
+  The H3 sections of a topic are that topic's parts.
   A topic H2 has its own overview paragraph before its first H3. <!-- code: topic-overview -->
 - **Parts come first**: A parent topic's own parts come before its subtopics. <!-- code: part-after-topic -->
   Roles are inferred from H3 children, so a short subtopic without H3 looks like a part, and ordering findings are therefore only warnings.

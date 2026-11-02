@@ -27,7 +27,7 @@ Choices that depend on meaning, such as whether content belongs in a section, li
 Each rule is stated once for writers and once for the checker, and a few documents point to those statements.
 A change to a rule updates these together:
 
-- **Rule text**: the rule in the skill's reference documents, with its code marker.
+- **Rule text**: the rule in the skill's reference documents, with its code marker, and its entry in `references/terms.md` when the rule defines a term.
 - **Checker**: the detection and constants in `mddt.py`, and the code's entries in `rules.toml` and `fixes.toml`.
 - **Summaries**: the overview of `model.md`, which `SKILL.md` and README condense, when what the model covers changes.
 - **Checker reference**: `references/checker.md`, which README, `SKILL.md`, and `--help` point to, when options, file selection, output, or exit statuses change.
