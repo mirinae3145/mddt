@@ -51,6 +51,13 @@ The command accepts these options:
 Changelogs are always skipped.
 The checker covers structure only, so run your repository's own Markdown linter for formatting rules.
 
+## Languages
+
+The checker counts words as whitespace-separated tokens that contain a letter or digit, so one rule covers English words and Korean eojeol.
+Its counts and sentence boundaries have been reviewed with English and Korean documents.
+Sentence boundaries inside a line are recognized after Korean sentence endings and before capitalized Latin words, so other languages may get incomplete `line-sentences` findings.
+Languages written without spaces between words, such as Chinese, Japanese, and Thai, are not measured meaningfully.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how the checker is organized and how to run its tests.

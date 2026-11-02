@@ -257,6 +257,8 @@ def clean_prose(line: str, placeholder: str = '') -> str:
     sentence punctuation, which keeps sentence boundaries around them detectable.
     """
     line = COMMENT.sub(' ', line)
+    # Entities such as &rightarrow; stand for symbols, not words.
+    line = re.sub(r'&(?:[A-Za-z][A-Za-z0-9]*|#\d+|#x[0-9A-Fa-f]+);', ' ', line)
     line = re.sub(r'`[^`]*`', f' {placeholder} ' if placeholder else ' ', line)
     line = re.sub(r'!\[([^\]]*)\]\([^)]*\)', ' ', line)
     # Link text counts as words, but punctuation inside a link never ends a sentence.
@@ -267,6 +269,11 @@ def clean_prose(line: str, placeholder: str = '') -> str:
 
 
 def count_words(text: str) -> int:
+    """Count whitespace-separated tokens that contain a letter or digit.
+
+    The same rule counts English words and Korean eojeol; languages written
+    without spaces between words are not measured meaningfully.
+    """
     return sum(1 for token in text.split() if re.search(r'\w', token))
 
 

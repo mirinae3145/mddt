@@ -149,6 +149,11 @@ class ProseRules(CheckerCase):
         self.assertCodes(f'# T\n\n{words}\n{words}.\n', ['sentence-length'])
         self.assertCodes(f'# T\n\n{words} `a b c d e f g h`\n{words[:-5]}.\n', [])
 
+    def test_words_are_whitespace_tokens_without_entities(self):
+        words = ' '.join(['이름'] * 13)
+        self.assertCodes(f'# T\n\n{words} &rightarrow; {words[:-3]}.\n', [])
+        self.assertCodes(f'# T\n\n{words} &rightarrow; {words}.\n', ['sentence-length'])
+
     def test_hard_wrapped_sentences_end_inside_lines(self):
         words = ' '.join(['word'] * 10)
         self.assertCodes(f'# T\n\n{words}. Next {words}\nand {words}.\n', ['line-sentences'])
