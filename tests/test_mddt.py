@@ -132,6 +132,90 @@ class ListRules(CheckerCase):
             '  - [Spec](u)을 확인했다.\n  - Meet at 10:30 today.\n- **B**: y\n', [])
 
 
+class ProseRules(CheckerCase):
+    def test_paragraph_length_counts_lines(self):
+        five = ''.join(f'Sentence {n}.\n' for n in range(5))
+        self.assertCodes(f'# T\n\n{five}', [])
+        self.assertCodes(f'# T\n\n{five}One more.\n', ['paragraph-length'])
+
+    def test_paragraph_run(self):
+        three = 'One.\n\nTwo.\n\nThree.\n'
+        self.assertCodes(f'# T\n\n{three}', [])
+        self.assertCodes(f'# T\n\n{three}\nFour.\n', ['paragraph-run'])
+        self.assertCodes(f'# T\n\n{three}\nList:\n\n- a\n- b\n\nAfter.\n', ['paragraph-run'])
+
+    def test_sentence_length_spans_line_breaks_but_not_code(self):
+        words = ' '.join(['word'] * 13)
+        self.assertCodes(f'# T\n\n{words}\n{words}.\n', ['sentence-length'])
+        self.assertCodes(f'# T\n\n{words} `a b c d e f g h`\n{words[:-5]}.\n', [])
+
+    def test_hard_wrapped_sentences_end_inside_lines(self):
+        words = ' '.join(['word'] * 10)
+        self.assertCodes(f'# T\n\n{words}. Next {words}\nand {words}.\n', ['line-sentences'])
+
+    def test_line_sentences(self):
+        self.assertCodes('# T\n\nFirst sentence. Second sentence.\n', ['line-sentences'])
+        self.assertCodes('# T\n\n첫 문장이다. 둘째 문장이다.\n', ['line-sentences'])
+        self.assertCodes('# T\n\nUse a tool, e.g. Python, with version 1.2 here.\n', [])
+        self.assertCodes('# T\n\nSee `a.b` and [Spec. One](u) now.\n', [])
+
+
+class TreeRules(CheckerCase):
+    def tree(self, files):
+        for name, text in files.items():
+            path = self.dir / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding='utf-8')
+        result = run('--format', 'json', str(self.dir))
+        data = json.loads(result.stdout)
+        return sorted((Path(d['file']).relative_to(self.dir).as_posix(), d['code'])
+                      for d in data['diagnostics'])
+
+    def test_parent_must_link_to_child(self):
+        found = self.tree({
+            'README.md': '# R\n\nSee [A](a.md).\n',
+            'a.md': '# A\n\nOverview.\n',
+            'b.md': '# B\n\nOverview.\n',
+        })
+        self.assertEqual(found, [('b.md', 'doc-unlinked')])
+
+    def test_companion_folder_and_folder_index(self):
+        found = self.tree({
+            'README.md': '# R\n\nSee [A](a.md) and [docs](docs/).\n',
+            'a.md': '# A\n\nSee [C](a/c.md), [B](b.md).\n',
+            'b.md': '# B\n\nOverview.\n',
+            'a/c.md': '# C\n\nOverview.\n',
+            'a/d.md': '# D\n\nOverview.\n',
+            'docs/README.md': '# Docs\n\nSee [E](sub/e.md).\n',
+            'docs/sub/e.md': '# E\n\nOverview.\n',
+        })
+        self.assertEqual(found, [('a/d.md', 'doc-unlinked'), ('b.md', 'doc-unlinked')])
+
+    def test_entry_documents_need_no_parent(self):
+        found = self.tree({
+            'README.md': '# R\n\nOverview.\n',
+            'skills/x/SKILL.md': '# X\n\nSee [ref](references/r.md).\n',
+            'skills/x/references/r.md': '# Ref\n\nOverview.\n',
+        })
+        self.assertEqual(found, [])
+
+    def test_exclude_skips_non_documents(self):
+        found = self.tree({
+            'README.md': '# R\n\nOverview.\n',
+            'templates/case.md': 'no heading\n',
+        })
+        self.assertEqual(found, [('templates/case.md', 'doc-unlinked'), ('templates/case.md', 'h1-missing')])
+        data = json.loads(run('--format', 'json', '--exclude', 'templates/*', str(self.dir)).stdout)
+        self.assertEqual(data['diagnostics'], [])
+
+    def test_anchor_to_part_in_another_file(self):
+        found = self.tree({
+            'README.md': '# R\n\nSee [part](other.md#part), [topic](other.md#topic), [file](other.md).\n',
+            'other.md': '# O\n\nOverview.\n\n## Part\n\nText.\n\n## Topic\n\nOverview.\n\n### A\n\nX.\n\n### B\n\nY.\n',
+        })
+        self.assertEqual(found, [('README.md', 'anchor-to-part')])
+
+
 class Interface(CheckerCase):
     def test_exit_codes(self):
         ok = self.write('ok.md', '# T\n\nOverview.\n')

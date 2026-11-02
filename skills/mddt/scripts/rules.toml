@@ -98,3 +98,40 @@ severity = "warning"
 group = "structure"
 summary = "list item names mix forms within one topic"
 rule = "model.md#lists"
+
+[doc-unlinked]
+severity = "error"
+group = "structure"
+summary = "parent document does not link to this document"
+rule = "model.md#links-between-documents"
+
+[anchor-to-part]
+severity = "warning"
+group = "structure"
+summary = "link from another file points to a part"
+rule = "model.md#links-between-documents"
+
+[paragraph-length]
+severity = "warning"
+group = "sentence"
+summary = "paragraph has more than five sentences"
+rule = "model.md#paragraphs-and-sentences"
+
+[paragraph-run]
+severity = "warning"
+group = "sentence"
+summary = "four or more paragraphs follow each other without other structure"
+rule = "model.md#paragraphs-and-sentences"
+
+[sentence-length]
+severity = "warning"
+group = "sentence"
+summary = "sentence has more than 25 words"
+rule = "model.md#paragraphs-and-sentences"
+
+[line-sentences]
+severity = "warning"
+group = "sentence"
+summary = "line holds more than one sentence"
+rule = "model.md#paragraphs-and-sentences"
+

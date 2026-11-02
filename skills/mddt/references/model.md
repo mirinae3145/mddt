@@ -47,12 +47,12 @@ The roles and the movement between them work as follows.
 
 Prose follows these rules about lines, paragraphs, and sentences.
 
-- **One sentence per line**: Each sentence of prose starts on its own line, including in list items.
+- **One sentence per line**: Each sentence of prose starts on its own line, including in list items. <!-- code: line-sentences -->
   Later sentences of a list item go on indented continuation lines.
   Tools can then find sentence boundaries at line ends instead of guessing at periods in abbreviations, versions, file names, and URLs.
-- **Paragraph size**: A paragraph has at most five sentences.
+- **Paragraph size**: A paragraph has at most five sentences. <!-- code: paragraph-length, paragraph-run -->
   Four or more paragraphs in a row without a list, table, heading, or code block suggest structure that has not been made visible.
-- **Sentence length**: A sentence has at most 25 words, or 25 eojeol in Korean.
+- **Sentence length**: A sentence has at most 25 words, or 25 eojeol in Korean. <!-- code: sentence-length -->
   A long sentence can usually be split, or holds content that belongs in separate sections.
   A sentence is counted across line breaks until a line ends with sentence punctuation, without code spans, link targets, or URLs.
 - **Condition placement**: A condition that decides whether an instruction applies comes before the instruction, so readers it does not concern can skip it.
@@ -62,14 +62,14 @@ Prose follows these rules about lines, paragraphs, and sentences.
 
 Documents form a tree through links that follow these rules.
 
-- **Downward links**: A parent document links to each of its child documents with a short summary.
+- **Downward links**: A parent document links to each of its child documents with a short summary. <!-- code: doc-unlinked -->
   When a subtopic moves to its own file, its original place keeps that summary and link.
   The summary condenses the child's overview, which remains the canonical version.
   Upward links are needed only when the folder tree does not show where a document belongs.
 - **Groups of peer documents**: Sibling topics in separate files are introduced together in one part.
   The part has an introductory sentence followed by a list of links with summaries.
 - **Landing pages**: A document that introduces other documents reads as an overview, not as a bare list of links.
-- **Anchor targets**: A link to an anchor in another file that expects its target to be read alone points to a topic.
+- **Anchor targets**: A link to an anchor in another file that expects its target to be read alone points to a topic. <!-- code: anchor-to-part -->
   An anchor to a part only locates content inside a file that the reader reads whole.
 - **Lateral links**: A link to a related topic outside the tree path goes in the sentence where the relation matters.
   The sentence shows why the link is there, such as evidence, the canonical location, or further detail.

@@ -17,11 +17,15 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass, field
+import fnmatch
 import json
+import os
 from pathlib import Path
 import re
+import subprocess
 import sys
 import tomllib
+from urllib.parse import unquote
 
 from markdown_it import MarkdownIt
 from markdown_it.tree import SyntaxTreeNode
@@ -44,6 +48,23 @@ HEADING_PUNCTUATION = '.,;:!?。，；：！？'
 COLON_NAME = re.compile(r'^(?P<name>[^:：\n]{1,40}?)[:：](?:\s|$)')
 LINK_NAME_TAIL = re.compile(r'^\s*(?:[:：—–]|-\s)')
 CONVENTION_FILES = re.compile(r'^changelog(\..*)?$', re.IGNORECASE)
+
+# A folder's index file is the parent of the folder's other documents.
+INDEX_NAMES = ('readme.md', 'index.md', 'skill.md')
+# Tools read these files by name, so they need no parent document.
+ENTRY_NAMES = {'skill.md', 'agents.md', 'claude.md', 'gemini.md'}
+URL_SCHEME = re.compile(r'^[a-z][a-z0-9+.-]*:', re.IGNORECASE)
+
+MAX_SENTENCES = 5
+MAX_PARAGRAPH_RUN = 3
+MAX_WORDS = 25
+# Prose keeps one sentence per line, so a sentence ends where a line ends with
+# sentence punctuation; a colon ends the sentence that introduces a list.
+SENTENCE_END = re.compile(r'[.!?。！？:：][\'"”’)\]*_]*$')
+CONTAINER_PREFIX = re.compile(r'^\s*(?:>\s?)*(?:[-*+]\s+|\d+[.)]\s+)?')
+COMMENT = re.compile(r'<!--.*?-->')
+BOUNDARY = re.compile(r'([.!?。！？])([\'"”’)\]*_]*)\s+([\'"“‘(*_]*)(\S)')
+ABBREVIATIONS = {'e.g', 'i.e', 'etc', 'vs', 'cf', 'al', 'fig', 'no', 'dr', 'mr', 'mrs', 'ms', 'st', 'approx'}
 
 KIND = {
     'heading': 'a heading',
@@ -223,10 +244,56 @@ def is_heading_like_emphasis(block: SyntaxTreeNode) -> bool:
     return bool(text) and text[-1] not in HEADING_PUNCTUATION
 
 
+def clean_prose(line: str, placeholder: str = '') -> str:
+    """Remove what does not count as prose: comments, code, link targets, and URLs.
+
+    With a placeholder, code spans become a single token and link text loses its
+    sentence punctuation, which keeps sentence boundaries around them detectable.
+    """
+    line = COMMENT.sub(' ', line)
+    line = re.sub(r'`[^`]*`', f' {placeholder} ' if placeholder else ' ', line)
+    line = re.sub(r'!\[([^\]]*)\]\([^)]*\)', ' ', line)
+    # Link text counts as words, but punctuation inside a link never ends a sentence.
+    line = re.sub(r'\[([^\]]*)\]\([^)]*\)',
+                  lambda m: re.sub(r'[.!?。！？]', '', m.group(1)) if placeholder else m.group(1), line)
+    line = re.sub(r'<https?://[^>]*>|https?://\S+|<[^>]+>', ' ', line)
+    return line
+
+
+def count_words(text: str) -> int:
+    return sum(1 for token in text.split() if re.search(r'\w', token))
+
+
+def sentence_breaks(line: str) -> list[int]:
+    """Return positions inside a line where a new sentence starts.
+
+    A boundary needs sentence punctuation, whitespace, and a new sentence:
+    Korean text ending a sentence, or an uppercase letter after Latin text.
+    Abbreviations and single-letter initials are not boundaries.
+    """
+    breaks = []
+    for m in BOUNDARY.finditer(line):
+        word = re.search(r'(\S+)$', line[:m.start(1)])
+        previous = word.group(1) if word else ''
+        if not previous or previous.lower().rstrip('.') in ABBREVIATIONS:
+            continue
+        if re.fullmatch(r'[A-Z]', previous) or re.search(r'\.\w$', previous):
+            continue
+        hangul = '\uac00' <= previous[-1] <= '\ud7a3'
+        if hangul or m.group(1) in '。！？' or (m.group(4).isupper() and m.group(4).isalpha()):
+            breaks.append(m.start(3))
+    return breaks
+
+
+def github_slug(text: str) -> str:
+    return re.sub(r'[^\w\- ]', '', text.strip().lower()).replace(' ', '-')
+
+
 class FileCheck:
     def __init__(self, path: str, text: str):
         self.path = path
-        self.line_count = len(text.splitlines())
+        self.lines = text.splitlines()
+        self.line_count = len(self.lines)
         self.root = SyntaxTreeNode(parser().parse(text))
         self.blocks = list(self.root.children)
         self.diagnostics: list[Diagnostic] = []
@@ -272,7 +339,87 @@ class FileCheck:
         self.check_headings()
         self.check_regions()
         self.check_lists()
+        self.check_prose()
         return self.diagnostics
+
+    def sentences(self, paragraph: SyntaxTreeNode) -> list[tuple[int, int]]:
+        """Return (first line, word count) for each sentence of a paragraph.
+
+        Sentences are counted across line breaks until a line ends with
+        sentence punctuation, so breaking a long sentence over several lines
+        does not hide its length.
+        """
+        found, words, start = [], 0, None
+        first, last = paragraph.map
+        for no in range(first, last):
+            raw = self.lines[no]
+            raw = CONTAINER_PREFIX.sub('', raw) if no == first else re.sub(r'^\s*(?:>\s?)*', '', raw)
+            text = clean_prose(raw, placeholder='X')
+            # Sentences that end inside a line, as in hard-wrapped text, also end here.
+            pieces = [text[a:b] for a, b in zip([0] + sentence_breaks(text),
+                                                sentence_breaks(text) + [len(text)])]
+            for k, piece in enumerate(pieces):
+                if k:
+                    if start is not None:
+                        found.append((start, words))
+                    words, start = 0, None
+                n = count_words(piece.replace(' X ', ' '))
+                if n and start is None:
+                    start = no + 1
+                words += n
+            if SENTENCE_END.search(COMMENT.sub('', raw).rstrip()) or no == last - 1:
+                if start is not None:
+                    found.append((start, words))
+                words, start = 0, None
+        return found
+
+    def check_prose(self) -> None:
+        for node in self.root.walk():
+            if node.type != 'paragraph' or not node.map or is_badge_paragraph(node):
+                continue
+            first, last = node.map
+            for no in range(first, last):
+                text = clean_prose(CONTAINER_PREFIX.sub('', self.lines[no]), placeholder='X')
+                if sentence_breaks(text):
+                    self.report('line-sentences', no + 1, 'line holds more than one sentence')
+            found = self.sentences(node)
+            if len(found) > MAX_SENTENCES:
+                self.report('paragraph-length', node, f'paragraph has {len(found)} sentences')
+            for line, words in found:
+                if words > MAX_WORDS:
+                    self.report('sentence-length', line, f'sentence has {words} words')
+        run: list[SyntaxTreeNode] = []
+        for block in self.blocks + [None]:
+            if block is not None and block.type in TRANSPARENT:
+                continue
+            if block is not None and block.type == 'paragraph':
+                run.append(block)
+                continue
+            if len(run) > MAX_PARAGRAPH_RUN:
+                self.report('paragraph-run', run[0], f'{len(run)} paragraphs in a row')
+            run = []
+
+    def links(self) -> list[tuple[str, int]]:
+        """Return (target, line) for every link in the file."""
+        found = []
+        line = 1
+        for node in self.root.walk():
+            if not node.is_root and node.map:
+                line = start_line(node)
+            if node.type == 'link':
+                found.append((node.attrs.get('href', ''), line))
+        return found
+
+    def anchors(self) -> dict[str, Heading]:
+        """Map GitHub-style heading anchors, with suffixes for duplicates, to headings."""
+        found: dict[str, Heading] = {}
+        counts: dict[str, int] = {}
+        for h in self.headings:
+            slug = github_slug(h.text)
+            n = counts.get(slug, 0)
+            counts[slug] = n + 1
+            found[f'{slug}-{n}' if n else slug] = h
+        return found
 
     def check_headings(self) -> None:
         h1s = [h for h in self.headings if h.level == 1]
@@ -413,6 +560,113 @@ class FileCheck:
         return lines
 
 
+def index_file(folder: Path, skip: Path | None = None) -> Path | None:
+    try:
+        names = {p.name.lower(): p for p in folder.iterdir() if p.is_file()}
+    except OSError:
+        return None
+    for name in INDEX_NAMES:
+        found = names.get(name)
+        if found and found != skip:
+            return found
+    return None
+
+
+def folder_owner(folder: Path, root: Path) -> Path | None:
+    """Return the document that owns a folder without its own index file.
+
+    A companion file x.md owns the folder x/ beside it; otherwise the owner is
+    the index file of the next folder up, repeated until the root.
+    """
+    while folder != root and root in folder.parents:
+        companion = folder.with_name(folder.name + '.md')
+        if companion.is_file():
+            return companion
+        folder = folder.parent
+        found = index_file(folder)
+        if found:
+            return found
+    return None
+
+
+def parent_of(doc: Path, root: Path) -> Path | None:
+    if index_file(doc.parent) == doc:
+        return folder_owner(doc.parent, root)
+    return index_file(doc.parent, skip=doc) or folder_owner(doc.parent, root)
+
+
+def link_target(source: Path, href: str) -> Path | None:
+    """Resolve a link to a local file path, without following symbolic links."""
+    if not href or href.startswith('#') or URL_SCHEME.match(href):
+        return None
+    path = unquote(href.split('#')[0].split('?')[0])
+    if not path:
+        return None
+    base = Path('/') if path.startswith('/') else source.parent
+    target = Path(os.path.normpath(base / path))
+    if target.is_dir():
+        target = index_file(target) or target
+    return target
+
+
+def find_root(path: Path) -> Path | None:
+    for folder in path.parents:
+        if (folder / '.git').exists():
+            return folder
+    return None
+
+
+class Tree:
+    """Documents around the checked files, for checks that span files."""
+
+    def __init__(self):
+        self.cache: dict[Path, FileCheck | None] = {}
+
+    def load(self, path: Path) -> FileCheck | None:
+        if path not in self.cache:
+            try:
+                self.cache[path] = FileCheck(str(path), path.read_text(encoding='utf-8'))
+            except (OSError, UnicodeDecodeError):
+                self.cache[path] = None
+        return self.cache[path]
+
+    def check(self, path: Path, check: FileCheck, root: Path | None) -> None:
+        self.check_anchors(path, check)
+        if root is not None:
+            self.check_parent(path, check, root)
+
+    def check_anchors(self, path: Path, check: FileCheck) -> None:
+        for href, line in check.links():
+            if '#' not in href:
+                continue
+            target = link_target(path, href)
+            if target is None or target == path or target.suffix.lower() != '.md':
+                continue
+            other = self.load(target)
+            if other is None:
+                continue
+            heading = other.anchors().get(unquote(href.split('#', 1)[1]))
+            if heading and (heading.level >= 3 or (heading.level == 2 and not heading.is_topic)):
+                check.report('anchor-to-part', line,
+                             f'links to part "{heading.text}" in {relative(target, path)}')
+
+    def check_parent(self, path: Path, check: FileCheck, root: Path) -> None:
+        if path.name.lower() in ENTRY_NAMES or path == index_file(root):
+            return
+        parent = parent_of(path, root)
+        if parent is None:
+            return
+        source = self.load(parent)
+        if source is None:
+            return
+        if not any(link_target(parent, href) == path for href, _ in source.links()):
+            check.report('doc-unlinked', 1, f'parent {relative(parent, path)} does not link here')
+
+
+def relative(target: Path, source: Path) -> str:
+    return os.path.relpath(target, source.parent)
+
+
 def first_named_descendant(item: SyntaxTreeNode) -> tuple[int, str] | None:
     for child in item.children:
         if child.type not in LIST_TYPES:
@@ -453,29 +707,63 @@ def region_list_stats(region: list[SyntaxTreeNode]) -> str:
     return text
 
 
-def collect(paths: list[str]) -> tuple[list[Path], list[str]]:
-    """Expand arguments into Markdown files and report skipped files.
+def collect(paths: list[str], excludes: list[str]) -> tuple[list[tuple[Path, Path | None]], list[str]]:
+    """Expand arguments into Markdown files, each with the directory it came from.
 
-    Convention-bound files such as changelogs are skipped even when named
-    explicitly.
+    Convention-bound files such as changelogs and files matching an exclude
+    pattern are skipped even when named explicitly.
     """
     files, skipped = [], []
     for arg in paths:
-        p = Path(arg)
+        p = Path(os.path.abspath(arg))
         if p.is_dir():
-            candidates = sorted(f for f in p.rglob('*.md')
-                                if not any(part.startswith('.') or part == 'node_modules'
-                                           for part in f.relative_to(p).parts[:-1]))
+            candidates, base = markdown_files(p), p
         elif p.is_file():
-            candidates = [p]
+            candidates, base = [p], None
         else:
             raise FileNotFoundError(arg)
         for f in candidates:
-            if CONVENTION_FILES.match(f.name):
-                skipped.append(str(f))
+            rel = f.relative_to(base).as_posix() if base else arg
+            if CONVENTION_FILES.match(f.name) or any(
+                    fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(f.name, pattern)
+                    for pattern in excludes):
+                skipped.append(display(f))
             else:
-                files.append(f)
+                files.append((f, base))
     return files, skipped
+
+
+def markdown_files(folder: Path) -> list[Path]:
+    """List Markdown files under a folder, honoring .gitignore inside a Git repository.
+
+    Hidden folders are skipped, and symbolic links to other trees, such as
+    linked repositories, are not followed.
+    """
+    listed = None
+    if find_root(folder / '_') is not None:
+        result = subprocess.run(['git', '-C', str(folder), 'ls-files', '--cached', '--others',
+                                 '--exclude-standard', '-z', '--', '.'],
+                                capture_output=True, text=True)
+        if result.returncode == 0:
+            listed = {folder / rel for rel in result.stdout.split('\0') if rel}
+    found = []
+    for current, dirs, names in os.walk(folder):
+        dirs[:] = sorted(d for d in dirs if not d.startswith('.') and d != 'node_modules'
+                         and not os.path.islink(os.path.join(current, d)))
+        for name in sorted(names):
+            path = Path(current) / name
+            if name.lower().endswith('.md') and (listed is None or path in listed):
+                found.append(path)
+    return found
+
+
+def display(path: Path) -> str:
+    """Show paths below the working directory relatively, others in full."""
+    try:
+        rel = os.path.relpath(path)
+    except ValueError:
+        return str(path)
+    return str(path) if rel.startswith('..') else rel
 
 
 def sort_key(registry: dict, d: Diagnostic):
@@ -550,33 +838,42 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument('--outline', action='store_true',
                     help='print how each file was interpreted, even without structural findings')
     ap.add_argument('--format', choices=('text', 'json'), default='text')
+    ap.add_argument('--exclude', action='append', default=[], metavar='GLOB',
+                    help='skip files matching GLOB, such as templates or fixtures; repeatable')
+    ap.add_argument('--root', metavar='DIR',
+                    help='top of the document tree; defaults to the Git repository root, '
+                         'then to a directory argument')
     args = ap.parse_args(argv)
 
     registry = load_registry()
     try:
-        files, skipped = collect(args.paths)
+        files, skipped = collect(args.paths, args.exclude)
     except FileNotFoundError as missing:
         print(f'mddt: no such file or directory: {missing}', file=sys.stderr)
         return 2
 
     diagnostics: list[Diagnostic] = []
     outlines: dict[str, list[str]] = {}
-    for f in files:
+    tree = Tree()
+    fixed_root = Path(os.path.abspath(args.root)) if args.root else None
+    for f, base in files:
         try:
             text = f.read_text(encoding='utf-8')
         except (OSError, UnicodeDecodeError) as exc:
             print(f'mddt: cannot read {f}: {exc}', file=sys.stderr)
             return 2
-        check = FileCheck(str(f), text)
+        check = FileCheck(display(f), text)
         found = check.run()
+        tree.check(f, check, fixed_root or find_root(f) or base)
+        found = check.diagnostics
         diagnostics.extend(found)
         structural = any(registry[d.code]['group'] == 'structure' for d in found)
         if args.outline or (structural and args.format == 'text'):
-            outlines[str(f)] = check.outline()
+            outlines[check.path] = check.outline()
 
     if args.format == 'json':
         sys.stdout.write(render_json(registry, diagnostics, outlines,
-                                     [str(f) for f in files], skipped))
+                                     [display(f) for f, _ in files], skipped))
     else:
         sys.stdout.write(render_text(registry, load_fixes(), diagnostics, outlines,
                                      len(files), skipped))

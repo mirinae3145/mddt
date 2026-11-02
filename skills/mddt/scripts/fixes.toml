@@ -110,3 +110,43 @@ name-form-mix = """
 Use one name form within a topic; in new writing, use bold names.
 Keep link items when the list is a navigation list and the mix is deliberate.
 """
+
+doc-unlinked = """
+Fix, in order of preference:
+1. Link to the document from its parent with a short summary of its overview.
+2. If the document belongs under another parent, move it to that parent's folder or companion folder.
+3. If the file is not a document, such as a template, fixture, or artifact, skip it with --exclude.
+Avoid linking it only from a sibling; a lateral link does not place it in the tree.
+"""
+
+anchor-to-part = """
+A link into another file that expects its target to be read alone should point to a topic; keeping the link is a valid outcome.
+1. Promote the target to a topic when readers are meant to read it on its own.
+2. Link to the file instead of the section.
+3. Keep the anchor when it only locates content in a file that the reader reads whole.
+"""
+
+paragraph-length = """
+Keeping the paragraph is a valid outcome when it is one line of argument.
+1. Turn parallel points into a list, or points with shared attributes into a table.
+2. Split the paragraph where its subject shifts.
+"""
+
+paragraph-run = """
+Long runs of paragraphs often hide structure; keeping them is a valid outcome for continuous argument.
+1. Turn parallel points into a list, or points with shared attributes into a table.
+2. Start a section where the subject changes.
+"""
+
+sentence-length = """
+Fix, in order of preference:
+1. Split the sentence.
+2. Check whether its parts belong in separate sections or list items.
+3. Keep it, breaking the line at a clause boundary if that helps reading.
+Avoid breaking lines only to hide the length; a sentence is counted across line breaks.
+"""
+
+line-sentences = """
+Start each sentence on its own line; in a list item, put later sentences on indented continuation lines.
+Keep the line when the period belongs to an abbreviation, a version, or a name.
+"""

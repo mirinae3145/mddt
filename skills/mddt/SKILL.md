@@ -44,8 +44,13 @@ uv run <skill-dir>/scripts/mddt.py FILE...
 
 Without uv, install `markdown-it-py` and `mdit-py-plugins` and run the script with Python 3.11 or later.
 Errors make the command exit with status 1, warnings do not, and each finding comes with fix guidance.
-`--outline` prints how each file was interpreted, which also helps when exploring an unfamiliar document.
 Apply the findings as described in [checking](references/writing.md#checking), which limits them to what the current task changed.
+
+These options adjust a run:
+
+- `--outline` prints how each file was interpreted, which also helps when exploring an unfamiliar document.
+- `--root DIR` sets the top of the document tree outside a Git repository, so that parent documents can be found.
+- `--exclude GLOB` skips Markdown files that are not documents, such as templates and fixtures.
 
 ## Scope
 
