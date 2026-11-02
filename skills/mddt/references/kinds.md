@@ -44,9 +44,9 @@ The first step in choosing a block's form is to start from its type:
 
 | Type | Default form |
 | --- | --- |
-| Procedure | Numbered list with one action per step; a decision table when there are three or more branches |
+| Procedure | Numbered list with one action per step; a decision table when a step branches three or more ways |
 | Process | Numbered list or paragraphs in time order; a stage-by-actor table when several actors take part |
-| Principle | Unordered list with the default rule first and exceptions after it; a decision table for two or more conditions |
+| Principle | Unordered list with the default rule first and exceptions after it; a decision table when two or more conditions combine to decide one outcome |
 | Concept | Definition paragraph saying what the thing is a kind of and what sets it apart, then examples and counterexamples; a list or table that covers every kind exactly once when dividing into kinds |
 | Structure | Named list of parts, or a part-by-function table; a nested list or file tree for a hierarchy |
 | Fact | Table when the facts share attributes, otherwise a named list or sentences |

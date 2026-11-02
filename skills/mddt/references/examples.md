@@ -283,7 +283,7 @@ After:
 The tool keeps one photo from each group:
 
 - **Default**: The photo with the highest resolution is kept.
-  - On a tie, the photo with the oldest modification time is kept.
+  - On a tie, the older one is kept.
 - **Override**: With `--prefer PATH`, photos under `PATH` are kept instead.
   - The default still decides among the photos under `PATH`.
 ```
@@ -293,7 +293,7 @@ A single nested item is fine, because it marks a detail of its parent rather tha
 
 ### Decision tables
 
-Conditional content with two or more conditions becomes a decision table.
+A decision whose outcome depends on two or more combined conditions becomes a decision table.
 
 Before:
 

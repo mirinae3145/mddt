@@ -93,7 +93,8 @@ The following criteria adjust that default.
 - **List**: Use a list for short, parallel items that are compared side by side.
 - **Table**: Use a table when items share attributes.
   A table starts with an introductory sentence under the same rules as a list. <!-- code: table-intro -->
-- **Decision table**: Use a decision table for conditional content with two or more conditions or three or more outcomes.
+- **Decision table**: Use a decision table for one decision whose outcome depends on two or more combined conditions, or that has three or more outcomes.
+  A default rule with nested exceptions and a set of independent rules stay lists.
   Put the condition columns on the left in the order they are decided, and the result column on the right.
   Mark a condition that no longer matters with a dash, cover every combination exactly once, and give each row one result.
 
