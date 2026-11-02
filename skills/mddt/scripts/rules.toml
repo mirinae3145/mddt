@@ -1,0 +1,100 @@
+# Detection registry for mddt.py.
+# Codes are permanent identifiers; severity may change without renaming a code.
+# `rule` is a path under the skill's references/ directory.
+# Fix guidance for each code lives in fixes/<code>.md.
+
+[h1-missing]
+severity = "error"
+group = "structure"
+summary = "file has no level-1 heading"
+rule = "model.md#files-and-topics"
+
+[h1-multiple]
+severity = "error"
+group = "structure"
+summary = "file has more than one level-1 heading"
+rule = "model.md#files-and-topics"
+
+[h1-overview]
+severity = "error"
+group = "structure"
+summary = "level-1 heading lacks an overview paragraph"
+rule = "model.md#files-and-topics"
+
+[heading-skip]
+severity = "error"
+group = "structure"
+summary = "heading level is skipped"
+rule = "model.md#headings-and-promotion"
+
+[heading-depth]
+severity = "error"
+group = "structure"
+summary = "heading is deeper than H3"
+rule = "model.md#files-and-topics"
+
+[topic-overview]
+severity = "error"
+group = "structure"
+summary = "topic H2 lacks an overview paragraph"
+rule = "model.md#headings-and-promotion"
+
+[name-nesting]
+severity = "error"
+group = "structure"
+summary = "named list item has a named descendant"
+rule = "model.md#lists"
+
+[bold-heading]
+severity = "error"
+group = "structure"
+summary = "emphasized paragraph is used as a heading"
+rule = "model.md#lists"
+
+[list-depth-4]
+severity = "error"
+group = "structure"
+summary = "list is nested four or more levels deep"
+rule = "model.md#lists"
+
+[list-intro]
+severity = "error"
+group = "structure"
+summary = "list does not start with an introductory paragraph"
+rule = "model.md#lists"
+
+[list-single]
+severity = "error"
+group = "structure"
+summary = "list has only one item"
+rule = "model.md#lists"
+
+[part-after-topic]
+severity = "warning"
+group = "structure"
+summary = "part H2 follows a topic H2"
+rule = "model.md#headings-and-promotion"
+
+[topic-single-child]
+severity = "warning"
+group = "structure"
+summary = "topic H2 has only one H3"
+rule = "model.md#headings-and-promotion"
+
+[list-depth-3]
+severity = "warning"
+group = "structure"
+summary = "list is nested three levels deep"
+rule = "model.md#lists"
+
+[list-length]
+severity = "warning"
+group = "structure"
+summary = "list has more than seven items without mechanical order"
+rule = "model.md#lists"
+
+[name-form-mix]
+severity = "warning"
+group = "structure"
+summary = "list item names mix forms within one topic"
+rule = "model.md#lists"

@@ -1,0 +1,181 @@
+"""Behavioral checks through the checker's command-line interface."""
+import json
+from pathlib import Path
+import subprocess
+import tempfile
+import tomllib
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS = ROOT / 'skills/mddt/scripts'
+SCRIPT = SCRIPTS / 'mddt.py'
+
+
+def run(*args, cwd=None):
+    return subprocess.run(['uv', 'run', '--quiet', str(SCRIPT), *args],
+                          capture_output=True, text=True, cwd=cwd)
+
+
+class CheckerCase(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def write(self, name, text):
+        path = self.dir / name
+        path.write_text(text, encoding='utf-8')
+        return path
+
+    def codes(self, text, name='doc.md'):
+        path = self.write(name, text)
+        result = run('--format', 'json', str(path))
+        self.assertIn(result.returncode, (0, 1), result.stderr)
+        return [(d['code'], d['line']) for d in json.loads(result.stdout)['diagnostics']]
+
+    def assertCodes(self, text, expected):
+        self.assertEqual(sorted(c for c, _ in self.codes(text)), sorted(expected))
+
+
+class FileAndHeadingRules(CheckerCase):
+    def test_conforming_topic_set_has_no_findings(self):
+        self.assertCodes(
+            '# Title\n\nOverview.\n\n## Part\n\nText.\n\n'
+            '## Topic\n\nTopic overview.\n\n### One\n\nA.\n\n### Two\n\nB.\n', [])
+
+    def test_missing_and_multiple_h1(self):
+        self.assertCodes('## Only part\n\nText.\n', ['h1-missing'])
+        self.assertCodes('# A\n\nOverview.\n\n# B\n\nOverview.\n', ['h1-multiple'])
+
+    def test_h1_overview_ignores_badges_and_comments(self):
+        self.assertCodes('# T\n\n[![b](x.svg)](y)\n\n<!-- note -->\n\nOverview.\n', [])
+        self.assertCodes('# T\n\n[![b](x.svg)](y)\n\n## Part\n\nText.\n', ['h1-overview'])
+        self.assertCodes('# T\n\n```\ncode\n```\n', ['h1-overview'])
+
+    def test_heading_skip_and_depth(self):
+        self.assertCodes('# T\n\nOverview.\n\n### Deep\n\nText.\n', ['heading-skip'])
+        self.assertCodes(
+            '# T\n\nOverview.\n\n## Topic\n\nOverview.\n\n### A\n\nX.\n\n#### B\n\nY.\n\n### C\n\nZ.\n',
+            ['heading-depth'])
+
+    def test_topic_overview(self):
+        self.assertCodes(
+            '# T\n\nOverview.\n\n## Topic\n\n### A\n\nX.\n\n### B\n\nY.\n', ['topic-overview'])
+
+    def test_part_after_topic_is_reported_once_per_run(self):
+        found = self.codes(
+            '# T\n\nOverview.\n\n## Topic\n\nOverview.\n\n### A\n\nX.\n\n### B\n\nY.\n\n'
+            '## Late one\n\nText.\n\n## Late two\n\nText.\n')
+        self.assertEqual(found, [('part-after-topic', 17)])
+
+    def test_topic_single_child(self):
+        self.assertCodes(
+            '# T\n\nOverview.\n\n## Topic\n\nOverview.\n\n### Only\n\nX.\n', ['topic-single-child'])
+
+    def test_bold_paragraph_used_as_heading(self):
+        self.assertCodes('# T\n\nOverview.\n\n**Pseudo heading**\n\nText.\n', ['bold-heading'])
+        self.assertCodes('# T\n\nOverview.\n\n**A bold sentence.**\n\nText.\n', [])
+
+
+class ListRules(CheckerCase):
+    def test_list_intro_requires_paragraph(self):
+        self.assertCodes('# T\n\nOverview.\n\n| a |\n| - |\n| b |\n\n- x\n- y\n', ['list-intro'])
+        self.assertCodes('# T\n\nOverview.\n\nThe list:\n\n- x\n- y\n', [])
+
+    def test_sole_list_in_part_needs_no_intro(self):
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n  - detail\n  - more\n- y\n', [])
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\nAfter.\n', ['list-intro'])
+
+    def test_list_right_after_h1_is_an_overview_problem_only(self):
+        self.assertCodes('# T\n\n- x\n- y\n', ['h1-overview'])
+
+    def test_list_depth(self):
+        three = '# T\n\nOverview.\n\nList:\n\n- a\n  - b\n    - c\n    - d\n  - e\n- f\n'
+        self.assertCodes(three, ['list-depth-3'])
+        four = '# T\n\nOverview.\n\nList:\n\n- a\n  - b\n    - c\n      - d\n      - e\n    - f\n  - g\n- h\n'
+        self.assertCodes(four, ['list-depth-4'])
+
+    def test_single_item_list(self):
+        self.assertCodes('# T\n\nOverview.\n\nList:\n\n- only\n', ['list-single'])
+
+    def test_single_nested_item_marks_a_detail(self):
+        self.assertCodes('# T\n\nOverview.\n\nList:\n\n- a\n  - detail of a\n- b\n', [])
+
+    def test_long_list_unless_mechanically_ordered(self):
+        unordered = '\n'.join(f'- {w}' for w in 'pear apple fig kiwi plum lime date cherry'.split())
+        self.assertCodes(f'# T\n\nOverview.\n\nFruit:\n\n{unordered}\n', ['list-length'])
+        ordered = '\n'.join(f'- {w}' for w in sorted('pear apple fig kiwi plum lime date cherry'.split()))
+        self.assertCodes(f'# T\n\nOverview.\n\nFruit:\n\n{ordered}\n', [])
+        dates = '\n'.join(f'- 2026-10-{d:02d}: entry' for d in range(20, 10, -1))
+        self.assertCodes(f'# T\n\nOverview.\n\nLog:\n\n{dates}\n', [])
+
+    def test_named_item_with_named_descendant(self):
+        self.assertCodes(
+            '# T\n\nOverview.\n\nList:\n\n- **Outer**: text\n  - **Inner**: text\n  - plain\n- **Other**: x\n',
+            ['name-nesting'])
+        self.assertCodes(
+            '# T\n\nOverview.\n\nList:\n\n- **Outer**: text\n  - Inner: text\n  - plain\n- **Other**: x\n',
+            ['name-nesting', 'name-form-mix'])
+
+    def test_name_forms_are_compared_per_topic(self):
+        text = ('# T\n\nOverview.\n\n## Topic A\n\nOverview.\n\n### One\n\nList:\n\n- **a**: x\n- **b**: y\n\n'
+                '### Two\n\nList:\n\n- c: x\n- d: y\n\n'
+                '## Topic B\n\nOverview.\n\n### Three\n\nList:\n\n- e: x\n- f: y\n\n### Four\n\nText.\n')
+        self.assertEqual(self.codes(text), [('name-form-mix', 20)])
+
+    def test_prose_starting_with_link_or_time_is_not_a_name(self):
+        self.assertCodes(
+            '# T\n\nOverview.\n\nList:\n\n- **A**: x\n'
+            '  - [Spec](u)을 확인했다.\n  - Meet at 10:30 today.\n- **B**: y\n', [])
+
+
+class Interface(CheckerCase):
+    def test_exit_codes(self):
+        ok = self.write('ok.md', '# T\n\nOverview.\n')
+        warn = self.write('warn.md', '# T\n\nOverview.\n\nList:\n\n- a\n  - b\n    - c\n    - d\n  - e\n- f\n')
+        bad = self.write('bad.md', '# T\n')
+        self.assertEqual(run(str(ok)).returncode, 0)
+        self.assertEqual(run(str(warn)).returncode, 0)
+        self.assertEqual(run(str(bad)).returncode, 1)
+        self.assertEqual(run(str(self.dir / 'missing.md')).returncode, 2)
+
+    def test_text_output_groups_locations_and_prints_fix_once(self):
+        a = self.write('a.md', '# A\n')
+        b = self.write('b.md', '# B\n')
+        out = run(str(a), str(b)).stdout
+        self.assertEqual(out.count('error h1-overview:'), 1)
+        self.assertEqual(out.count('  fix:'), 1)
+        self.assertIn(f'{a}:1', out)
+        self.assertIn(f'{b}:1', out)
+
+    def test_outline_is_automatic_only_with_structural_findings(self):
+        ok = self.write('ok.md', '# T\n\nOverview.\n\n## Part\n\nText.\n')
+        self.assertNotIn('outline', run(str(ok)).stdout)
+        self.assertIn('H2 Part  [part]', run('--outline', str(ok)).stdout)
+        bad = self.write('bad.md', '# T\n')
+        self.assertIn('outline', run(str(bad)).stdout)
+
+    def test_directories_skip_changelogs_and_hidden_folders(self):
+        self.write('CHANGELOG.md', '## 1.0\n\n- one\n')
+        (self.dir / '.hidden').mkdir()
+        self.write('.hidden/x.md', '## no h1\n')
+        self.write('doc.md', '# T\n\nOverview.\n')
+        data = json.loads(run('--format', 'json', str(self.dir)).stdout)
+        self.assertEqual([Path(f).name for f in data['files']], ['doc.md'])
+        self.assertEqual([Path(f).name for f in data['skipped']], ['CHANGELOG.md'])
+
+
+class Registry(unittest.TestCase):
+    def test_every_code_has_fix_guidance_and_vice_versa(self):
+        with (SCRIPTS / 'rules.toml').open('rb') as f:
+            codes = list(tomllib.load(f))
+        with (SCRIPTS / 'fixes.toml').open('rb') as f:
+            fixes = tomllib.load(f)
+        self.assertEqual(codes, list(fixes))
+        self.assertTrue(all(isinstance(text, str) and text.strip() for text in fixes.values()))
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -1,0 +1,112 @@
+# Fix guidance printed with each code's findings.
+# Kept in one file so that related codes can share consistent wording and option order.
+# Keys match the codes in rules.toml.
+
+h1-missing = """
+Add one level-1 heading at the top that names the document, so the title can be understood without the file path.
+Avoid promoting a section heading to H1 without adjusting the levels below it.
+"""
+
+h1-multiple = """
+Fix, in order of preference:
+1. If the file holds several documents, split it into one file per H1 and link the files from a parent document.
+2. Otherwise demote the extra H1 headings to H2 and adjust the levels below them.
+"""
+
+h1-overview = """
+Write an overview paragraph right after the H1 that says what the document is and what it covers, so a reader arriving from anywhere can decide whether to read on.
+Badge-only paragraphs do not count as an overview.
+Avoid repeating the title, or moving the first section's opening sentence up as a stand-in.
+"""
+
+heading-skip = """
+Fix, in order of preference:
+1. Insert the missing intermediate heading if the content has that grouping.
+2. Otherwise raise the heading to the level right below its parent.
+"""
+
+heading-depth = """
+Fix, in order of preference:
+1. Move the H3 section that contains the deeper headings into its own file, leave a summary and a link in its original place, and rebuild the deeper headings as that file's H2 and H3.
+2. If the deeper parts are short, remove their headings and write them as named list items.
+Avoid:
+- Bold paragraphs used as headings.
+- Raising the deeper headings to H3 so that the hierarchy is flattened.
+"""
+
+topic-overview = """
+Fix, in order of preference:
+1. Write an overview paragraph between the H2 and its first H3.
+2. If the H3 headings are not needed, remove them so that the H2 becomes a part.
+Avoid moving the first H3's opening text up as a stand-in.
+"""
+
+name-nesting = """
+Fix, in order of preference:
+1. Promote the outer name to a heading so that the named children become its content.
+2. Remove the names from the inner items.
+3. Remove the outer name and turn it into an introductory sentence.
+Avoid:
+- Removing only the bold while keeping a "Name:" form, which is still a name.
+- Merging the children into one long sentence.
+"""
+
+bold-heading = """
+Turn it into a real heading (H3 at most), a named list item, or a plain sentence.
+Avoid creating an H4 to keep it as a heading.
+"""
+
+list-depth-4 = """
+Fix, in order of preference:
+1. Fold the deepest level into its parent item's sentence.
+2. Promote an upper level to a heading.
+3. Split the list into separate lists, each with its own introduction.
+Avoid cramming several items into one long sentence.
+"""
+
+list-intro = """
+Fix, in order of preference:
+1. Add a sentence before the list that says what the list contains.
+2. Move the list into its own section so that it is the section's only content and the heading introduces it.
+Avoid a filler sentence such as "The following:" that does not say what the list is.
+"""
+
+list-single = """
+Write the item as a sentence or paragraph.
+"""
+
+part-after-topic = """
+A parent's own parts come before its subtopics.
+Fix, in order of preference:
+1. Move the part before the topics.
+2. Keep it when it is really a short subtopic that the checker reads as a part because it has no H3.
+"""
+
+topic-single-child = """
+Fix, in order of preference:
+1. Remove the H3 heading so that the H2 becomes a part, when the single H3 does not divide the topic.
+2. Keep it when other documents link to the H3.
+"""
+
+list-depth-3 = """
+Reconsider whether the third level is needed; keeping it is a valid outcome.
+1. Fold the deepest level into its parent item's sentence.
+2. Promote an upper level to a heading.
+3. Split the list.
+4. Keep it when all three levels carry meaning.
+Avoid cramming items into one long sentence to silence the warning.
+"""
+
+list-length = """
+Long lists are hard to scan unless their order is mechanical; keeping the list is a valid outcome.
+1. Group items by role into sublists, noting that this adds a nesting level.
+2. Turn the list into a table if the items share attributes.
+3. Promote groups to headings.
+4. Sort the items alphabetically or numerically when readers look them up by name.
+5. Keep it.
+"""
+
+name-form-mix = """
+Use one name form within a topic; in new writing, use bold names.
+Keep link items when the list is a navigation list and the mix is deliberate.
+"""
