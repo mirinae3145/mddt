@@ -410,6 +410,28 @@ class Registry(unittest.TestCase):
             self.assertEqual(enclosing[code][0], name, code)
             self.assertIn(anchor, enclosing[code][1], code)
 
+    def test_stated_limits_match_the_checker(self):
+        source = (SCRIPTS / 'mddt.py').read_text(encoding='utf-8')
+        limit = {name: int(value) for name, value in re.findall(r'^(MAX_\w+) = (\d+)$', source, re.M)}
+        model = (SKILL / 'references' / 'model.md').read_text(encoding='utf-8')
+        with (SCRIPTS / 'rules.toml').open('rb') as f:
+            summary = {code: entry['summary'] for code, entry in tomllib.load(f).items()}
+        word = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+        sentences, run_after = word[limit['MAX_SENTENCES']], word[limit['MAX_PARAGRAPH_RUN'] + 1]
+        items, words = word[limit['MAX_LIST_ITEMS']], limit['MAX_WORDS']
+        for text, phrase in [
+            (model, f'at most {sentences} sentences'),
+            (summary['paragraph-length'], f'more than {sentences} sentences'),
+            (model, f'{run_after.capitalize()} or more paragraphs in a row'),
+            (summary['paragraph-run'], f'{run_after} or more paragraphs'),
+            (model, f'at most {words} words'),
+            (summary['sentence-length'], f'more than {words} words'),
+            (model, f'about {items} items'),
+            (summary['list-length'], f'more than {items} items'),
+            (summary['section-count'], f'more than {items} sibling sections'),
+        ]:
+            self.assertIn(phrase, text)
+
     def test_example_results_follow_the_model(self):
         # The "After" side of each example must itself conform; snippets are
         # fragments, so codes about whole files and parents do not apply.

@@ -68,7 +68,7 @@ Languages written without spaces between words, such as Chinese, Japanese, and T
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how the checker is organized and how to run its tests.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how the checker is organized, what to update when a rule changes, how files are licensed, and how to run its tests.
 
 ## License
 
