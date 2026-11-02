@@ -58,9 +58,9 @@ Prose follows these rules about lines, paragraphs, and sentences.
   Tools can then find sentence boundaries at line ends instead of guessing at periods in abbreviations, versions, file names, and URLs.
 - **Paragraph size**: A paragraph has at most five sentences. <!-- code: paragraph-length, paragraph-run -->
   Four or more paragraphs in a row without a list, table, heading, or code block suggest structure that has not been made visible.
-- **Sentence length**: A sentence has at most 25 words, counted as whitespace-separated tokens. <!-- code: sentence-length -->
+- **Sentence length**: A sentence has at most 25 words, counted as whitespace-separated tokens that contain a letter or digit. <!-- code: sentence-length -->
   A long sentence can usually be split, or holds content that belongs in separate sections.
-  A sentence is counted across line breaks until a line ends with sentence punctuation, without code spans, link targets, or URLs.
+  Languages written without spaces between words are not measured.
 - **Condition placement**: A condition that decides whether an instruction applies comes before the instruction, so readers it does not concern can skip it.
   An exception to a rule that almost always applies comes after the rule.
 

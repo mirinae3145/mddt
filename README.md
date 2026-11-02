@@ -54,6 +54,7 @@ Codes and their severities are listed in [`rules.toml`](skills/mddt/scripts/rule
 `--outline` prints how each file was interpreted, and files with structural findings get it automatically.
 `--review` adds review information and prints the outline of every file.
 Run the checker with `--help` for its other options, the files a directory run checks, and its exit statuses.
+Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes.
 The checker covers structure only, so run your repository's own Markdown linter for formatting rules.
 
 ## Limits
@@ -68,9 +69,9 @@ An agent reads the reference documents, plans each document's place in the tree,
 These steps take more tokens and time than a direct edit.
 
 The checker counts words as whitespace-separated tokens that contain a letter or digit, so one rule covers English words and Korean eojeol.
-Sentence boundaries were reviewed with English and Korean documents, and the sentence length threshold with English documents written to the model, as described in [calibration](calibration/README.md).
+Sentence boundaries were reviewed with English and Korean documents, and the sentence length threshold with English documents written to the model.
 Korean sentences written to the same model contain fewer words, so the threshold rarely applies to them.
-Sentence boundaries inside a line are recognized after Korean sentence endings and before capitalized Latin words, so other languages may get incomplete `line-sentences` findings.
+Sentence boundaries inside a line are recognized after Korean sentence endings and full-width stops and before capital letters, so other languages may get incomplete `line-sentences` findings.
 Languages written without spaces between words, such as Chinese, Japanese, and Thai, are not measured meaningfully.
 
 ## Contributing

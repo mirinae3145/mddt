@@ -168,12 +168,14 @@ Fix, in order of preference:
 1. Split the sentence.
 2. Check whether its parts belong in separate sections or list items.
 3. Keep it, breaking the line at a clause boundary if that helps reading.
-Avoid breaking lines only to hide the length; a sentence is counted across line breaks.
+Avoid breaking lines only to hide the length.
+A sentence is counted across line breaks until a line ends with sentence punctuation or a colon, and code spans, link targets, and URLs are not counted.
 """
 
 line-sentences = """
 Start each sentence on its own line; in a list item, put later sentences on indented continuation lines.
 Keep the line when the period belongs to an abbreviation, a version, or a name.
+Within a line, a new sentence is recognized after sentence punctuation and a space, when Korean text ends the sentence, a full-width stop is used, or a capital letter follows.
 """
 
 link-without-summary = """
