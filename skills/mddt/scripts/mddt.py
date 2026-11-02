@@ -397,7 +397,9 @@ class FileCheck:
                 where = f'"{self.headings[owner].text}"' if owner >= 0 else 'the file'
                 self.report('section-count', self.headings[siblings[MAX_LIST_ITEMS]].node,
                             f'{where} has {len(siblings)} H{level} sections without mechanical order')
-            if len(siblings) < 2:
+            # With two siblings the other's size is the whole comparison, which
+            # makes a main section next to a short note look unbalanced.
+            if len(siblings) < 3:
                 continue
             sizes = {k: self.section_lines(k) for k in siblings}
             for k, size in sizes.items():

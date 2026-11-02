@@ -278,6 +278,8 @@ class TreeRules(CheckerCase):
         text = f'# T\n\nOverview.\n\n## A\n\nShort.\n\n## B\n\n{big}## C\n\nShort.\n'
         found = self.tree({'README.md': text}, '--review')
         self.assertIn(('README.md', 'sibling-imbalance'), found)
+        pair = f'# T\n\nOverview.\n\n## A\n\nShort.\n\n## B\n\n{big}'
+        self.assertNotIn(('README.md', 'sibling-imbalance'), self.tree({'README.md': pair}, '--review'))
         long = '# T\n\nOverview.\n\n' + ''.join(f'- item {n}\n' for n in range(400))
         found = self.tree({'README.md': long}, '--review')
         self.assertIn(('README.md', 'file-size'), found)
