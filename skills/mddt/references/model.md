@@ -108,6 +108,9 @@ The following rules apply to them.
   A division uses one criterion and covers the whole without gaps or overlaps.
 - **Other sets**: Sets that do not claim to cover a whole need neither one criterion nor complete coverage.
   Examples, notes, reasons, procedure steps, and rule collections are usually such sets.
+- **Claims only where needed**: A set that does cover a whole still makes the claim only when the reader relies on its completeness.
+  A reader relies on it when choosing among all the options or checking that nothing is missing.
+  Otherwise the introduction states no count and no completeness, because such a claim has to be kept true whenever the set changes.
 - **No false claims**: When a set cannot cover the whole, drop the claim instead of adding a catch-all item.
   Introduce the set with words such as "for example" or "includes", so it is no longer a division.
 - **Children answer the parent**: A nested item answers a question that its parent raises, such as how, when, why, or what is excepted.
