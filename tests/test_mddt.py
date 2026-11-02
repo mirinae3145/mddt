@@ -68,6 +68,13 @@ class FileAndHeadingRules(CheckerCase):
             '# T\n\nOverview.\n\n## Topic\n\nOverview.\n\n### A\n\nX.\n\n#### B\n\nY.\n\n### C\n\nZ.\n',
             ['heading-depth'])
 
+    def test_section_numbers_in_sequence(self):
+        self.assertCodes('# T\n\nOverview.\n\n## 1. Start\n\nA.\n\n## 2. Next\n\nB.\n', ['heading-number'])
+        self.assertCodes('# T\n\nOverview.\n\n## A. Start\n\nA.\n\n## B. Next\n\nB.\n', ['heading-number'])
+        self.assertCodes('# T\n\nOverview.\n\n## 2.0 migration\n\nA.\n\n## 3.0 migration\n\nB.\n', [])
+        self.assertCodes('# T\n\nOverview.\n\n## 2026-10-30 review\n\nA.\n\n## 2026-10-31 review\n\nB.\n', [])
+        self.assertCodes('# T\n\nOverview.\n\n## 3 things to know\n\nA.\n\n## Other\n\nB.\n', [])
+
     def test_topic_overview(self):
         self.assertCodes(
             '# T\n\nOverview.\n\n## Topic\n\n### A\n\nX.\n\n### B\n\nY.\n', ['topic-overview'])

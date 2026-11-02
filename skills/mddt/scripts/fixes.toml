@@ -27,6 +27,12 @@ Fix, in order of preference:
 2. Otherwise raise the heading to the level right below its parent.
 """
 
+heading-number = """
+Remove the section numbers and let heading levels and titles carry the hierarchy.
+Update anchors and links that contained the numbers.
+Keep numbers that belong to the subject, such as versions, dates, and identifiers.
+"""
+
 heading-depth = """
 Fix, in order of preference:
 1. Move the H3 section that contains the deeper headings into its own file, leave a summary and a link in its original place, and rebuild the deeper headings as that file's H2 and H3.

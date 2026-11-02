@@ -29,6 +29,12 @@ group = "structure"
 summary = "heading level is skipped"
 rule = "model.md#headings-and-promotion"
 
+[heading-number]
+severity = "error"
+group = "structure"
+summary = "sibling headings carry section numbers"
+rule = "model.md#headings-and-promotion"
+
 [heading-depth]
 severity = "error"
 group = "structure"

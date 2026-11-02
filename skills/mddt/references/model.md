@@ -37,6 +37,8 @@ The roles and the movement between them work as follows.
 - **Parts come first**: A parent topic's own parts come before its subtopics. <!-- code: part-after-topic -->
   Roles are inferred from H3 children, so a short subtopic without H3 looks like a part, and ordering findings are therefore only warnings.
 - **No skipped levels**: A heading is at most one level below the heading before it. <!-- code: heading-skip -->
+- **No section numbers**: Headings carry no section numbers, because levels and titles carry the hierarchy and numbers break when sections move. <!-- code: heading-number -->
+  Numbers that belong to the subject, such as versions, dates, and identifiers, stay.
 - **Emphasis is not a heading**: A paragraph consisting only of bold or italic text does not stand in for a heading. <!-- code: bold-heading -->
 - **Promotion**: A name that would need named children is promoted instead.
   The ladder runs from a leading name in a list item to a heading, then a topic, then a file.
