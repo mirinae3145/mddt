@@ -57,7 +57,7 @@ rule = "model.md#lists"
 severity = "error"
 group = "structure"
 summary = "emphasized paragraph is used as a heading"
-rule = "model.md#lists"
+rule = "model.md#headings-and-promotion"
 
 [list-depth-4]
 severity = "error"

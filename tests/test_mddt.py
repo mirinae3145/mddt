@@ -359,14 +359,25 @@ class Registry(unittest.TestCase):
                 marked.update(code.strip() for code in group.split(','))
         self.assertEqual(codes, marked)
 
-    def test_registry_rule_locations_exist(self):
+    def test_registry_rule_locations_hold_their_markers(self):
         with (SCRIPTS / 'rules.toml').open('rb') as f:
             registry = tomllib.load(f)
+        enclosing = {}
+        for doc in skill_docs():
+            stack, in_fence = [], False
+            for line in doc.read_text(encoding='utf-8').splitlines():
+                if line.startswith('```'):
+                    in_fence = not in_fence
+                elif not in_fence and (m := re.match(r'(#{1,6}) ', line)):
+                    level = len(m.group(1))
+                    stack = [s for s in stack if s[0] < level] + [(level, slug(line.lstrip('#')))]
+                for group in CODE_COMMENT.findall(line):
+                    for code in group.split(','):
+                        enclosing[code.strip()] = (doc.name, {s[1] for s in stack})
         for code, entry in registry.items():
             name, _, anchor = entry['rule'].partition('#')
-            doc = SKILL / 'references' / name
-            self.assertTrue(doc.is_file(), code)
-            self.assertIn(anchor, anchors(doc), code)
+            self.assertEqual(enclosing[code][0], name, code)
+            self.assertIn(anchor, enclosing[code][1], code)
 
     def test_example_results_follow_the_model(self):
         # The "After" side of each example must itself conform; snippets are
