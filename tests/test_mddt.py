@@ -158,6 +158,11 @@ class ListRules(CheckerCase):
         self.assertCodes(
             '# T\n\nOverview.\n\nList:\n\n- **A**: x\n- Install the tool with pipx:\n\n  ```sh\n  pipx install t\n  ```\n- **B**: y\n', [])
 
+    def test_link_names_do_not_count_as_a_form(self):
+        self.assertCodes(
+            '# T\n\nOverview.\n\n## Docs\n\n- [A](a.md): what A covers.\n- [B](b.md): what B covers.\n\n'
+            '## Scope\n\n- **In**: x\n- **Out**: y\n', [])
+
     def test_prose_starting_with_link_or_time_is_not_a_name(self):
         self.assertCodes(
             '# T\n\nOverview.\n\nList:\n\n- **A**: x\n'

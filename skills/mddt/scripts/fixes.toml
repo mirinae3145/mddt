@@ -130,7 +130,7 @@ Long lists are hard to scan unless their order is mechanical; keeping the list i
 
 name-form-mix = """
 Use one name form within a topic; in new writing, use bold names.
-Keep link items when the list is a navigation list and the mix is deliberate.
+Link text is not counted, so this finding concerns bold terms and phrases followed by a colon.
 """
 
 doc-unlinked = """

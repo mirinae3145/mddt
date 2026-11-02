@@ -150,5 +150,5 @@ An item whose children need names is promoted as described in [headings and prom
 An unnumbered item of several sentences is a block of its own and carries a name where the rule above allows one. <!-- code: item-name, nested-block -->
 Where the rule forbids it, a block sits inside another block, which suggests promoting the enclosing item.
 A numbered step is labeled by its position and needs no name.
-Names within one topic use one form. <!-- code: name-form-mix -->
+Names within one topic use one form, not counting link text, whose wording follows its target. <!-- code: name-form-mix -->
 In a file with topic H2s, each topic H2 is one scope, and the parent's own parts together form another.

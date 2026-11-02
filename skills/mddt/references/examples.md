@@ -172,7 +172,7 @@ The how-to kept its steps, and the explanation of storage became an explanation 
 
 ## Lists and tables
 
-These examples show when a list must cover a whole and when conditions call for a table.
+These examples show when a list must cover a whole, how nesting carries conditions, and when conditions call for a table.
 
 ### Divisions
 
@@ -220,6 +220,35 @@ Slow syncs often come from causes such as these:
 - Large files
 - Slow networks
 ```
+
+### Details and exceptions in nesting
+
+A detail, condition, or exception that qualifies one item nests under that item.
+
+Before:
+
+```markdown
+The tool keeps one photo from each group:
+
+- The photo with the highest resolution is kept.
+- With `--prefer PATH`, photos under `PATH` are kept instead.
+- If two photos have the same resolution, the older one is kept.
+- Under `--prefer PATH`, the resolution rule still decides among those photos.
+```
+
+After:
+
+```markdown
+The tool keeps one photo from each group:
+
+- **Default**: The photo with the highest resolution is kept.
+  - On a tie, the photo with the oldest modification time is kept.
+- **Override**: With `--prefer PATH`, photos under `PATH` are kept instead.
+  - The default still decides among the photos under `PATH`.
+```
+
+Each top-level item now states one rule, and the conditions that only qualify a rule sit under it.
+A single nested item is fine, because it marks a detail of its parent rather than a list of its own.
 
 ### Decision tables
 

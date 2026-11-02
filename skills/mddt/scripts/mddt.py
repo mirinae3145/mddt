@@ -621,7 +621,9 @@ class FileCheck:
             named = name_of(item)
             descendant = first_named_descendant(item)
             if named:
-                forms.setdefault(named[0], []).append(start_line(item))
+                # Link text follows its target's title, so it is not a form choice.
+                if named[0] != 'link':
+                    forms.setdefault(named[0], []).append(start_line(item))
                 if descendant:
                     self.report('name-nesting', item,
                                 f'"{named[1]}" has named descendant "{descendant[1]}" '
