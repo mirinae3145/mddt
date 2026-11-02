@@ -21,6 +21,7 @@ Before writing, decide where the content sits in the tree:
 
 Start from each block's information type and its [default form](kinds.md#default-forms).
 Then adjust with the criteria in [sections, lists, and tables](model.md#sections-lists-and-tables).
+When a choice stays unclear, compare with the [examples](examples.md).
 
 The same content can be a part with sections or a list with names.
 A short set of parallel options reads best as a list:

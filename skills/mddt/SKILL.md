@@ -21,6 +21,8 @@ This file is the entry point; the rules and procedures live in the reference doc
 The [document model](references/model.md) states the properties a conforming document has.
 Writers treat each property as a condition to satisfy, and readers treat it as a guarantee to rely on.
 It covers files and topics, headings and promotion, paragraphs and sentences, links between documents, the choice between sections, lists, and tables, and list structure.
+[Examples](references/examples.md) show its judgment rules as before-and-after pairs; read them when a rule's application is unclear.
+
 [Document kinds and information types](references/kinds.md) decide what a topic contains and which form each block takes by default.
 Read [applying the document model to common uses](references/uses.md) when writing repository documentation, project records, or agent instructions and skills.
 

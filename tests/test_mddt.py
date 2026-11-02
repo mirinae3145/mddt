@@ -356,6 +356,19 @@ class Registry(unittest.TestCase):
             self.assertTrue(doc.is_file(), code)
             self.assertIn(anchor, anchors(doc), code)
 
+    def test_example_results_follow_the_model(self):
+        # The "After" side of each example must itself conform; snippets are
+        # fragments, so codes about whole files and parents do not apply.
+        text = (SKILL / 'references' / 'examples.md').read_text(encoding='utf-8')
+        snippets = re.findall(r'(?:After:|In `[^`]+`:)\n\n```markdown\n(.*?)```', text, re.S)
+        self.assertGreater(len(snippets), 5)
+        with tempfile.TemporaryDirectory() as tmp:
+            for n, snippet in enumerate(snippets):
+                Path(tmp, f'after{n}.md').write_text(snippet, encoding='utf-8')
+            data = json.loads(run('--format', 'json', '--review', tmp).stdout)
+        whole_file = {'h1-missing', 'h1-overview', 'doc-unlinked'}
+        self.assertEqual([d for d in data['diagnostics'] if d['code'] not in whole_file], [])
+
     def test_links_between_skill_documents_resolve(self):
         for doc in skill_docs():
             text = re.sub(r'(?ms)^```.*?^```', '', doc.read_text(encoding='utf-8'))
