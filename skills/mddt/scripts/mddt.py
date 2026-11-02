@@ -51,7 +51,7 @@ COLON_NAME = re.compile(r'^(?P<name>[^:：\n]{1,40}?)[:：](?:\s|$)')
 LINK_NAME_TAIL = re.compile(r'^\s*(?:[:：—–]|-\s)')
 CONVENTION_FILES = re.compile(r'^changelog(\..*)?$', re.IGNORECASE)
 # Section numbers such as "1.", "2.3", "B)", or "IV." followed by a title.
-SECTION_NUMBER = re.compile(r'^(?:(?P<arabic>\d+(?:\.\d+)*)[.)]?|(?P<alpha>[A-Z])[.)]|(?P<roman>[IVXLC]+)[.)])\s+\S')
+SECTION_NUMBER = re.compile(r'^(?:(?P<arabic>\d+(?:\.\d+)*)(?P<punct>[.)])?|(?P<alpha>[A-Z])[.)]|(?P<roman>[IVXLC]+)[.)])\s+\S')
 ROMAN = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100}
 
 # A folder's index file is the parent of the folder's other documents.
@@ -308,13 +308,24 @@ def sentence_breaks(line: str) -> list[int]:
     return breaks
 
 
-def section_number(text: str) -> tuple[str, int] | None:
-    """Return the numbering style and last number of a heading's section number."""
+def section_number(text: str, parent: str | None = None) -> tuple[str, int] | None:
+    """Return the numbering style and last number of a heading's section number.
+
+    Only forms that cannot be subject numbers count: numbers followed by a
+    period or parenthesis, such as "2." and "2.1.", and dotted numbers that
+    extend the parent heading's number, such as "2.1" under "2. Scope".
+    A bare number such as a year, a count, or a version stays with the subject.
+    """
     m = SECTION_NUMBER.match(text)
     if not m:
         return None
     if m['arabic']:
-        return f'arabic{m["arabic"].count(".")}', int(m['arabic'].split('.')[-1])
+        head, _, last = m['arabic'].rpartition('.')
+        parent_match = SECTION_NUMBER.match(parent or '')
+        extends_parent = bool(head) and parent_match is not None and parent_match['arabic'] == head
+        if not (m['punct'] or extends_parent):
+            return None
+        return f'arabic{m["arabic"].count(".")}', int(last)
     if m['alpha']:
         return 'alpha', ord(m['alpha']) - ord('A') + 1
     total, last = 0, 0
@@ -392,7 +403,8 @@ class FileCheck:
             groups.setdefault((owner, h.level), []).append(k)
         for (owner, level), siblings in groups.items():
             keys = [self.headings[k].text for k in siblings]
-            self.check_section_numbers([self.headings[k] for k in siblings])
+            self.check_section_numbers([self.headings[k] for k in siblings],
+                                       self.headings[owner] if owner >= 0 else None)
             if level > 1 and len(siblings) > MAX_LIST_ITEMS and not is_mechanically_ordered(keys):
                 where = f'"{self.headings[owner].text}"' if owner >= 0 else 'the file'
                 self.report('section-count', self.headings[siblings[MAX_LIST_ITEMS]].node,
@@ -410,13 +422,13 @@ class FileCheck:
                     self.report('sibling-imbalance', h.node,
                                 f'"{h.text}" has {size} lines; its siblings have a median of {median}')
 
-    def check_section_numbers(self, siblings: list[Heading]) -> None:
+    def check_section_numbers(self, siblings: list[Heading], parent: Heading | None) -> None:
         """Report sibling headings numbered in sequence, such as "1." then "2.".
 
-        A single number or numbers that do not run in sequence, such as
-        version headings, belong to the subject and are left alone.
+        A single number, numbers that do not run in sequence, and numbers that
+        may belong to the subject, as section_number decides, are left alone.
         """
-        numbers = [section_number(h.text) for h in siblings]
+        numbers = [section_number(h.text, parent.text if parent else None) for h in siblings]
         for (a, b) in zip(numbers, numbers[1:]):
             if a and b and a[0] == b[0] and b[1] == a[1] + 1:
                 first = next(h for h, n in zip(siblings, numbers) if n)

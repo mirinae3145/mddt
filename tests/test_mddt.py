@@ -75,6 +75,17 @@ class FileAndHeadingRules(CheckerCase):
         self.assertCodes('# T\n\nOverview.\n\n## 2026-10-30 review\n\nA.\n\n## 2026-10-31 review\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 3 things to know\n\nA.\n\n## Other\n\nB.\n', [])
 
+    def test_subject_numbers_in_headings_stay(self):
+        for first, second in [('2025 review', '2026 review'), ('1.4 (2026-01-10)', '1.5 (2026-02-01)'),
+                              ('1.4 release notes', '1.5 release notes'), ('2 players', '3 players')]:
+            self.assertCodes(f'# T\n\nOverview.\n\n## {first}\n\nA.\n\n## {second}\n\nB.\n', [])
+
+    def test_subsection_numbers_extending_the_parent(self):
+        self.assertCodes('# T\n\nOverview.\n\n## 2. Scope\n\nOverview.\n\n### 2.1 Inputs\n\nA.\n\n### 2.2 Outputs\n\nB.\n',
+                         ['heading-number'])
+        self.assertCodes('# T\n\nOverview.\n\n## Scope\n\nOverview.\n\n### 1.1. Inputs\n\nA.\n\n### 1.2. Outputs\n\nB.\n',
+                         ['heading-number'])
+
     def test_topic_overview(self):
         self.assertCodes(
             '# T\n\nOverview.\n\n## Topic\n\n### A\n\nX.\n\n### B\n\nY.\n', ['topic-overview'])
