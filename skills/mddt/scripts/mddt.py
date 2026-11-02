@@ -1003,16 +1003,36 @@ def render_json(registry: dict, diagnostics: list[Diagnostic], outlines: dict[st
     return json.dumps(data, ensure_ascii=False, indent=2) + '\n'
 
 
+HELP_EPILOG = """\
+which files are checked:
+  A directory argument checks the .md files Git sees there: tracked files and
+  untracked files that are not ignored, or every .md file outside a
+  repository. Hidden folders are checked; .git, node_modules, and linked
+  folders are not entered. Files named CHANGELOG are always skipped.
+
+not checked:
+  Lists inside block quotes.
+
+exit status:
+  0 when no errors are found, 1 when any error is found, and 2, without
+  reporting findings, when a path does not exist or a file is not UTF-8.
+"""
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog='mddt',
-        description='Check Markdown files against the mddt document-tree model.')
+        description='Check Markdown files against the mddt document-tree model.',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=HELP_EPILOG)
     ap.add_argument('paths', nargs='+', help='Markdown files or directories to check')
     ap.add_argument('--outline', action='store_true',
                     help='print how each file was interpreted, even without structural findings')
     ap.add_argument('--review', action='store_true',
                     help='also report information for reviewing structure, and print every outline')
-    ap.add_argument('--format', choices=('text', 'json'), default='text')
+    ap.add_argument('--format', choices=('text', 'json'), default='text',
+                    help='json lists the files and findings without fix guidance; '
+                         'outlines appear only with --outline or --review')
     ap.add_argument('--exclude', action='append', default=[], metavar='GLOB',
                     help='skip files whose path relative to the tree root, or whose name, matches GLOB, '
                          'such as templates or fixtures; repeatable')

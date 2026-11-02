@@ -54,8 +54,8 @@ These options adjust a run:
 
 - `--outline` prints how each file was interpreted, which also helps when exploring an unfamiliar document.
 - `--review` adds information for reviewing structure, such as oversized sections and links without summaries.
-- `--root DIR` sets the top of the document tree outside a Git repository, so that parent documents can be found.
-- `--exclude GLOB` skips Markdown files that are not documents, such as templates and fixtures.
+
+Run the checker with `--help` for its other options, the files a directory run checks, and its exit statuses.
 
 ## Scope
 

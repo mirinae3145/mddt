@@ -48,19 +48,12 @@ Without uv, install `markdown-it-py` and `mdit-py-plugins` and run the script wi
 Errors are violations the parser can decide, and the command exits with status 1 when any are found.
 Warnings mark places that need a writer's judgment, and keeping the original structure is a valid outcome for them.
 Information supports a deliberate review of structure and appears only with `--review`.
-Each code is printed once with its fix guidance, followed by every location where it occurs.
+Each code is printed once with its summary and rule location, followed by every location where it occurs and then its fix guidance.
 Codes and their severities are listed in [`rules.toml`](skills/mddt/scripts/rules.toml).
 
-The command accepts these options:
-
-- `--outline` prints how each file was interpreted; files with structural findings get it automatically.
-- `--review` adds review information and prints the outline of every file.
-- `--format json` produces machine-readable output.
-- `--exclude GLOB` skips files that are not documents, such as templates and test fixtures.
-- `--root DIR` sets the top of the document tree, which decides each document's parent.
-  It defaults to the Git repository root, then to a directory argument.
-
-Changelogs are always skipped.
+`--outline` prints how each file was interpreted, and files with structural findings get it automatically.
+`--review` adds review information and prints the outline of every file.
+Run the checker with `--help` for its other options, the files a directory run checks, and its exit statuses.
 The checker covers structure only, so run your repository's own Markdown linter for formatting rules.
 
 ## Limits
