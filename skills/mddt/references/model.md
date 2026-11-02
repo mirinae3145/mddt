@@ -14,6 +14,7 @@ Each file relates to topics as follows.
 - **Files hold topics**: A file is either one topic or a set of topics, never a set of sets.
   As a result, headings stop at H3. <!-- code: heading-depth -->
   Content that needs a fourth level moves to its own file, which the parent links to.
+  A file too long to read comfortably at once suggests that its topics have outgrown one file. <!-- code: file-size -->
 - **Each file has an identity**: A file has exactly one H1, followed by an overview paragraph. <!-- code: h1-missing, h1-multiple, h1-overview -->
   The overview says what the document is and what it covers, so a reader arriving from anywhere can decide whether to read on.
   Badges and other image-only paragraphs do not count as an overview.
@@ -62,7 +63,7 @@ Prose follows these rules about lines, paragraphs, and sentences.
 
 Documents form a tree through links that follow these rules.
 
-- **Downward links**: A parent document links to each of its child documents with a short summary. <!-- code: doc-unlinked -->
+- **Downward links**: A parent document links to each of its child documents with a short summary. <!-- code: doc-unlinked, link-without-summary -->
   When a subtopic moves to its own file, its original place keeps that summary and link.
   The summary condenses the child's overview, which remains the canonical version.
   Upward links are needed only when the folder tree does not show where a document belongs.
@@ -95,7 +96,7 @@ The following criteria adjust that default.
 Headings at the same level and items in the same list are siblings.
 The following rules apply to them.
 
-- **Same level of detail**: Siblings have a comparable level of detail.
+- **Same level of detail**: Siblings have a comparable level of detail. <!-- code: sibling-imbalance -->
   When one sibling grows much deeper or larger than the others, it probably holds content of another level.
 - **Divisions**: A sibling set is a division when it claims to cover a whole.
   Decision tables, divisions of a concept into kinds, and introductions that state a count or say "one of the following" make that claim.

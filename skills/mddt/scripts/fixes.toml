@@ -120,7 +120,8 @@ Avoid linking it only from a sibling; a lateral link does not place it in the tr
 """
 
 anchor-to-part = """
-A link into another file that expects its target to be read alone should point to a topic; keeping the link is a valid outcome.
+This is information for structural review; most such links only locate content in a file that the reader reads whole.
+A link that expects its target to be read alone should point to a topic.
 1. Promote the target to a topic when readers are meant to read it on its own.
 2. Link to the file instead of the section.
 3. Keep the anchor when it only locates content in a file that the reader reads whole.
@@ -149,4 +150,21 @@ Avoid breaking lines only to hide the length; a sentence is counted across line 
 line-sentences = """
 Start each sentence on its own line; in a list item, put later sentences on indented continuation lines.
 Keep the line when the period belongs to an abbreviation, a version, or a name.
+"""
+
+link-without-summary = """
+Information for structural review.
+Add a short summary after the link, condensed from the child's overview, so that readers can choose a path without opening every child.
+"""
+
+sibling-imbalance = """
+Information for structural review; siblings may differ in size for good reasons.
+1. If the section holds finer or broader detail than its siblings, move that detail to a topic at its own level and link to it.
+2. If the section has grown into a subject of its own, promote it to a topic or a file.
+"""
+
+file-size = """
+Information for structural review; a long file may still be one coherent topic set.
+1. Move topics that are read on their own into files in the companion folder, leaving summaries and links.
+2. Check whether parts of the file belong to another kind or level.
 """

@@ -161,12 +161,12 @@ class ProseRules(CheckerCase):
 
 
 class TreeRules(CheckerCase):
-    def tree(self, files):
+    def tree(self, files, *options):
         for name, text in files.items():
             path = self.dir / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding='utf-8')
-        result = run('--format', 'json', str(self.dir))
+        result = run('--format', 'json', *options, str(self.dir))
         data = json.loads(result.stdout)
         return sorted((Path(d['file']).relative_to(self.dir).as_posix(), d['code'])
                       for d in data['diagnostics'])
@@ -208,12 +208,30 @@ class TreeRules(CheckerCase):
         data = json.loads(run('--format', 'json', '--exclude', 'templates/*', str(self.dir)).stdout)
         self.assertEqual(data['diagnostics'], [])
 
-    def test_anchor_to_part_in_another_file(self):
-        found = self.tree({
+    def test_anchor_to_part_is_review_information(self):
+        files = {
             'README.md': '# R\n\nSee [part](other.md#part), [topic](other.md#topic), [file](other.md).\n',
             'other.md': '# O\n\nOverview.\n\n## Part\n\nText.\n\n## Topic\n\nOverview.\n\n### A\n\nX.\n\n### B\n\nY.\n',
-        })
-        self.assertEqual(found, [('README.md', 'anchor-to-part')])
+        }
+        self.assertEqual(self.tree(files), [])
+        self.assertEqual(self.tree(files, '--review'), [('README.md', 'anchor-to-part')])
+
+    def test_link_without_summary(self):
+        found = self.tree({
+            'README.md': '# R\n\nChildren:\n\n- [A](a.md)\n- [B](b.md): what B covers.\n',
+            'a.md': '# A\n\nOverview.\n',
+            'b.md': '# B\n\nSee [A](a.md).\n',
+        }, '--review')
+        self.assertEqual(found, [('README.md', 'link-without-summary')])
+
+    def test_sibling_imbalance_and_file_size(self):
+        big = ''.join(f'Line {n}.\n\n' for n in range(30))
+        text = f'# T\n\nOverview.\n\n## A\n\nShort.\n\n## B\n\n{big}## C\n\nShort.\n'
+        found = self.tree({'README.md': text}, '--review')
+        self.assertIn(('README.md', 'sibling-imbalance'), found)
+        long = '# T\n\nOverview.\n\n' + ''.join(f'- item {n}\n' for n in range(400))
+        found = self.tree({'README.md': long}, '--review')
+        self.assertIn(('README.md', 'file-size'), found)
 
 
 class Interface(CheckerCase):

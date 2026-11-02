@@ -89,6 +89,7 @@ For example, adding items that push a list past seven makes that warning part of
 - **Existing warnings**: Leave them, or reconsider them while giving the existing structure priority.
 - **Existing errors**: Fix them inside the section you are editing, and report the rest without fixing them.
 - **Requested restructuring**: When the user asks for the structure to be reorganized, apply all findings.
+  Run the checker with `--review` to also see information such as oversized sections and links without summaries.
 
 When a structural finding is unclear, read the outline the checker prints for that file.
 It shows how each H2 was classified, how deep each list goes, and which items carry names.

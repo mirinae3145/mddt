@@ -106,7 +106,7 @@ summary = "parent document does not link to this document"
 rule = "model.md#links-between-documents"
 
 [anchor-to-part]
-severity = "warning"
+severity = "info"
 group = "structure"
 summary = "link from another file points to a part"
 rule = "model.md#links-between-documents"
@@ -134,4 +134,22 @@ severity = "warning"
 group = "sentence"
 summary = "line holds more than one sentence"
 rule = "model.md#paragraphs-and-sentences"
+
+[link-without-summary]
+severity = "info"
+group = "structure"
+summary = "link to a child document has no summary"
+rule = "model.md#links-between-documents"
+
+[sibling-imbalance]
+severity = "info"
+group = "structure"
+summary = "section is much larger than its siblings"
+rule = "model.md#siblings"
+
+[file-size]
+severity = "info"
+group = "structure"
+summary = "file is long enough to reconsider its division"
+rule = "model.md#files-and-topics"
 

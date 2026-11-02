@@ -40,7 +40,7 @@ LIST_TYPES = {'bullet_list', 'ordered_list'}
 # Blocks that neither introduce nor interrupt content, such as comments.
 TRANSPARENT = {'html_block', 'front_matter'}
 GROUP_ORDER = {'structure': 0, 'sentence': 1}
-SEVERITY_ORDER = {'error': 0, 'warning': 1}
+SEVERITY_ORDER = {'error': 0, 'warning': 1, 'info': 2}
 MAX_LIST_ITEMS = 7
 NAME_MAX_WORDS = 6
 # MD036 treats emphasis ending in punctuation as a sentence, not a heading.
@@ -54,6 +54,12 @@ INDEX_NAMES = ('readme.md', 'index.md', 'skill.md')
 # Tools read these files by name, so they need no parent document.
 ENTRY_NAMES = {'skill.md', 'agents.md', 'claude.md', 'gemini.md'}
 URL_SCHEME = re.compile(r'^[a-z][a-z0-9+.-]*:', re.IGNORECASE)
+
+# Provisional thresholds for review information, to be calibrated against
+# documents written to the model.
+SIBLING_RATIO = 3
+SIBLING_MIN_LINES = 20
+FILE_MAX_LINES = 300
 
 MAX_SENTENCES = 5
 MAX_PARAGRAPH_RUN = 3
@@ -340,7 +346,27 @@ class FileCheck:
         self.check_regions()
         self.check_lists()
         self.check_prose()
+        self.check_sizes()
         return self.diagnostics
+
+    def check_sizes(self) -> None:
+        if self.line_count > FILE_MAX_LINES:
+            self.report('file-size', 1, f'file has {self.line_count} lines')
+        groups: dict[tuple[int, int], list[int]] = {}
+        for k, h in enumerate(self.headings):
+            owner = next((j for j in range(k - 1, -1, -1) if self.headings[j].level < h.level), -1)
+            groups.setdefault((owner, h.level), []).append(k)
+        for siblings in groups.values():
+            if len(siblings) < 2:
+                continue
+            sizes = {k: self.section_lines(k) for k in siblings}
+            for k, size in sizes.items():
+                others = sorted(v for j, v in sizes.items() if j != k)
+                median = others[len(others) // 2]
+                if size >= SIBLING_MIN_LINES and size >= SIBLING_RATIO * max(median, 1):
+                    h = self.headings[k]
+                    self.report('sibling-imbalance', h.node,
+                                f'"{h.text}" has {size} lines; its siblings have a median of {median}')
 
     def sentences(self, paragraph: SyntaxTreeNode) -> list[tuple[int, int]]:
         """Return (first line, word count) for each sentence of a paragraph.
@@ -399,15 +425,25 @@ class FileCheck:
                 self.report('paragraph-run', run[0], f'{len(run)} paragraphs in a row')
             run = []
 
-    def links(self) -> list[tuple[str, int]]:
-        """Return (target, line) for every link in the file."""
+    def links(self) -> list[tuple[str, int, bool]]:
+        """Return (target, line, alone) for every link in the file.
+
+        A link is alone when nothing but punctuation surrounds it in its
+        paragraph, list item, or table cell, so it carries no summary.
+        """
         found = []
         line = 1
         for node in self.root.walk():
             if not node.is_root and node.map:
                 line = start_line(node)
-            if node.type == 'link':
-                found.append((node.attrs.get('href', ''), line))
+            if node.type != 'inline':
+                continue
+            parts = [n for n in node.children if n.type != 'softbreak']
+            for n in node.walk():
+                if n.type == 'link':
+                    alone = all(o is n or (o.type == 'text' and not re.search(r'\w', o.content))
+                                for o in parts)
+                    found.append((n.attrs.get('href', ''), line, alone))
         return found
 
     def anchors(self) -> dict[str, Heading]:
@@ -634,9 +670,29 @@ class Tree:
         self.check_anchors(path, check)
         if root is not None:
             self.check_parent(path, check, root)
+            self.check_summaries(path, check, root)
+
+    def check_summaries(self, path: Path, check: FileCheck, root: Path) -> None:
+        """Report children whose every link from this parent lacks a summary."""
+        bare: dict[Path, int] = {}
+        summarized: set[Path] = set()
+        for href, line, alone in check.links():
+            target = link_target(path, href)
+            if target is None or target == path or not target.is_file():
+                continue
+            if target.suffix.lower() != '.md' or parent_of(target, root) != path:
+                continue
+            if alone:
+                bare.setdefault(target, line)
+            else:
+                summarized.add(target)
+        for target, line in bare.items():
+            if target not in summarized:
+                check.report('link-without-summary', line,
+                             f'link to child {relative(target, path)} has no summary')
 
     def check_anchors(self, path: Path, check: FileCheck) -> None:
-        for href, line in check.links():
+        for href, line, _ in check.links():
             if '#' not in href:
                 continue
             target = link_target(path, href)
@@ -659,7 +715,7 @@ class Tree:
         source = self.load(parent)
         if source is None:
             return
-        if not any(link_target(parent, href) == path for href, _ in source.links()):
+        if not any(link_target(parent, href) == path for href, _, _ in source.links()):
             check.report('doc-unlinked', 1, f'parent {relative(parent, path)} does not link here')
 
 
@@ -775,10 +831,12 @@ def sort_key(registry: dict, d: Diagnostic):
 def render_text(registry: dict, fixes: dict[str, str], diagnostics: list[Diagnostic], outlines: dict[str, list[str]],
                 checked: int, skipped: list[str]) -> str:
     out = []
-    errors = sum(registry[d.code]['severity'] == 'error' for d in diagnostics)
-    warnings = len(diagnostics) - errors
+    counts = {s: sum(registry[d.code]['severity'] == s for d in diagnostics) for s in SEVERITY_ORDER}
     if diagnostics:
-        out.append(f'mddt: {errors} error(s), {warnings} warning(s) in {checked} file(s)')
+        summary = f'{counts["error"]} error(s), {counts["warning"]} warning(s)'
+        if counts['info']:
+            summary += f', {counts["info"]} info'
+        out.append(f'mddt: {summary} in {checked} file(s)')
     else:
         out.append(f'mddt: no problems in {checked} file(s)')
     if skipped:
@@ -837,6 +895,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument('paths', nargs='+', help='Markdown files or directories to check')
     ap.add_argument('--outline', action='store_true',
                     help='print how each file was interpreted, even without structural findings')
+    ap.add_argument('--review', action='store_true',
+                    help='also report information for reviewing structure, and print every outline')
     ap.add_argument('--format', choices=('text', 'json'), default='text')
     ap.add_argument('--exclude', action='append', default=[], metavar='GLOB',
                     help='skip files matching GLOB, such as templates or fixtures; repeatable')
@@ -865,10 +925,12 @@ def main(argv: list[str] | None = None) -> int:
         check = FileCheck(display(f), text)
         found = check.run()
         tree.check(f, check, fixed_root or find_root(f) or base)
-        found = check.diagnostics
+        # Information supports deliberate structural review and stays hidden otherwise.
+        found = [d for d in check.diagnostics
+                 if args.review or registry[d.code]['severity'] != 'info']
         diagnostics.extend(found)
         structural = any(registry[d.code]['group'] == 'structure' for d in found)
-        if args.outline or (structural and args.format == 'text'):
+        if args.outline or args.review or (structural and args.format == 'text'):
             outlines[check.path] = check.outline()
 
     if args.format == 'json':
