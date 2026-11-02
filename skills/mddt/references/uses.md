@@ -1,4 +1,4 @@
-# Uses
+# Applying the document model to common uses
 
 This document applies the [document model](model.md) to three common uses: repository documentation, project records, and agent instructions and skills.
 Each use has its own vocabulary of document kinds and its own entry documents, while the model and the [information types](kinds.md#information-types) stay the same.

@@ -8,7 +8,8 @@ The structural rules that these choices operate within are in the [document mode
 ## Document kinds
 
 A topic's kind says what the reader is doing with it, and the vocabulary of kinds depends on what the documents are for.
-[Uses](uses.md) gives that vocabulary for repository documentation, project records, and agent instructions and skills, while information types and default forms stay the same everywhere.
+[Applying the document model to common uses](uses.md) gives that vocabulary for repository documentation, project records, and agent instructions and skills.
+Information types and default forms stay the same everywhere.
 
 The Diátaxis compass judges a topic by two questions: whether it informs action or cognition, and whether it serves study or work.
 Tutorials and how-to guides have the same dominant type and default form, so this skill treats them as one kind, action.

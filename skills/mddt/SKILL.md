@@ -22,7 +22,7 @@ The [document model](references/model.md) states the properties a conforming doc
 Writers treat each property as a condition to satisfy, and readers treat it as a guarantee to rely on.
 It covers files and topics, headings and promotion, paragraphs and sentences, links between documents, the choice between sections, lists, and tables, and list structure.
 [Document kinds and information types](references/kinds.md) decide what a topic contains and which form each block takes by default.
-Read [uses](references/uses.md) when writing repository documentation, project records, or agent instructions and skills.
+Read [applying the document model to common uses](references/uses.md) when writing repository documentation, project records, or agent instructions and skills.
 
 ## Writing and restructuring
 
