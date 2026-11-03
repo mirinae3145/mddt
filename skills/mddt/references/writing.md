@@ -93,7 +93,9 @@ Check the result as follows:
 
 1. Once the content has settled, reread each part or topic you changed as a whole.
    Judge whether the changes fit its question, order, and forms, and compare with the [examples](examples.md) where a rule's application is unclear.
-   When the documents change alongside other work, such as code, the content settles when that work does.
+   - **Alongside other work**: When the documents change with other work, such as code, the content settles when that work does.
+   - **Unchanged rendering**: A part or topic whose changes all leave the rendered document as it was needs no reread.
+     Such changes include one-sentence line splits and link target updates after a move, but not a blank line, which splits a paragraph.
 1. Run the checker on the files you created or changed.
    After adding child documents, add `--review` to see links that lack summaries.
    Information findings rest on approximate detection, so judge each one before acting on it.
@@ -108,7 +110,10 @@ Findings the task did not cause, and requests to restructure, are handled as fol
 
 - **Existing warnings**: Leave them, or reconsider them while giving the existing structure priority.
 - **Existing errors**: Fix them inside the section you are editing, and report the rest without fixing them.
-- **Requested restructuring**: When the user asks for the structure to be reorganized, apply all findings.
+- **Requested restructuring**: When the user asks for the structure to be reorganized, apply all structural findings.
+  Apply sentence-level findings as well where the fix leaves the rendered document as it was, such as splitting lines for `line-sentences`.
+  Other sentence-level findings need rewriting, so fix them only where [growing and shrinking](#growing-and-shrinking) allows a rewrite: in parts and topics whose question the task changed.
+  Elsewhere leave them; like other warnings that remain after judgment, they are a valid outcome.
   Run the checker with `--review` to also see information such as oversized sections and links without summaries.
 
 When a structural finding is unclear, read the outline the checker prints for that file.

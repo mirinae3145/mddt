@@ -50,7 +50,8 @@ uv run <skill-dir>/scripts/mddt.py FILE...
 ```
 
 Each finding comes with fix guidance, and errors make the command exit with status 1.
-Apply the findings as described in [checking](references/writing.md#checking), which limits them to what the current task created or made worse, unless the user asked for restructuring.
+Apply the findings as described in [checking](references/writing.md#checking), which limits them to what the current task created or made worse.
+A requested restructuring applies more of them, though not every sentence-level finding.
 The [checker reference](references/checker.md) covers running the checker, its findings and output, its options, the files it checks, and its exit statuses.
 Read it in these cases:
 
