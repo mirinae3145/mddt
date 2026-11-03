@@ -42,6 +42,7 @@ The command accepts these options:
 - **`--review`**: Also report information for reviewing structure, and print every outline.
 - **`--format text|json`**: Choose the output format, which defaults to text.
 - **`--exclude GLOB`**: Skip files whose path relative to the tree root, or whose name, matches GLOB; repeat it for several patterns.
+  Without a tree root, the path is taken relative to the current directory.
 - **`--root DIR`**: Set the top of the document tree, which decides each document's parent; it defaults to the Git repository root, then to a directory argument.
 
 ## Files checked

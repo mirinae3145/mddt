@@ -882,7 +882,8 @@ def collect(paths: list[str], excludes: list[str],
     Convention-bound files such as changelogs and files matching an exclude
     pattern are skipped even when named explicitly. A pattern matches a file's
     path relative to its tree root, the same root that decides parents, or the
-    file name, so it works however the file argument is spelled.
+    file name, so it works however the file argument is spelled. Without a
+    tree root, the path is taken relative to the current directory.
     """
     files, skipped = [], []
     for arg in paths:
@@ -895,7 +896,7 @@ def collect(paths: list[str], excludes: list[str],
             raise FileNotFoundError(arg)
         for f in candidates:
             root = fixed_root or find_root(f) or base
-            rel = os.path.relpath(f, root).replace(os.sep, '/') if root else f.name
+            rel = os.path.relpath(f, root or os.getcwd()).replace(os.sep, '/')
             if CONVENTION_FILES.match(f.name) or any(
                     fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(f.name, pattern)
                     for pattern in excludes):

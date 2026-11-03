@@ -380,6 +380,15 @@ class Interface(CheckerCase):
                                   arg, cwd=cwd).stdout)
             self.assertEqual(data['files'], [], arg)
 
+    def test_exclude_without_a_tree_root_matches_from_the_current_directory(self):
+        if any((folder / '.git').exists() for folder in self.dir.parents):
+            self.skipTest('the temporary directory is inside a Git tree')
+        (self.dir / 'templates').mkdir()
+        self.write('templates/t.md', 'no heading\n')
+        data = json.loads(run('--format', 'json', '--exclude', 'templates/*', 'templates/t.md',
+                              cwd=self.dir).stdout)
+        self.assertEqual(data['files'], [])
+
 
 SKILL = ROOT / 'skills/mddt'
 CODE_COMMENT = re.compile(r'<!-- code: ([^>]*?) -->')
