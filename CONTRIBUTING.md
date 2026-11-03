@@ -80,4 +80,8 @@ After changing them, check them with the generated material in `calibration/` ex
 uv run skills/mddt/scripts/mddt.py --exclude 'calibration/outputs/*' --exclude 'calibration/briefs/*' --exclude 'calibration/skill/*' .
 ```
 
+The checker decides only the rules a parser can see.
+Also review the changed documents against the model's judgment rules, such as divisions, levels of detail among siblings, and summaries in parent documents.
+Where a rule's application is unclear, compare with the [examples](skills/mddt/references/examples.md).
+
 Add a test with each new code or behavior change, including a case that must not be reported.
