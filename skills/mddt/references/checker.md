@@ -2,7 +2,7 @@
 
 This document describes the checker that comes with the skill.
 It covers running the checker, its findings and output, its options, the files it checks, and its exit statuses.
-Read it when a run needs options, when choosing files to check or exclude, or when a script reads the output.
+Read it when choosing the files or tree root of a run, when a script reads the output or exit status, or without uv.
 
 ## Running
 
