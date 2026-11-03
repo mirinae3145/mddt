@@ -78,9 +78,13 @@ Structure changes as content grows or shrinks, and the promotion ladder in [head
   Alternatively, move only the excess detail to a topic at that level.
 - **When a block of another kind or level grows**: Move it to a topic of its own.
   See [blocks of another kind or level](kinds.md#blocks-of-another-kind-or-level).
+- **When a change alters what a part or topic answers**: Rewrite that part or topic as a unit from the question it now answers.
+  Appending to its end or patching single sentences leaves its old order and form in place.
+  Keep its facts, and leave the parts and topics around it as they are.
 
-Restructuring moves content; it does not rewrite it.
+Moving content does not rewrite it.
 Keep the wording of moved content unless the move itself requires a change, such as replacing a position word with a link.
+Only a part or topic whose question the current task changed is rewritten.
 
 ## Checking
 
