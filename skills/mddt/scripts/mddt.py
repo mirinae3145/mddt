@@ -896,7 +896,10 @@ def collect(paths: list[str], excludes: list[str],
             raise FileNotFoundError(arg)
         for f in candidates:
             root = fixed_root or find_root(f) or base
-            rel = os.path.relpath(f, root or os.getcwd()).replace(os.sep, '/')
+            try:
+                rel = os.path.relpath(f, root or os.getcwd()).replace(os.sep, '/')
+            except ValueError:  # on another Windows drive
+                rel = f.name
             if CONVENTION_FILES.match(f.name) or any(
                     fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(f.name, pattern)
                     for pattern in excludes):
