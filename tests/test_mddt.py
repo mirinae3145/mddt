@@ -81,6 +81,8 @@ class FileAndHeadingRules(CheckerCase):
         for first, second in [('2025 review', '2026 review'), ('1.4 (2026-01-10)', '1.5 (2026-02-01)'),
                               ('1.4 release notes', '1.5 release notes'), ('2 players', '3 players')]:
             self.assertCodes(f'# T\n\nOverview.\n\n## {first}\n\nA.\n\n## {second}\n\nB.\n', [])
+        self.assertCodes('# T\n\nOverview.\n\n## 1.4 (2026-01)\n\nOverview.\n\n'
+                         '### 1.4.1 (2026-01-10)\n\nA.\n\n### 1.4.2 (2026-02-01)\n\nB.\n', [])
 
     def test_subsection_numbers_extending_the_parent(self):
         self.assertCodes('# T\n\nOverview.\n\n## 2. Scope\n\nOverview.\n\n### 2.1 Inputs\n\nA.\n\n### 2.2 Outputs\n\nB.\n',

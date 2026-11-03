@@ -316,8 +316,9 @@ def section_number(text: str, parent: str | None = None) -> tuple[str, int] | No
 
     Only forms that cannot be subject numbers count: numbers followed by a
     period or parenthesis, such as "2." and "2.1.", and dotted numbers that
-    extend the parent heading's number, such as "2.1" under "2. Scope".
-    A bare number such as a year, a count, or a version stays with the subject.
+    extend such a number in the parent heading, such as "2.1" under "2. Scope".
+    A bare number such as a year, a count, or a version stays with the subject,
+    and so does a dotted number under it, such as "1.4.1" under "1.4".
     """
     m = SECTION_NUMBER.match(text)
     if not m:
@@ -325,7 +326,8 @@ def section_number(text: str, parent: str | None = None) -> tuple[str, int] | No
     if m['arabic']:
         head, _, last = m['arabic'].rpartition('.')
         parent_match = SECTION_NUMBER.match(parent or '')
-        extends_parent = bool(head) and parent_match is not None and parent_match['arabic'] == head
+        extends_parent = (bool(head) and parent_match is not None
+                          and parent_match['arabic'] == head and parent_match['punct'] is not None)
         if not (m['punct'] or extends_parent):
             return None
         return f'arabic{m["arabic"].count(".")}', int(last)
