@@ -9,7 +9,7 @@ What a topic contains and which form each block takes by default are described i
 ## Files and topics
 
 A topic is a unit of meaning that can be read on its own, and a file is a unit of storage.
-Each file relates to topics as follows.
+Files relate to topics, to their names and folders, and to the documents above them as follows.
 
 - **Topics stand alone**: A topic does not assume that the reader has read what comes before or after it.
   It states its own context and links to named anchors instead of saying "above" or "as described earlier".
@@ -34,7 +34,7 @@ Each file relates to topics as follows.
 ## Headings and promotion
 
 Each H2 plays one of two roles, and a parser can tell them apart by whether the H2 has H3 children.
-The roles and the movement between them work as follows.
+The following rules cover the two roles, the form of headings, and the movement between the roles.
 
 - **Topics and parts**: An H2 with H3 children is a topic; an H2 without them is a part of the file's topic.
   The H3 sections of a topic are that topic's parts.
@@ -108,6 +108,7 @@ The following rules apply to them.
 
 - **Same level of detail**: Siblings have a comparable level of detail. <!-- code: sibling-imbalance -->
   When one sibling grows much deeper or larger than the others, it probably holds content of another level.
+- **Same form**: Items in one list share a grammatical form.
 - **Number of sibling sections**: Sibling headings follow [the same limit as list items](#length-and-order), about seven unless in mechanical order. <!-- code: section-count -->
 - **Divisions**: A sibling set is a division when it claims to cover a whole.
   Decision tables, divisions of a concept into kinds, and introductions that state a count or say "one of the following" make that claim.
@@ -119,8 +120,6 @@ The following rules apply to them.
   Otherwise the introduction states no count and no completeness, because such a claim has to be kept true whenever the set changes.
 - **No false claims**: When a set cannot cover the whole, drop the claim instead of adding a catch-all item.
   Introduce the set with words such as "for example" or "includes", so it is no longer a division.
-- **Children answer the parent**: A nested item answers a question that its parent raises, such as how, when, why, or what is excepted.
-  This relation is what justifies nesting.
 
 ## Lists
 
@@ -134,11 +133,9 @@ When the list is the only content of a section without subheadings, the section 
 Continuation paragraphs, code blocks, and nested lists inside items count as part of the list.
 This exception does not apply directly under an H1 or a topic H2, which start with an overview paragraph.
 
-Items in one list share a grammatical form.
-A top-level list has at least two items, while a single nested item is allowed because it marks a detail or condition of its parent. <!-- code: list-single -->
-
 ### Length and order
 
+A top-level list has at least two items, while a single nested item is allowed because it marks a detail or condition of its parent. <!-- code: list-single -->
 A list has about seven items or fewer. <!-- code: list-length -->
 A list in mechanical order, such as alphabetical, numerical, or date order, can be longer because readers find items without reading their content.
 Steps and priorities are ordered by content, so numbered procedures are not exempt.
@@ -148,6 +145,9 @@ Steps and priorities are ordered by content, so numbered procedures are not exem
 Lists nest at most three levels, counting ordered and unordered lists alike. <!-- code: list-depth-3, list-depth-4 -->
 A fourth level is not allowed, and a third level is allowed but worth reconsidering.
 Continuation paragraphs, code blocks, and tables inside an item do not add depth.
+
+A nested item answers a question that its parent raises, such as how, when, why, or what is excepted.
+This relation is what justifies nesting.
 Nested items under one parent may play different roles, such as details, conditions, and exceptions, and items with the same role stay together.
 
 ### Names
