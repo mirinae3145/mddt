@@ -49,8 +49,9 @@ The command accepts these options:
 A file argument is checked as given, and a directory argument expands as follows:
 
 - **In a Git repository**: The `.md` files that Git sees, which are tracked files and untracked files that are not ignored.
-  Without the `git` command, every `.md` file is checked, and the checker reports that `.gitignore` was not applied.
-- **Outside a repository**: Every `.md` file.
+  Without the `git` command, files are found as outside a repository, and the checker reports that `.gitignore` was not applied.
+- **Outside a repository**: Every `.md` file, except in folders whose own `.gitignore` holds only `*`.
+  Tools such as pytest and uv mark their caches and virtual environments this way.
 - **Never entered**: The `.git` and `node_modules` folders and folders reached through symbolic links.
   Other hidden folders are checked, so exclude them with `--exclude` when they hold no documents.
 

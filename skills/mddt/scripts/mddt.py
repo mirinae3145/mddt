@@ -907,7 +907,9 @@ def markdown_files(folder: Path) -> list[Path]:
 
     Hidden folders are included, since agent instructions often live in them;
     .git and node_modules are skipped, and symbolic links to other trees, such
-    as linked repositories, are not followed.
+    as linked repositories, are not followed. When Git does not filter the
+    files, folders whose own .gitignore ignores everything in them, as tool
+    caches and virtual environments do, are skipped as well.
     """
     listed = None
     if find_root(folder / '_') is not None:
@@ -924,12 +926,27 @@ def markdown_files(folder: Path) -> list[Path]:
     found = []
     for current, dirs, names in os.walk(folder):
         dirs[:] = sorted(d for d in dirs if d not in ('.git', 'node_modules')
-                         and not os.path.islink(os.path.join(current, d)))
+                         and not os.path.islink(os.path.join(current, d))
+                         and not (listed is None and ignores_itself(Path(current) / d)))
         for name in sorted(names):
             path = Path(current) / name
             if name.lower().endswith('.md') and (listed is None or path in listed):
                 found.append(path)
     return found
+
+
+def ignores_itself(folder: Path) -> bool:
+    """True when a folder's own .gitignore holds only the pattern "*".
+
+    Tools such as pytest, mypy, ruff, and uv mark the caches and virtual
+    environments they create this way, so the folder holds no documents.
+    """
+    try:
+        text = (folder / '.gitignore').read_text(encoding='utf-8')
+    except (OSError, UnicodeDecodeError):
+        return False
+    patterns = [line.strip() for line in text.splitlines()]
+    return [p for p in patterns if p and not p.startswith('#')] == ['*']
 
 
 def display(path: Path) -> str:

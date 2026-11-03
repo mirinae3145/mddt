@@ -359,6 +359,17 @@ class Interface(CheckerCase):
         self.assertEqual([Path(f).name for f in json.loads(result.stdout)['files']], ['doc.md'])
         self.assertIn('.gitignore is not applied', result.stderr)
 
+    def test_self_ignoring_folders_are_skipped_without_git(self):
+        self.write('README.md', '# R\n\nOverview.\n')
+        (self.dir / '.pytest_cache').mkdir()
+        self.write('.pytest_cache/.gitignore', '# Created by pytest automatically.\n*\n')
+        self.write('.pytest_cache/README.md', '# pytest cache directory #\n\nCache data.\n')
+        (self.dir / '.notes').mkdir()
+        self.write('.notes/.gitignore', '*\n!plan.md\n')
+        self.write('.notes/plan.md', '# Plan\n\nOverview.\n')
+        data = json.loads(run('--format', 'json', str(self.dir)).stdout)
+        self.assertEqual(sorted(Path(f).name for f in data['files']), ['README.md', 'plan.md'])
+
     def test_exclude_matches_paths_from_the_root_however_spelled(self):
         (self.dir / 'sub').mkdir()
         deep = self.write('sub/deep.md', 'no heading\n')
