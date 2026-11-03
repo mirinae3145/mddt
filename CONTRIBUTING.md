@@ -1,6 +1,7 @@
 # Contributing
 
-This guide covers how the checker is organized, what to update when a rule changes, how files are licensed, and how to verify changes.
+This guide covers how the checker is organized and what to update when a rule changes.
+It also covers how the repository applies the skill to itself, how files are licensed, and how to verify changes.
 The skill is meant for any agent and repository, so keep it independent of personal instruction sets, machine paths, and particular workflow tools.
 
 ## Checker layout
@@ -35,6 +36,14 @@ A change to a rule updates these together:
 Tests also check that the numbers in `model.md` and in `rules.toml` summaries match the checker's constants, and that the checker reference lists every option.
 The calibration material records one past round, so it is not updated when a rule changes.
 
+## Self-conformance
+
+The repository applies the skill to itself on a best-effort basis, aiming for these properties:
+
+- **Model conformance**: The repository's documents follow the document model and pass the checker without errors or warnings, apart from the generated calibration material.
+- **Checker consistency**: Tests keep the checker's codes, rule locations, numeric limits, and options in step with the reference documents.
+- **Self-containment**: The skill folder works without files outside it, since it holds the checker's specification and an index of terms.
+
 ## Licenses
 
 Every file is covered by a license entry in `REUSE.toml`.
@@ -51,7 +60,8 @@ python3 -m unittest discover -s tests -v
 ```
 
 The tests run the checker through `uv run`, so uv must be installed.
-When checking the repository's own documents, exclude the generated material in `calibration/`:
+The repository's own documents follow the model, as [self-conformance](#self-conformance) describes.
+After changing them, check them with the generated material in `calibration/` excluded:
 
 ```bash
 uv run skills/mddt/scripts/mddt.py --exclude 'calibration/outputs/*' --exclude 'calibration/briefs/*' --exclude 'calibration/skill/*' .
