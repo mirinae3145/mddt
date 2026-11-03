@@ -152,7 +152,11 @@ class ListRules(CheckerCase):
 
     def test_heading_does_not_introduce_a_block_followed_by_other_blocks(self):
         table = '| a | b |\n| - | - |\n| 1 | 2 |\n'
-        self.assertCodes('# T\n\nOverview.\n\n## Steps\n\n1. Run it.\n1. Check it.\n\n```\ncode\n```\n', ['list-intro'])
+        found = self.write('doc.md', '# T\n\nOverview.\n\n## Steps\n\n1. Run it.\n1. Check it.\n\n```\ncode\n```\n')
+        data = json.loads(run('--format', 'json', str(found)).stdout)
+        self.assertEqual([d['message'] for d in data['diagnostics']],
+                         ['list does not start with an introductory paragraph: '
+                          'list follows the heading and precedes a code block'])
         self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\n1. a\n1. b\n', ['list-intro', 'list-intro'])
         self.assertCodes(f'# T\n\nOverview.\n\n## Items\n\n{table}\n- x\n- y\n', ['table-intro', 'list-intro'])
         self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\n**Pseudo heading**\n\nText.\n',

@@ -74,16 +74,18 @@ Avoid cramming several items into one long sentence.
 
 list-intro = """
 Fix, in order of preference:
-1. Add a sentence before the list that says what the list contains.
-2. Move the list into its own section so that it is the section's only content and the heading introduces it.
-Avoid a filler sentence such as "The following:" that does not say what the list is.
+1. If a code block or other block next to the list belongs to one of its items, such as a step's command, indent it into that item.
+   It then counts as part of the list, which also rejoins a list that the block split in two.
+2. Add a sentence before the list that says what the list contains.
+3. Move the list into its own section so that it is the section's only content and the heading introduces it.
+Avoid a filler sentence such as "The following:" or one that repeats the heading, since neither says what the list is.
 """
 
 table-intro = """
 Fix, in order of preference:
 1. Add a sentence before the table that says what it compares or lists.
 2. Move the table into its own section so that it is the section's only content and the heading introduces it.
-Avoid a filler sentence that does not say what the table holds.
+Avoid a filler sentence, or one that repeats the heading, since neither says what the table holds.
 """
 
 heading-intro = """

@@ -176,6 +176,17 @@ def is_badge_paragraph(block: SyntaxTreeNode) -> bool:
     return True
 
 
+def block_kind(block: SyntaxTreeNode, what: str) -> str:
+    """Name a block next to a list or table, marking one of the same kind."""
+    if block.type == 'table':
+        return 'another table' if what == 'table' else 'a table'
+    if block.type in LIST_TYPES and what != 'list':
+        return 'a list'
+    if is_heading_like_emphasis(block):
+        return 'an emphasized paragraph'
+    return KIND.get(block.type, block.type)
+
+
 def meaningful(blocks: list[SyntaxTreeNode]) -> list[SyntaxTreeNode]:
     return [b for b in blocks if b.type not in TRANSPARENT]
 
@@ -610,12 +621,10 @@ class FileCheck:
                     self.report('heading-intro', start_line(block),
                                 f'{what} follows the heading and precedes a paragraph')
                     continue
-                self.report(code, start_line(block), f'{what} follows the heading')
+                self.report(code, start_line(block),
+                            f'{what} follows the heading and precedes {block_kind(following, what)}')
                 continue
-            kind = KIND.get(previous.type, previous.type)
-            if previous.type == 'table':
-                kind = 'another table' if what == 'table' else 'a table'
-            self.report(code, start_line(block), f'{what} follows {kind}')
+            self.report(code, start_line(block), f'{what} follows {block_kind(previous, what)}')
 
     def check_lists(self) -> None:
         forms: dict[str, dict[str, list[int]]] = {}
