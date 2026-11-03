@@ -1026,8 +1026,6 @@ def render_json(registry: dict, diagnostics: list[Diagnostic], outlines: dict[st
     return json.dumps(data, ensure_ascii=False, indent=2) + '\n'
 
 
-
-
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         prog='mddt',
