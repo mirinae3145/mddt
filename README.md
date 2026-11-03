@@ -30,7 +30,7 @@ It does not represent any source in full or the positions of its authors.
 ## Checker
 
 The checker reads the Markdown files or directories it is given and reports findings by code.
-The [checker reference](skills/mddt/references/checker.md) covers running the checker, its findings and output, its options, the files it checks, and its exit statuses.
+The [checker reference](skills/mddt/references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
 Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes.
 The checker covers the model's rules, not formatting, so run your repository's own Markdown linter for formatting rules.
 

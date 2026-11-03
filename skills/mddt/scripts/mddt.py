@@ -32,6 +32,7 @@ from urllib.parse import unquote
 
 from markdown_it import MarkdownIt
 from markdown_it.tree import SyntaxTreeNode
+from mdit_py_plugins.dollarmath import dollarmath_plugin
 from mdit_py_plugins.front_matter import front_matter_plugin
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -61,6 +62,8 @@ INDEX_NAMES = ('skill.md', 'readme.md', 'index.md')
 # Tools read these files by name, so they need no parent document.
 ENTRY_NAMES = {'skill.md', 'agents.md', 'claude.md', 'gemini.md'}
 URL_SCHEME = re.compile(r'^[a-z][a-z0-9+.-]*:', re.IGNORECASE)
+# HTML elements that a link anchor can name besides headings, such as <a id="x">.
+HTML_ANCHOR = re.compile(r'''<[a-z][^>]*?\s(?:id|name)\s*=\s*["']?([^"'\s>]+)''', re.IGNORECASE)
 
 # Provisional thresholds for review information, to be calibrated against
 # documents written to the model.
@@ -130,6 +133,15 @@ def load_fixes() -> dict[str, str]:
 
 def parser() -> MarkdownIt:
     return MarkdownIt('commonmark').enable('table').use(front_matter_plugin)
+
+
+def link_parser() -> MarkdownIt:
+    """Parse dollar math as GitHub renders it, so formulas such as $[A](z,t)$ hold no links.
+
+    Only link extraction uses it; the other checks keep the plain parse, on
+    which their rules and thresholds were defined.
+    """
+    return parser().use(dollarmath_plugin, allow_space=False, allow_digits=False)
 
 
 def start_line(node: SyntaxTreeNode) -> int:
@@ -342,13 +354,23 @@ def section_number(text: str, parent: str | None = None) -> tuple[str, int] | No
 
 
 def github_slug(text: str) -> str:
+    """Approximate GitHub's heading ID: lowercase, without punctuation, spaces as hyphens.
+
+    Python's word characters differ from GitHub's, as the github-slugger
+    package reproduces them, for some characters: GitHub keeps combining
+    marks and removes superscript digits and fractions, so headings with such
+    characters may get another ID. Korean text and the middle dot (removed by
+    both) agree.
+    """
     return re.sub(r'[^\w\- ]', '', text.strip().lower()).replace(' ', '-')
 
 
 class FileCheck:
     def __init__(self, path: str, text: str):
         self.path = path
+        self.text = text
         self.lines = text.splitlines()
+        self._links: list[tuple[str, int, bool]] | None = None
         self.line_count = len(self.lines)
         self.root = SyntaxTreeNode(parser().parse(text))
         self.blocks = list(self.root.children)
@@ -504,20 +526,27 @@ class FileCheck:
 
         A link is alone when nothing but punctuation surrounds it in its
         paragraph, list item, or table cell, so it carries no summary.
+        The line is the link's own line, counted through line breaks in its block.
         """
+        if self._links is not None:
+            return self._links
         found = []
         line = 1
-        for node in self.root.walk():
+        for node in SyntaxTreeNode(link_parser().parse(self.text)).walk():
             if not node.is_root and node.map:
                 line = start_line(node)
             if node.type != 'inline':
                 continue
             parts = [n for n in node.children if n.type != 'softbreak']
+            offset = 0
             for n in node.walk():
-                if n.type == 'link':
+                if n.type in ('softbreak', 'hardbreak'):
+                    offset += 1
+                elif n.type == 'link':
                     alone = all(o is n or (o.type == 'text' and not re.search(r'\w', o.content))
                                 for o in parts)
-                    found.append((n.attrs.get('href', ''), line, alone))
+                    found.append((n.attrs.get('href', ''), line + offset, alone))
+        self._links = found
         return found
 
     def anchors(self) -> dict[str, Heading]:
@@ -530,6 +559,11 @@ class FileCheck:
             counts[slug] = n + 1
             found[f'{slug}-{n}' if n else slug] = h
         return found
+
+    def html_anchors(self) -> set[str]:
+        """Return the id and name attributes of HTML elements, which links can also target."""
+        return {m.group(1) for node in self.root.walk() if node.type in ('html_block', 'html_inline')
+                for m in HTML_ANCHOR.finditer(node.content)}
 
     def check_headings(self) -> None:
         h1s = [h for h in self.headings if h.level == 1]
@@ -754,6 +788,16 @@ def link_target(source: Path, href: str) -> Path | None:
     return target
 
 
+def through_symlink(source: Path, target: Path) -> bool:
+    """True when the path from the linking file's folder to the target passes a symbolic link."""
+    base, part = Path(os.path.commonpath([source.parent, target])), target
+    while part != base:
+        if part.is_symlink():
+            return True
+        part = part.parent
+    return False
+
+
 def find_root(path: Path) -> Path | None:
     for folder in path.parents:
         if (folder / '.git').exists():
@@ -776,7 +820,7 @@ class Tree:
         return self.cache[path]
 
     def check(self, path: Path, check: FileCheck, root: Path | None) -> None:
-        self.check_anchors(path, check)
+        self.check_links(path, check)
         if root is not None:
             self.check_parent(path, check, root)
             self.check_summaries(path, check, root)
@@ -800,20 +844,43 @@ class Tree:
                 check.report('link-without-summary', line,
                              f'link to child {relative(target, path)} has no summary')
 
-    def check_anchors(self, path: Path, check: FileCheck) -> None:
+    def check_links(self, path: Path, check: FileCheck) -> None:
+        """Report relative links whose target or anchor is missing, and anchors to parts.
+
+        URLs and absolute paths are not resolved, because their base depends on
+        where the documents are served: a leading slash means the repository
+        root on GitHub but the file system root locally. A target reached
+        through a symbolic link, such as a linked repository, is checked for
+        existence only, since its headings belong to another tree.
+        """
         for href, line, _ in check.links():
-            if '#' not in href:
+            if href.startswith('#'):
+                target, other = path, check
+            else:
+                target = link_target(path, href)
+                if target is None or href.startswith('/'):
+                    continue
+                if not target.exists():
+                    check.report('link-broken', line, f'link to {relative(target, path)}')
+                    continue
+                # A query selects another view, such as GitHub's ?plain=1 source view with line anchors.
+                if '#' not in href or '?' in href.split('#')[0] or target.suffix.lower() != '.md':
+                    continue
+                if not target.is_file() or through_symlink(path, target):
+                    continue
+                other = check if target == path else self.load(target)
+                if other is None:
+                    continue
+            anchor = unquote(href.split('#', 1)[1])
+            if not anchor:
                 continue
-            target = link_target(path, href)
-            if target is None or target == path or target.suffix.lower() != '.md':
-                continue
-            other = self.load(target)
-            if other is None:
-                continue
-            heading = other.anchors().get(unquote(href.split('#', 1)[1]))
-            if heading and (heading.level >= 3 or (heading.level == 2 and not heading.is_topic)):
-                check.report('anchor-to-part', line,
-                             f'links to part "{heading.text}" in {relative(target, path)}')
+            heading = other.anchors().get(anchor)
+            where = 'this file' if other is check else relative(target, path)
+            if heading is None:
+                if anchor not in other.html_anchors():
+                    check.report('anchor-missing', line, f'no heading in {where} has the anchor #{anchor}')
+            elif other is not check and (heading.level >= 3 or (heading.level == 2 and not heading.is_topic)):
+                check.report('anchor-to-part', line, f'links to part "{heading.text}" in {where}')
 
     def check_parent(self, path: Path, check: FileCheck, root: Path) -> None:
         if path.name.lower() in ENTRY_NAMES or path == index_file(root):

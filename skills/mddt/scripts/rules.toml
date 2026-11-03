@@ -125,6 +125,18 @@ group = "structure"
 summary = "parent document does not link to this document"
 rule = "model.md#links-between-documents"
 
+[link-broken]
+severity = "error"
+group = "structure"
+summary = "relative link points to a path that does not exist"
+rule = "model.md#links-between-documents"
+
+[anchor-missing]
+severity = "warning"
+group = "structure"
+summary = "link anchor matches no heading in its target"
+rule = "model.md#links-between-documents"
+
 [anchor-to-part]
 severity = "info"
 group = "structure"
