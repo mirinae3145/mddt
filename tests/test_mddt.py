@@ -71,10 +71,11 @@ class FileAndHeadingRules(CheckerCase):
         self.assertCodes('# A\n\nOverview.\n\n# B\n\nOverview.\n', ['h1-multiple'])
 
     def test_h1_overview_ignores_badges_and_comments(self):
-        self.assertCodes('# T\n\n[![b](x.svg)](y)\n\n<!-- note -->\n\nOverview.\n', [])
-        self.assertCodes('# T\n\n[![b](x.svg)](y)\n\n## Part\n\nText.\n', ['h1-overview'])
+        badge = '[![b](x.svg)](https://example.com/y)'
+        self.assertCodes(f'# T\n\n{badge}\n\n<!-- note -->\n\nOverview.\n', [])
+        self.assertCodes(f'# T\n\n{badge}\n\n## Part\n\nText.\n', ['h1-overview'])
         self.assertCodes('# T\n\n```\ncode\n```\n', ['h1-overview'])
-        badges = '[![a](a.svg)](x) [![b](b.svg)](y)\n![c](c.svg)'
+        badges = '[![a](a.svg)](https://example.com/x) [![b](b.svg)](https://example.com/y)\n![c](c.svg)'
         self.assertCodes(f'# T\n\n{badges}\n\nOverview.\n', [])
         self.assertCodes(f'# T\n\n{badges}\n\n## Part\n\nText.\n', ['h1-overview'])
 
@@ -137,7 +138,30 @@ class ListRules(CheckerCase):
 
     def test_sole_list_in_part_needs_no_intro(self):
         self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n  - detail\n  - more\n- y\n', [])
-        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\nAfter.\n', ['list-intro'])
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\n<!-- note -->\n', [])
+
+    def test_heading_may_introduce_a_block_that_paragraphs_follow(self):
+        table = '| a | b |\n| - | - |\n| 1 | 2 |\n'
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\nAfter.\n', ['heading-intro'])
+        self.assertCodes(f'# T\n\nOverview.\n\n## Topic\n\nOverview.\n\n### Values\n\n{table}\nAfter.\n\n### B\n\nY.\n',
+                         ['heading-intro'])
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\nMore:\n\n- z\n- w\n', ['heading-intro'])
+        self.assertCodes('# T\n\nOverview.\n\n## Topic\n\n- x\n- y\n\nAfter.\n\n### A\n\nX.\n\n### B\n\nY.\n',
+                         ['topic-overview'])
+        path = self.write('warn.md', '# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\nAfter.\n')
+        self.assertEqual(run(str(path)).returncode, 0)
+
+    def test_heading_does_not_introduce_a_block_followed_by_other_blocks(self):
+        table = '| a | b |\n| - | - |\n| 1 | 2 |\n'
+        found = self.write('doc.md', '# T\n\nOverview.\n\n## Steps\n\n1. Run it.\n1. Check it.\n\n```\ncode\n```\n')
+        data = json.loads(run('--format', 'json', str(found)).stdout)
+        self.assertEqual([d['message'] for d in data['diagnostics']],
+                         ['list does not start with an introductory paragraph: '
+                          'list follows the heading and precedes a code block'])
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\n1. a\n1. b\n', ['list-intro', 'list-intro'])
+        self.assertCodes(f'# T\n\nOverview.\n\n## Items\n\n{table}\n- x\n- y\n', ['table-intro', 'list-intro'])
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\n**Pseudo heading**\n\nText.\n',
+                         ['list-intro', 'bold-heading'])
 
     def test_list_right_after_h1_is_an_overview_problem_only(self):
         self.assertCodes('# T\n\n- x\n- y\n', ['h1-overview'])
@@ -195,6 +219,8 @@ class ListRules(CheckerCase):
             '# T\n\nOverview.\n\nList:\n\n- **A**: x\n- Install the tool with pipx:\n\n  ```sh\n  pipx install t\n  ```\n- **B**: y\n', [])
 
     def test_link_names_do_not_count_as_a_form(self):
+        self.write('a.md', '# A\n\nOverview.\n')
+        self.write('b.md', '# B\n\nOverview.\n')
         self.assertCodes(
             '# T\n\nOverview.\n\n## Docs\n\n- [A](a.md): what A covers.\n- [B](b.md): what B covers.\n\n'
             '## Scope\n\n- **In**: x\n- **Out**: y\n', [])
@@ -202,7 +228,7 @@ class ListRules(CheckerCase):
     def test_prose_starting_with_link_or_time_is_not_a_name(self):
         self.assertCodes(
             '# T\n\nOverview.\n\nList:\n\n- **A**: x\n'
-            '  - [Spec](u)을 확인했다.\n  - Meet at 10:30 today.\n- **B**: y\n', [])
+            '  - [Spec](https://example.com/u)을 확인했다.\n  - Meet at 10:30 today.\n- **B**: y\n', [])
 
 
 class ProseRules(CheckerCase):
@@ -235,7 +261,7 @@ class ProseRules(CheckerCase):
         self.assertCodes('# T\n\nFirst sentence. Second sentence.\n', ['line-sentences'])
         self.assertCodes('# T\n\n첫 문장이다. 둘째 문장이다.\n', ['line-sentences'])
         self.assertCodes('# T\n\nUse a tool, e.g. Python, with version 1.2 here.\n', [])
-        self.assertCodes('# T\n\nSee `a.b` and [Spec. One](u) now.\n', [])
+        self.assertCodes('# T\n\nSee `a.b` and [Spec. One](https://example.com/u) now.\n', [])
         self.assertCodes('# T\n\n보관함을 스캔한다. `tool scan PATH`\n', [])
         self.assertCodes('# T\n\nAsk the U.S. Office and call foo. bar handles it.\n', [])
 
@@ -313,6 +339,62 @@ class TreeRules(CheckerCase):
         }
         self.assertEqual(self.tree(files), [])
         self.assertEqual(self.tree(files, '--review'), [('README.md', 'anchor-to-part')])
+
+    def link_findings(self, files, *options):
+        return [(name, code) for name, code in self.tree(files, *options)
+                if code in ('link-broken', 'anchor-missing')]
+
+    def test_links_to_missing_paths_are_errors(self):
+        (self.dir / 'docs').mkdir()
+        (self.dir / 'pic.png').write_bytes(b'')
+        links = ['a.md', 'docs/', 'pic.png', 'my%20file.md', '<my file.md>', '한글.md', 'a.md?plain=1',
+                 'https://example.com/none.md', 'mailto:a@example.com', '/no/such/file.md', '//host/none.md']
+        text = '# R\n\nLinks:\n\n' + ''.join(f'- [link]({href})\n' for href in links)
+        found = self.tree({
+            'README.md': text + '\nSee [gone](gone.md),\n[folder](none/), and\n[image](none.png).\n',
+            'a.md': '# A\n\nOverview.\n',
+            'my file.md': '# M\n\nOverview.\n',
+            '한글.md': '# H\n\nOverview.\n',
+        })
+        self.assertEqual([f for f in found if f[1] == 'link-broken'], [('README.md', 'link-broken')] * 3)
+        data = json.loads(run('--format', 'json', str(self.dir / 'README.md')).stdout)
+        self.assertEqual([d['line'] for d in data['diagnostics'] if d['code'] == 'link-broken'],
+                         [len(links) + 6, len(links) + 7, len(links) + 8])
+
+    def test_anchors_must_match_a_heading(self):
+        found = self.link_findings({
+            'README.md': '# R\n\nOverview.\n\n## Own part\n\nLinks:\n\n'
+                         '- [own](#own-part), [own missing](#gone)\n'
+                         '- [topic](a.md#topic), [repeated](a.md#topic-1), [encoded](a.md#%EC%86%8C%EA%B0%9C)\n'
+                         '- [dot](a.md#문서자동화의-배치), [html](a.md#custom), [empty](a.md#)\n'
+                         '- [missing](a.md#nope), [line](a.md#L10), [source](a.md?plain=1#L10)\n'
+                         '- [line](script.py#L10), [folder](docs/#intro)\n',
+            'a.md': '# A\n\nOverview.\n\n## Topic\n\nText.\n\n## Topic\n\nText.\n\n'
+                    '## 소개\n\nText.\n\n## 문서·자동화의 배치\n\nText.\n\n<a id="custom"></a>\nText.\n',
+            'script.py': 'pass\n',
+            'docs/README.md': '# Docs\n\nOverview.\n\n## Intro\n\nText.\n',
+        })
+        self.assertEqual(found, [('README.md', 'anchor-missing')] * 3)
+
+    def test_math_is_not_read_as_links(self):
+        found = self.link_findings({
+            'README.md': '# R\n\nThe ratio $[A](z,t)/[A]_0$ falls.\n\n$$\n[A](z,T) = 1\n$$\n\nSee [gone](gone.md).\n',
+        })
+        self.assertEqual(found, [('README.md', 'link-broken')])
+
+    def test_linked_trees_are_checked_for_existence_only(self):
+        tree, other = self.dir / 'tree', self.dir / 'other'
+        other.mkdir()
+        (other / 'doc.md').write_text('# Other\n\nOverview.\n', encoding='utf-8')
+        tree.mkdir()
+        (tree / 'linked').symlink_to(other)
+        (tree / 'dangling').symlink_to(self.dir / 'none')
+        (tree / 'README.md').write_text(
+            '# R\n\nLinks:\n\n- [anchor](linked/doc.md#nope)\n- [missing](linked/none.md)\n'
+            '- [dangling](dangling/doc.md)\n', encoding='utf-8')
+        data = json.loads(run('--format', 'json', '--root', str(tree), str(tree)).stdout)
+        self.assertEqual([(d['code'], d['line']) for d in data['diagnostics']],
+                         [('link-broken', 6), ('link-broken', 7)])
 
     def test_link_without_summary(self):
         found = self.tree({
@@ -538,7 +620,8 @@ class Registry(unittest.TestCase):
 
     def test_example_results_follow_the_model(self):
         # The "After" side of each example must itself conform; snippets are
-        # fragments, so codes about whole files and parents do not apply.
+        # fragments, so codes about whole files, parents, and the files that
+        # their links name do not apply.
         text = (SKILL / 'references' / 'examples.md').read_text(encoding='utf-8')
         snippets = re.findall(r'(?:After:|In `[^`]+`:)\n\n```markdown\n(.*?)```', text, re.S)
         self.assertGreater(len(snippets), 5)
@@ -546,7 +629,7 @@ class Registry(unittest.TestCase):
             for n, snippet in enumerate(snippets):
                 Path(tmp, f'after{n}.md').write_text(snippet, encoding='utf-8')
             data = json.loads(run('--format', 'json', '--review', tmp).stdout)
-        whole_file = {'h1-missing', 'h1-overview', 'doc-unlinked'}
+        whole_file = {'h1-missing', 'h1-overview', 'doc-unlinked', 'link-broken', 'anchor-missing'}
         self.assertEqual([d for d in data['diagnostics'] if d['code'] not in whole_file], [])
 
     def test_links_between_skill_documents_resolve(self):

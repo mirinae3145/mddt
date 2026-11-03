@@ -78,6 +78,8 @@ Documents form a tree through links that follow these rules.
   The part has an introductory sentence followed by a list of links with summaries.
 - **Landing pages**: A document that introduces other documents reads as an overview, not as a bare list of links.
   It may introduce each of its other children in the part where the reader's task needs it.
+- **Links resolve**: A relative link points to a file or folder that exists, and its anchor matches a heading or an HTML `id` in the target. <!-- code: link-broken, anchor-missing -->
+  Moving or renaming a file or heading therefore includes updating the links to it, even in files the change does not otherwise touch.
 - **Anchor targets**: A link to an anchor in another file that expects its target to be read alone points to a topic. <!-- code: anchor-to-part -->
   An anchor to a part only locates content inside a file that the reader reads whole.
 - **Lateral links**: A link to a related topic outside the tree path goes in the sentence where the relation matters.
@@ -129,9 +131,13 @@ These rules apply wherever a list appears, under any heading level.
 ### Introductions
 
 A list starts with an introductory sentence that says what the list contains or which question it answers. <!-- code: list-intro -->
-When the list is the only content of a section without subheadings, the section heading introduces it instead.
 Continuation paragraphs, code blocks, and nested lists inside items count as part of the list.
-This exception does not apply directly under an H1 or a topic H2, which start with an overview paragraph.
+
+In a section without subheadings, the section heading can introduce a list that opens the section.
+The heading introduces it when the list is the section's only content, or when paragraphs follow and the heading says what the list holds. <!-- code: heading-intro -->
+Those paragraphs comment on the list rather than add items of its kind, which belong in the list.
+A list followed by any other block, such as another list or a code block, needs its own introduction.
+These exceptions do not apply directly under an H1 or a topic H2, which start with an overview paragraph.
 
 ### Length and order
 

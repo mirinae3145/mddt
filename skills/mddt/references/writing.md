@@ -99,6 +99,8 @@ Check the result as follows:
    - **Unchanged rendering**: A part or topic whose changes all leave the rendered document as it was needs no reread.
      Such changes include one-sentence line splits and link target updates after a move, but not a blank line, which splits a paragraph.
 1. Run the checker on the files you created or changed.
+   When the task moved or renamed files or headings, run it on the whole tree.
+   Links to the old names can sit in files that the task did not change.
    After adding child documents, add `--review` to see links that lack summaries.
    Information findings rest on approximate detection, so judge each one before acting on it.
 1. Fix structural findings before sentence-level ones, because structural fixes move sentences.

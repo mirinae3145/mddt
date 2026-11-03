@@ -1,7 +1,7 @@
 # Checker reference
 
 This document describes the checker that comes with the skill.
-It covers running the checker, its findings and output, its options, the files it checks, and its exit statuses.
+It covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
 Read it when choosing the files or tree root of a run, when a script reads the output or exit status, or without uv.
 
 ## Running
@@ -58,6 +58,23 @@ A file argument is checked as given, and a directory argument expands as follows
 
 Files named CHANGELOG and files matching `--exclude` are skipped even when named explicitly.
 Lists inside block quotes are not checked.
+
+## Links checked
+
+Links in the checked files are resolved as follows, while images and links written in raw HTML are not checked:
+
+- **Paths**: A relative path is resolved from the linking file's folder after percent-decoding, and a missing file or folder is an error.
+  A link to a folder stands for the folder's index file when it has one.
+- **Anchors**: An anchor in a link to a Markdown file, or a bare `#anchor`, must match a heading ID or an HTML `id` or `name` in its target.
+  A heading ID is the heading text in lowercase, without punctuation, with spaces as hyphens, and with `-1`, `-2`, and so on for repeats.
+- **Anchor IDs**: This rule only approximates GitHub's, so a missing anchor is a warning.
+  For example, GitHub keeps the variation selector that follows some emoji, while the checker drops it, so anchors to such headings are reported falsely.
+- **Not resolved**: URLs with a scheme and absolute paths are left alone, since their base depends on where the documents are served.
+  Anchors are also left alone when the link has a query, such as `?plain=1`, or its target is not a Markdown file.
+- **Linked trees**: A target reached through a symbolic link, such as a linked repository, is checked only for existence.
+  Its headings belong to another tree, which the checker does not enter.
+
+Formulas in dollar math are read as math, so brackets and parentheses in them do not form links.
 
 ## Exit status
 
