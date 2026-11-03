@@ -74,6 +74,9 @@ class FileAndHeadingRules(CheckerCase):
         self.assertCodes('# T\n\n[![b](x.svg)](y)\n\n<!-- note -->\n\nOverview.\n', [])
         self.assertCodes('# T\n\n[![b](x.svg)](y)\n\n## Part\n\nText.\n', ['h1-overview'])
         self.assertCodes('# T\n\n```\ncode\n```\n', ['h1-overview'])
+        badges = '[![a](a.svg)](x) [![b](b.svg)](y)\n![c](c.svg)'
+        self.assertCodes(f'# T\n\n{badges}\n\nOverview.\n', [])
+        self.assertCodes(f'# T\n\n{badges}\n\n## Part\n\nText.\n', ['h1-overview'])
 
     def test_heading_skip_and_depth(self):
         self.assertCodes('# T\n\nOverview.\n\n### Deep\n\nText.\n', ['heading-skip'])
@@ -84,6 +87,7 @@ class FileAndHeadingRules(CheckerCase):
     def test_section_numbers_in_sequence(self):
         self.assertCodes('# T\n\nOverview.\n\n## 1. Start\n\nA.\n\n## 2. Next\n\nB.\n', ['heading-number'])
         self.assertCodes('# T\n\nOverview.\n\n## A. Start\n\nA.\n\n## B. Next\n\nB.\n', ['heading-number'])
+        self.assertCodes('# T\n\nOverview.\n\n## III. Start\n\nA.\n\n## IV. Next\n\nB.\n', ['heading-number'])
         self.assertCodes('# T\n\nOverview.\n\n## 2.0 migration\n\nA.\n\n## 3.0 migration\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 2026-10-30 review\n\nA.\n\n## 2026-10-31 review\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 3 things to know\n\nA.\n\n## Other\n\nB.\n', [])
@@ -165,6 +169,10 @@ class ListRules(CheckerCase):
         self.assertCodes(
             '# T\n\nOverview.\n\nList:\n\n- **Outer**: text\n  - Inner: text\n  - plain\n- **Other**: x\n',
             ['name-nesting', 'name-form-mix'])
+        self.assertCodes(
+            '# T\n\nOverview.\n\nList:\n\n- **Outer**: text\n  - plain\n    - **Deep**: text\n    - plain\n'
+            '  - plain\n- **Other**: x\n',
+            ['name-nesting', 'list-depth-3'])
 
     def test_items_of_several_sentences_are_blocks(self):
         long = 'First sentence.\n  Second sentence.'
@@ -173,6 +181,8 @@ class ListRules(CheckerCase):
         self.assertEqual(self.review(f'# T\n\nOverview.\n\nList:\n\n- **Name**: {long}\n- **Other**: x\n'), [])
         nested = f'# T\n\nOverview.\n\nList:\n\n- **Name**: rule.\n  - {long}\n  - short\n- **Other**: x\n'
         self.assertEqual(self.review(nested), ['nested-block'])
+        holder = f'# T\n\nOverview.\n\nList:\n\n- {long}\n  - **Name**: x\n  - **Other**: y\n- short\n'
+        self.assertEqual(self.review(holder), ['nested-block'])
 
     def test_name_forms_are_compared_per_topic(self):
         text = ('# T\n\nOverview.\n\n## Topic A\n\nOverview.\n\n### One\n\nList:\n\n- **a**: x\n- **b**: y\n\n'
@@ -227,6 +237,7 @@ class ProseRules(CheckerCase):
         self.assertCodes('# T\n\nUse a tool, e.g. Python, with version 1.2 here.\n', [])
         self.assertCodes('# T\n\nSee `a.b` and [Spec. One](u) now.\n', [])
         self.assertCodes('# T\n\n보관함을 스캔한다. `tool scan PATH`\n', [])
+        self.assertCodes('# T\n\nAsk the U.S. Office and call foo. bar handles it.\n', [])
 
 
 class TreeRules(CheckerCase):
@@ -247,6 +258,14 @@ class TreeRules(CheckerCase):
             'b.md': '# B\n\nOverview.\n',
         })
         self.assertEqual(found, [('b.md', 'doc-unlinked')])
+
+    def test_git_root_decides_parents_of_a_checked_subfolder(self):
+        (self.dir / '.git').mkdir()
+        (self.dir / 'sub').mkdir()
+        self.write('README.md', '# R\n\nOverview.\n')
+        self.write('sub/a.md', '# A\n\nOverview.\n')
+        data = json.loads(run('--format', 'json', str(self.dir / 'sub')).stdout)
+        self.assertEqual([d['code'] for d in data['diagnostics']], ['doc-unlinked'])
 
     def test_companion_folder_and_folder_index(self):
         found = self.tree({
@@ -289,7 +308,7 @@ class TreeRules(CheckerCase):
 
     def test_anchor_to_part_is_review_information(self):
         files = {
-            'README.md': '# R\n\nSee [part](other.md#part), [topic](other.md#topic), [file](other.md).\n',
+            'README.md': '# R\n\nSee [part](other.md#part), [topic](other.md#topic), [file](other.md), [own](#r).\n',
             'other.md': '# O\n\nOverview.\n\n## Part\n\nText.\n\n## Topic\n\nOverview.\n\n### A\n\nX.\n\n### B\n\nY.\n',
         }
         self.assertEqual(self.tree(files), [])
@@ -302,6 +321,13 @@ class TreeRules(CheckerCase):
             'b.md': '# B\n\nSee [A](a.md).\n',
         }, '--review')
         self.assertEqual(found, [('README.md', 'link-without-summary')])
+
+    def test_one_summarized_link_is_enough(self):
+        found = self.tree({
+            'README.md': '# R\n\nChildren:\n\n- [A](a.md)\n- [A](a.md): what A covers.\n',
+            'a.md': '# A\n\nOverview.\n',
+        }, '--review')
+        self.assertEqual(found, [])
 
     def test_section_count_unless_mechanically_ordered(self):
         sections = ''.join(f'## {w}\n\nText.\n\n' for w in 'pear apple fig kiwi plum lime date cherry'.split())
@@ -330,6 +356,9 @@ class Interface(CheckerCase):
         self.assertEqual(run(str(warn)).returncode, 0)
         self.assertEqual(run(str(bad)).returncode, 1)
         self.assertEqual(run(str(self.dir / 'missing.md')).returncode, 2)
+        latin = self.dir / 'latin.md'
+        latin.write_bytes('# Caf\u00e9\n\nOverview.\n'.encode('latin-1'))
+        self.assertEqual(run(str(latin)).returncode, 2)
 
     def test_text_output_groups_locations_and_prints_fix_once(self):
         a = self.write('a.md', '# A\n')
@@ -339,6 +368,16 @@ class Interface(CheckerCase):
         self.assertEqual(out.count('  fix:'), 1)
         self.assertIn(f'{a}:1', out)
         self.assertIn(f'{b}:1', out)
+
+    def test_text_output_counts_info_and_long_skip_lists(self):
+        mixed = self.write('mixed.md', '# T\n\n- First sentence.\n  Second sentence.\n- short\n')
+        out = run('--review', str(mixed)).stdout
+        self.assertIn('1 error(s), 0 warning(s), 1 info in 1 file(s)', out)
+        self.assertEqual(out.count('  fix:'), 2)
+        for n in range(6):
+            self.write(f'skip{n}.md', '# S\n\nOverview.\n')
+        out = run('--exclude', 'skip*', str(self.dir)).stdout
+        self.assertIn('skipped: 6 files', out)
 
     def test_outline_is_automatic_only_with_structural_findings(self):
         ok = self.write('ok.md', '# T\n\nOverview.\n\n## Part\n\nText.\n')
@@ -370,6 +409,17 @@ class Interface(CheckerCase):
                      env={**os.environ, 'PATH': str(bin_dir)})
         self.assertEqual([Path(f).name for f in json.loads(result.stdout)['files']], ['doc.md'])
         self.assertIn('.gitignore is not applied', result.stderr)
+
+    def test_git_repositories_list_the_files_git_sees(self):
+        if shutil.which('git') is None:
+            self.skipTest('git is not installed')
+        subprocess.run(['git', 'init', '--quiet', str(self.dir)], check=True)
+        self.write('.gitignore', 'ignored/\n')
+        (self.dir / 'ignored').mkdir()
+        self.write('ignored/x.md', '# X\n\nOverview.\n')
+        self.write('doc.md', '# T\n\nOverview.\n')
+        data = json.loads(run('--format', 'json', str(self.dir)).stdout)
+        self.assertEqual([Path(f).name for f in data['files']], ['doc.md'])
 
     def test_self_ignoring_folders_are_skipped_without_git(self):
         self.write('README.md', '# R\n\nOverview.\n')
