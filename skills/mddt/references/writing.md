@@ -88,10 +88,13 @@ Only a part or topic whose question the current task changed is rewritten.
 
 ## Checking
 
-The checker reports what a parser can decide or flag, and its findings come with fix guidance.
-Use it as follows:
+Checking combines a reread against the model's judgment rules with the checker, which reports what a parser can decide or flag.
+Check the result as follows:
 
-1. Run the checker on the files you created or changed, after the structure is in place.
+1. Once the content has settled, reread each part or topic you changed as a whole.
+   Judge whether the changes fit its question, order, and forms, and compare with the [examples](examples.md) where a rule's application is unclear.
+   When the documents change alongside other work, such as code, the content settles when that work does.
+1. Run the checker on the files you created or changed.
    After adding child documents, add `--review` to see links that lack summaries.
    Information findings rest on approximate detection, so judge each one before acting on it.
 1. Fix structural findings before sentence-level ones, because structural fixes move sentences.
