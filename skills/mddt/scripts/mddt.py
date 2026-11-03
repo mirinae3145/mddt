@@ -290,8 +290,9 @@ def count_words(text: str) -> int:
 def sentence_breaks(line: str) -> list[int]:
     """Return positions inside a line where a new sentence starts.
 
-    A boundary needs sentence punctuation, whitespace, and a new sentence:
-    Korean text ending a sentence, or an uppercase letter after Latin text.
+    A boundary needs sentence punctuation and whitespace, and one of these:
+    Korean text before the punctuation, a full-width stop, or an uppercase
+    letter after the whitespace.
     Abbreviations and single-letter initials are not boundaries.
     """
     breaks = []
