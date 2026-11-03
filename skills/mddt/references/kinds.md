@@ -25,7 +25,8 @@ The remaining kinds are reference and explanation, and each kind has dominant in
 A rule set, such as a set of agent instructions made of rules, is reference in which principle dominates.
 
 Document sets, the files that a landing page introduces together, have no rule about mixing kinds.
-A document set may be divided by kind at any level, or by subject with several kinds below.
+Neither do the topics in a topic set file.
+A set may be divided by kind at any level, or by subject with several kinds below.
 Each topic still keeps one kind, and each landing page reads as an overview.
 
 Entry documents and landing pages are the exception, because their short parts may differ in kind.
