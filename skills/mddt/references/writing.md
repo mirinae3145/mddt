@@ -88,6 +88,7 @@ Use it as follows:
 
 1. Run the checker on the files you created or changed, after the structure is in place.
    After adding child documents, add `--review` to see links that lack summaries.
+   Information findings rest on approximate detection, so judge each one before acting on it.
 1. Fix structural findings before sentence-level ones, because structural fixes move sentences.
 1. Run the checker once more after fixing, and stop there.
    A warning that remains after judgment is a valid outcome, and the goal is not zero warnings.
