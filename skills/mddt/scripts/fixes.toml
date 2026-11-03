@@ -86,6 +86,15 @@ Fix, in order of preference:
 Avoid a filler sentence that does not say what the table holds.
 """
 
+heading-intro = """
+The heading may introduce a list or table that opens the section even when paragraphs follow it; keeping it is a valid outcome.
+1. Keep it when the heading says what the list or table holds and the paragraphs after it comment on it, such as caveats or limits.
+2. If the content after it continues the same kind of items, such as decisions outside a table of decisions, merge them into the list or table.
+3. Otherwise add a sentence before it that states its scope, such as which of the section's decisions it holds.
+Avoid a sentence that only repeats the heading, such as "The decisions are as follows:".
+It adds nothing, and it can claim that the list or table covers the whole section.
+"""
+
 list-single = """
 Write the item as a sentence or paragraph.
 """

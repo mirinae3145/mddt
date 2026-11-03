@@ -137,7 +137,26 @@ class ListRules(CheckerCase):
 
     def test_sole_list_in_part_needs_no_intro(self):
         self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n  - detail\n  - more\n- y\n', [])
-        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\nAfter.\n', ['list-intro'])
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\n<!-- note -->\n', [])
+
+    def test_heading_may_introduce_a_block_that_paragraphs_follow(self):
+        table = '| a | b |\n| - | - |\n| 1 | 2 |\n'
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\nAfter.\n', ['heading-intro'])
+        self.assertCodes(f'# T\n\nOverview.\n\n## Topic\n\nOverview.\n\n### Values\n\n{table}\nAfter.\n\n### B\n\nY.\n',
+                         ['heading-intro'])
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\nMore:\n\n- z\n- w\n', ['heading-intro'])
+        self.assertCodes('# T\n\nOverview.\n\n## Topic\n\n- x\n- y\n\nAfter.\n\n### A\n\nX.\n\n### B\n\nY.\n',
+                         ['topic-overview'])
+        path = self.write('warn.md', '# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\nAfter.\n')
+        self.assertEqual(run(str(path)).returncode, 0)
+
+    def test_heading_does_not_introduce_a_block_followed_by_other_blocks(self):
+        table = '| a | b |\n| - | - |\n| 1 | 2 |\n'
+        self.assertCodes('# T\n\nOverview.\n\n## Steps\n\n1. Run it.\n1. Check it.\n\n```\ncode\n```\n', ['list-intro'])
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\n1. a\n1. b\n', ['list-intro', 'list-intro'])
+        self.assertCodes(f'# T\n\nOverview.\n\n## Items\n\n{table}\n- x\n- y\n', ['table-intro', 'list-intro'])
+        self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\n**Pseudo heading**\n\nText.\n',
+                         ['list-intro', 'bold-heading'])
 
     def test_list_right_after_h1_is_an_overview_problem_only(self):
         self.assertCodes('# T\n\n- x\n- y\n', ['h1-overview'])

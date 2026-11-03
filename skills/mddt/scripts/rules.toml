@@ -77,6 +77,12 @@ group = "structure"
 summary = "table does not start with an introductory paragraph"
 rule = "model.md#sections-lists-and-tables"
 
+[heading-intro]
+severity = "warning"
+group = "structure"
+summary = "heading introduces a list or table that a paragraph follows"
+rule = "model.md#lists"
+
 [list-single]
 severity = "error"
 group = "structure"

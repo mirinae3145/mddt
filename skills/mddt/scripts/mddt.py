@@ -600,10 +600,20 @@ class FileCheck:
                 continue
             if previous is None and needs_overview:
                 continue  # The missing overview is reported for the heading.
-            if previous is None and len(blocks) == 1 and h.level >= 2:
-                continue  # The heading introduces a block that is its only content.
-            kind = KIND.get(previous.type, previous.type) if previous else 'the heading'
-            if previous is not None and previous.type == 'table':
+            if previous is None:
+                if len(blocks) == 1:
+                    continue  # The heading introduces a block that is its only content.
+                following = blocks[1]
+                if following.type == 'paragraph' and not is_heading_like_emphasis(following):
+                    # Whether the heading covers the block, or the paragraph
+                    # carries on with items of its kind, depends on meaning.
+                    self.report('heading-intro', start_line(block),
+                                f'{what} follows the heading and precedes a paragraph')
+                    continue
+                self.report(code, start_line(block), f'{what} follows the heading')
+                continue
+            kind = KIND.get(previous.type, previous.type)
+            if previous.type == 'table':
                 kind = 'another table' if what == 'table' else 'a table'
             self.report(code, start_line(block), f'{what} follows {kind}')
 
