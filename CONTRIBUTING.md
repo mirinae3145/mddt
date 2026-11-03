@@ -66,6 +66,10 @@ Running `reuse lint` from the [REUSE tool](https://reuse.software/) confirms tha
 
 ## Verification
 
+A change is verified by the tests, and a change to the repository's documents also by checking them against the model.
+
+### Tests
+
 Run the behavioral checks from the repository root:
 
 ```bash
@@ -73,6 +77,26 @@ python3 -m unittest discover -s tests -v
 ```
 
 The tests run the checker through `uv run`, so uv must be installed.
+Add a test with each new code or behavior change, including a case that must not be reported.
+
+After changing `mddt.py`, also run the tests with coverage to find the lines and branches they never reach:
+
+```bash
+MDDT_COVERAGE=1 python3 -m unittest discover -s tests
+uvx coverage combine
+uvx coverage report -m
+```
+
+The coverage run starts the checker through coverage rather than as the documentation tells users to, so it does not replace the plain run.
+Its report supports judgment rather than setting a target, so it has no required percentage.
+Unreached lines in the code the change added or modified are judged as follows:
+
+- **Specified behavior**: A line that decides a finding, file selection, output, or exit status needs a test.
+  Specified behavior is what the model, the checker reference, or a comment in the checker states.
+- **Unspecified conditions**: A line that guards against another platform, a broken registry, or a similar unspecified condition can stay unreached.
+
+### Documents
+
 The repository's own documents follow the model, as [self-conformance](#self-conformance) describes.
 After changing them, check them with the generated material in `calibration/` excluded:
 
@@ -83,5 +107,3 @@ uv run skills/mddt/scripts/mddt.py --exclude 'calibration/outputs/*' --exclude '
 The checker decides only the rules a parser can see.
 Also review the changed documents against the model's judgment rules, such as divisions, levels of detail among siblings, and summaries in parent documents.
 Where a rule's application is unclear, compare with the [examples](skills/mddt/references/examples.md).
-
-Add a test with each new code or behavior change, including a case that must not be reported.
