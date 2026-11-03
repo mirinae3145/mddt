@@ -9,6 +9,7 @@ The model holds the rules, and this document adds only the steps and the rules t
 Before writing, decide where the content sits in the tree.
 When adding to an existing document, place only the added content.
 Change the structure around it only where the addition requires it, as [growing and shrinking](#growing-and-shrinking) describes.
+When a task creates several documents, place them from the entry document down, so that each has its parent before its content is written.
 The placement takes these steps:
 
 1. State in one or two sentences what the content is and what it covers.
