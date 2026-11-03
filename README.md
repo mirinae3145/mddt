@@ -53,8 +53,8 @@ Languages written without spaces between words, such as Chinese, Japanese, and T
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how the checker is organized, what to update when a rule changes, and how to run its tests.
-It also says how the repository applies the skill to itself and how files are licensed.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for what to read before a change, how the checker is organized, and what to update when a rule changes.
+It also says how the repository applies the skill to itself, how files are licensed, and how to run the tests.
 
 ## License
 

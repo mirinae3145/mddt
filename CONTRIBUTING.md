@@ -1,8 +1,21 @@
 # Contributing
 
-This guide covers how the checker is organized and what to update when a rule changes.
+This guide covers what to read before a change, how the checker is organized, and what to update when a rule changes.
 It also covers how the repository applies the skill to itself, how files are licensed, and how to verify changes.
 The skill is meant for any agent and repository, so keep it independent of personal instruction sets, machine paths, and particular workflow tools.
+
+## Before a change
+
+What to read before a change depends on which files it touches:
+
+- **Skill and tests**: A change inside `skills/mddt/` or `tests/` needs the whole repository.
+  The rule text, checker, registry, fix guidance, tests, and summaries depend on one another.
+  Reading only the touched files can leave them out of step.
+  The license texts and the material in `calibration/` beyond its [README](calibration/README.md) can be skipped, since that material records one past round.
+- **Repository documents**: A change to another document, such as README or this guide, needs the skill's reference documents.
+  The repository's documents follow the model, as [self-conformance](#self-conformance) describes, and the checker covers only part of it.
+  The change also needs the documents that the changed text summarizes or that summarize it.
+- **Licensing and configuration**: A change to `REUSE.toml`, `LICENSES/`, or `.gitignore` needs only this guide.
 
 ## Checker layout
 
