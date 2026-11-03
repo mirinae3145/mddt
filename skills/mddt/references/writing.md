@@ -16,6 +16,7 @@ The placement takes these steps:
    This statement starts both the overview and the parent's summary.
    If it does not fit in two or three sentences, the content probably holds several topics or kinds.
 1. Find the parent document that will introduce it, and plan the summary and link that the parent will carry.
+   The parent carries the planned summary until the child settles, and then the summary is rewritten as [rules for new writing](#rules-for-new-writing) describe.
 1. Decide whether the content is a part of an existing topic, a new topic in an existing file, or a file of its own.
    Short topics that the same reader needs for the same task stay together in one file, as parts or as topic H2s.
    A topic gets its own file when it serves another reader or task, outgrows its siblings, or needs more than two heading levels.
@@ -64,8 +65,9 @@ Some rules apply only when writing, not when judging existing text:
 - **Named references**: Refer to other content by linking to its heading, not by position words such as "above" or "below".
   Use the target's title as the link text where the link introduces it, such as a parent's link to a child.
   Where the sentence already says what the reader will find, a shorter text that still identifies the target is enough.
-- **Overviews last**: When the content settles, rewrite the H1 overview and each topic overview to match it.
-  If the scope changed, update the parent's summary as well.
+- **Overviews and summaries last**: When the content settles, rewrite the H1 overview and each topic overview to match it.
+  Then rewrite the parent's summary of each document whose H1 overview the task wrote or changed, condensing the settled overview, not the planned summary.
+  Work up from the deepest changed documents, because a parent's own overview can change once its summaries do.
 
 ## Growing and shrinking
 
