@@ -1,12 +1,15 @@
 # Writing and restructuring
 
-This procedure applies the [document model](model.md) when creating a document or changing its structure.
+This procedure applies the [document model](model.md) when creating a document or adding, moving, or removing content in one.
 It covers placing a document in the tree, choosing forms, rules for new writing, growing and shrinking structure, and checking the result.
 The model holds the rules, and this document adds only the steps and the rules that apply only when writing.
 
 ## Placing a document
 
-Before writing, decide where the content sits in the tree:
+Before writing, decide where the content sits in the tree.
+When adding to an existing document, place only the added content.
+Change the structure around it only where the addition requires it, as [growing and shrinking](#growing-and-shrinking) describes.
+The placement takes these steps:
 
 1. State in one or two sentences what the content is and what it covers.
    This statement starts both the overview and the parent's summary.
