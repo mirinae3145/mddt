@@ -9,12 +9,14 @@ The model holds the rules, and this document adds only the steps and the rules t
 Before writing, decide where the content sits in the tree.
 When adding to an existing document, place only the added content.
 Change the structure around it only where the addition requires it, as [growing and shrinking](#growing-and-shrinking) describes.
+When a task creates several documents, place them from the entry document down, so that each has its parent before its content is written.
 The placement takes these steps:
 
 1. State in one or two sentences what the content is and what it covers.
    This statement starts both the overview and the parent's summary.
    If it does not fit in two or three sentences, the content probably holds several topics or kinds.
 1. Find the parent document that will introduce it, and plan the summary and link that the parent will carry.
+   The parent carries the planned summary until the child settles, and then the summary is rewritten as [rules for new writing](#rules-for-new-writing) describe.
 1. Decide whether the content is a part of an existing topic, a new topic in an existing file, or a file of its own.
    Short topics that the same reader needs for the same task stay together in one file, as parts or as topic H2s.
    A topic gets its own file when it serves another reader or task, outgrows its siblings, or needs more than two heading levels.
@@ -63,8 +65,9 @@ Some rules apply only when writing, not when judging existing text:
 - **Named references**: Refer to other content by linking to its heading, not by position words such as "above" or "below".
   Use the target's title as the link text where the link introduces it, such as a parent's link to a child.
   Where the sentence already says what the reader will find, a shorter text that still identifies the target is enough.
-- **Overviews last**: When the content settles, rewrite the H1 overview and each topic overview to match it.
-  If the scope changed, update the parent's summary as well.
+- **Overviews and summaries last**: When the content settles, rewrite the H1 overview and each topic overview to match it.
+  Then rewrite the parent's summary of each document whose H1 overview the task wrote or changed, condensing the settled overview, not the planned summary.
+  Work up from the deepest changed documents, because a parent's own overview can change once its summaries do.
 
 ## Growing and shrinking
 
@@ -77,17 +80,27 @@ Structure changes as content grows or shrinks, and the promotion ladder in [head
   Alternatively, move only the excess detail to a topic at that level.
 - **When a block of another kind or level grows**: Move it to a topic of its own.
   See [blocks of another kind or level](kinds.md#blocks-of-another-kind-or-level).
+- **When a change alters what a part or topic answers**: Rewrite that part or topic as a unit from the question it now answers.
+  Appending to its end or patching single sentences leaves its old order and form in place.
+  Keep its facts, and leave the parts and topics around it as they are.
 
-Restructuring moves content; it does not rewrite it.
+Moving content does not rewrite it.
 Keep the wording of moved content unless the move itself requires a change, such as replacing a position word with a link.
+Only a part or topic whose question the current task changed is rewritten.
 
 ## Checking
 
-The checker reports what a parser can decide or flag, and its findings come with fix guidance.
-Use it as follows:
+Checking combines a reread against the model's judgment rules with the checker, which reports what a parser can decide or flag.
+Check the result as follows:
 
-1. Run the checker on the files you created or changed, after the structure is in place.
+1. Once the content has settled, reread each part or topic you changed as a whole.
+   Judge whether the changes fit its question, order, and forms, and compare with the [examples](examples.md) where a rule's application is unclear.
+   - **Alongside other work**: When the documents change with other work, such as code, the content settles when that work does.
+   - **Unchanged rendering**: A part or topic whose changes all leave the rendered document as it was needs no reread.
+     Such changes include one-sentence line splits and link target updates after a move, but not a blank line, which splits a paragraph.
+1. Run the checker on the files you created or changed.
    After adding child documents, add `--review` to see links that lack summaries.
+   Information findings rest on approximate detection, so judge each one before acting on it.
 1. Fix structural findings before sentence-level ones, because structural fixes move sentences.
 1. Run the checker once more after fixing, and stop there.
    A warning that remains after judgment is a valid outcome, and the goal is not zero warnings.
@@ -99,7 +112,10 @@ Findings the task did not cause, and requests to restructure, are handled as fol
 
 - **Existing warnings**: Leave them, or reconsider them while giving the existing structure priority.
 - **Existing errors**: Fix them inside the section you are editing, and report the rest without fixing them.
-- **Requested restructuring**: When the user asks for the structure to be reorganized, apply all findings.
+- **Requested restructuring**: When the user asks for the structure to be reorganized, apply all structural findings.
+  Apply sentence-level findings as well where the fix leaves the rendered document as it was, such as splitting lines for `line-sentences`.
+  Other sentence-level findings need rewriting, so fix them only where [growing and shrinking](#growing-and-shrinking) allows a rewrite: in parts and topics whose question the task changed.
+  Elsewhere leave them; like other warnings that remain after judgment, they are a valid outcome.
   Run the checker with `--review` to also see information such as oversized sections and links without summaries.
 
 When a structural finding is unclear, read the outline the checker prints for that file.
