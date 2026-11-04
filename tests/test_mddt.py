@@ -214,6 +214,17 @@ class ListRules(CheckerCase):
         holder = f'# T\n\nOverview.\n\nList:\n\n- {long}\n  - **Name**: x\n  - **Other**: y\n- short\n'
         self.assertEqual(self.review(holder), ['nested-block'])
 
+    def test_numbered_steps_are_not_blocks_or_names(self):
+        long = 'First sentence.\n   Second sentence.'
+        holder = f'# T\n\nOverview.\n\nSteps:\n\n1. {long}\n   - **Name**: x\n   - **Other**: y\n1. short\n'
+        self.assertEqual(self.review(holder), [])
+        inside = '# T\n\nOverview.\n\nList:\n\n- **Name**: rule.\n  1. First sentence.\n     Second sentence.\n  1. short\n- **Other**: x\n'
+        self.assertEqual(self.review(inside), [])
+        labeled = '# T\n\nOverview.\n\nSteps:\n\n1. **Settings** opens.\n   - First sentence.\n     Second sentence.\n   - short\n1. Close it.\n'
+        self.assertEqual(self.review(labeled), ['item-name'])
+        self.assertCodes('# T\n\nOverview.\n\nScope:\n\n- In: x\n- Out: y\n\n'
+                         'Steps:\n\n1. **Settings** 메뉴를 연다.\n1. **Save**를 누른다.\n', [])
+
     def test_name_forms_are_compared_per_topic(self):
         text = ('# T\n\nOverview.\n\n## Topic A\n\nOverview.\n\n### One\n\nList:\n\n- **a**: x\n- **b**: y\n\n'
                 '### Two\n\nList:\n\n- c: x\n- d: y\n\n'

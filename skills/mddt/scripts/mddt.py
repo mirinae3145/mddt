@@ -696,32 +696,35 @@ class FileCheck:
             self.report('list-single', node, 'list has one item')
         if len(items) > MAX_LIST_ITEMS and not is_mechanically_ordered([item_key(i) for i in items]):
             self.report('list-length', node, f'{len(items)} items without mechanical order')
+        numbered = node.type == 'ordered_list'
         for item in items:
             named = name_of(item)
             descendant = first_named_descendant(item)
             if named:
-                # Link text follows its target's title, so it is not a form choice.
-                if named[0] != 'link':
+                # Link text follows its target's title, so it is not a form choice,
+                # and a numbered step is labeled by its position, so leading bold
+                # text in it, such as a UI label, is not one either.
+                if named[0] != 'link' and not numbered:
                     forms.setdefault(named[0], []).append(start_line(item))
                 if descendant:
                     self.report('name-nesting', item,
                                 f'"{named[1]}" has named descendant "{descendant[1]}" '
                                 f'at line {descendant[0]}')
-            self.check_item_block(item, named, descendant, named_ancestor,
-                                  numbered=node.type == 'ordered_list')
+            if not numbered:
+                self.check_item_block(item, named, descendant, named_ancestor)
             for child in item.children:
                 if child.type in LIST_TYPES:
                     self.walk_list(child, depth + 1, deepest, forms,
-                                   named[1] if named else named_ancestor)
+                                   named[1] if named and not numbered else named_ancestor)
 
-    def check_item_block(self, item: SyntaxTreeNode, named, descendant, ancestor: str | None,
-                         numbered: bool) -> None:
-        """Treat a list item of several sentences as a block that deserves a name.
+    def check_item_block(self, item: SyntaxTreeNode, named, descendant, ancestor: str | None) -> None:
+        """Treat an unnumbered list item of several sentences as a block that deserves a name.
 
         Where the name rules forbid a name, because a named item encloses this
         one or this one encloses named items, blocks are nested inside blocks,
         which suggests promoting the enclosing item to a heading. A numbered
-        step is labeled by its position, so it needs no name of its own.
+        step is labeled by its position, so the caller does not treat it as a
+        block, and its leading text does not name the items nested in it.
         """
         if named and descendant:
             return  # Reported as name-nesting.
@@ -734,7 +737,7 @@ class FileCheck:
         elif descendant and not named:
             self.report('nested-block', item,
                         f'item of {count} sentences holds named item "{descendant[1]}"')
-        elif not named and not numbered:
+        elif not named:
             self.report('item-name', item, f'item of {count} sentences has no name')
 
     def section_lines(self, k: int) -> int:
