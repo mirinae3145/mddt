@@ -423,6 +423,47 @@ class TreeRules(CheckerCase):
         })
         self.assertEqual(found, [('README.md', 'anchor-missing')] * 3)
 
+    def github_repo(self, origin):
+        if shutil.which('git') is None:
+            self.skipTest('git is not installed')
+        git = ['git', '-C', str(self.dir)]
+        subprocess.run(['git', 'init', '--quiet', '-b', 'main', str(self.dir)], check=True)
+        subprocess.run([*git, '-c', 'user.name=t', '-c', 'user.email=t@example.com',
+                        'commit', '--quiet', '--allow-empty', '-m', 'init'], check=True)
+        if origin:
+            subprocess.run([*git, 'remote', 'add', 'origin', origin], check=True)
+            subprocess.run([*git, 'update-ref', 'refs/remotes/origin/fix/x', 'HEAD'], check=True)
+
+    def test_github_links_to_the_own_repository_resolve(self):
+        self.github_repo('git@github.com:Owner/Pkg.git')
+        web = 'https://github.com/owner/pkg'
+        found = self.tree({
+            'README.md': '# R\n\nOverview.\n\n## Links\n\nPages:\n\n'
+                         f'- [Contributing]({web}/blob/main/CONTRIBUTING.md): how to contribute.\n'
+                         f'- [Docs]({web}/tree/main/docs/): the documentation.\n'
+                         f'- [Branch]({web}/blob/fix/x/CONTRIBUTING.md#setup), [gone]({web}/blob/main/gone.md)\n'
+                         f'- [anchor]({web}/blob/main/CONTRIBUTING.md#nope), [commit]({web}/blob/1a2b3c4/old.md)\n'
+                         '- [other](https://github.com/owner/other/blob/main/none.md), '
+                         f'[raw](https://raw.githubusercontent.com/owner/pkg/main/none.md)\n',
+            'CONTRIBUTING.md': '# Contributing\n\nOverview.\n\n## Setup\n\nText.\n',
+            'docs/README.md': '# Docs\n\nOverview.\n',
+        })
+        # The web links place CONTRIBUTING.md and docs/ in the tree, so neither is unlinked.
+        self.assertEqual([f for f in found if f[1] in ('link-broken', 'anchor-missing', 'doc-unlinked')],
+                         [('README.md', 'anchor-missing'), ('README.md', 'link-broken')])
+
+    def test_github_links_without_a_github_origin_are_left_alone(self):
+        for origin in (None, 'https://gitlab.com/owner/pkg.git'):
+            with self.subTest(origin=origin):
+                shutil.rmtree(self.dir)
+                self.dir.mkdir()
+                self.github_repo(origin)
+                found = self.tree({
+                    'README.md': '# R\n\nSee [the guide](https://github.com/owner/pkg/blob/main/CONTRIBUTING.md).\n',
+                    'CONTRIBUTING.md': '# Contributing\n\nOverview.\n',
+                })
+                self.assertEqual(found, [('CONTRIBUTING.md', 'doc-unlinked')])
+
     def test_math_is_not_read_as_links(self):
         found = self.link_findings({
             'README.md': '# R\n\nThe ratio $[A](z,t)/[A]_0$ falls.\n\n$$\n[A](z,T) = 1\n$$\n\nSee [gone](gone.md).\n',

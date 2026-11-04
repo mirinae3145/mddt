@@ -134,7 +134,7 @@ rule = "model.md#links-between-documents"
 [link-broken]
 severity = "error"
 group = "structure"
-summary = "relative link points to a path that does not exist"
+summary = "link points to a local path that does not exist"
 rule = "model.md#links-between-documents"
 
 [anchor-missing]

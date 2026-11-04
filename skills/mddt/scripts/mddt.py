@@ -67,6 +67,11 @@ INDEX_NAMES = ('skill.md', 'readme.md', 'index.md')
 # Tools read these files by name, so they need no parent document.
 ENTRY_NAMES = {'skill.md', 'agents.md', 'claude.md', 'gemini.md'}
 URL_SCHEME = re.compile(r'^[a-z][a-z0-9+.-]*:', re.IGNORECASE)
+# An origin on GitHub, in HTTPS, SSH, or scp-like form, such as git@github.com:owner/name.git.
+GITHUB_REMOTE = re.compile(r'^(?:[a-z+]+://)?(?:[^@/]+@)?github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?/?$',
+                           re.IGNORECASE)
+# A GitHub page of a file or folder at a ref, such as https://github.com/owner/name/blob/main/docs/a.md.
+GITHUB_LINK = re.compile(r'^https://(?:www\.)?github\.com/([^/]+)/([^/]+)/(?:blob|tree)/([^?#]+)', re.IGNORECASE)
 # HTML elements that a link anchor can name besides headings, such as <a id="x">.
 HTML_ANCHOR = re.compile(r'''<[a-z][^>]*?\s(?:id|name)\s*=\s*["']?([^"'\s>]+)''', re.IGNORECASE)
 
@@ -834,10 +839,57 @@ def parent_of(doc: Path, root: Path) -> Path | None:
     return index_file(doc.parent, skip=doc) or folder_owner(doc.parent, root)
 
 
+REPOSITORIES: dict[Path, tuple[str, str, set[str]] | None] = {}
+
+
+def github_repository(root: Path) -> tuple[str, str, set[str]] | None:
+    """Owner, name, and branch names of a repository whose origin is on GitHub."""
+    if root not in REPOSITORIES:
+        REPOSITORIES[root] = None
+        try:
+            url = subprocess.run(['git', '-C', str(root), 'config', '--get', 'remote.origin.url'],
+                                 capture_output=True, text=True)
+            refs = subprocess.run(['git', '-C', str(root), 'for-each-ref', '--format=%(refname)',
+                                   'refs/heads', 'refs/remotes/origin'], capture_output=True, text=True)
+        except FileNotFoundError:
+            return None
+        match = GITHUB_REMOTE.match(url.stdout.strip())
+        if match:
+            branches = {ref.split('/', 3)[3] if ref.startswith('refs/remotes/') else ref.split('/', 2)[2]
+                        for ref in refs.stdout.split()} - {'HEAD'}
+            REPOSITORIES[root] = (match.group(1).lower(), match.group(2).lower(), branches)
+    return REPOSITORIES[root]
+
+
+def own_github_path(source: Path, href: str) -> Path | None:
+    """Local path of a GitHub link to a branch of the repository that holds the source.
+
+    Such links let a README read outside the repository, as on a package index,
+    still reach the repository's files. A link to a commit or tag is left alone,
+    because it shows history rather than the working tree.
+    """
+    match = GITHUB_LINK.match(href)
+    root = find_root(source) if match else None
+    info = github_repository(root) if root else None
+    if info is None or (match.group(1).lower(), match.group(2).lower()) != info[:2]:
+        return None
+    parts = unquote(match.group(3)).strip('/').split('/')
+    # A branch name can hold slashes, so the longest name that is a branch decides.
+    for n in range(len(parts), 0, -1):
+        if '/'.join(parts[:n]) in info[2]:
+            target = Path(os.path.normpath(root.joinpath(*parts[n:])))
+            if target.is_dir():
+                target = index_file(target) or target
+            return target
+    return None
+
+
 def link_target(source: Path, href: str) -> Path | None:
     """Resolve a link to a local file path, without following symbolic links."""
-    if not href or href.startswith('#') or URL_SCHEME.match(href):
+    if not href or href.startswith('#'):
         return None
+    if URL_SCHEME.match(href):
+        return own_github_path(source, href)
     path = unquote(href.split('#')[0].split('?')[0])
     if not path:
         return None
@@ -909,7 +961,9 @@ class Tree:
 
         URLs and absolute paths are not resolved, because their base depends on
         where the documents are served: a leading slash means the repository
-        root on GitHub but the file system root locally. A target reached
+        root on GitHub but the file system root locally. GitHub links to a
+        branch of the document's own repository are the exception, and they
+        are resolved against the working tree. A target reached
         through a symbolic link, such as a linked repository, is checked for
         existence only, since its headings belong to another tree.
         """

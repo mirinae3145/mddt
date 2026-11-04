@@ -161,7 +161,7 @@ Avoid linking it only from a sibling; a lateral link does not place it in the tr
 
 link-broken = """
 Fix, in order of preference:
-1. If the target moved or was renamed, link to its current path, which is relative to the linking file.
+1. If the target moved or was renamed, link to its current path, which is relative to the linking file, or update the path in a GitHub link to the repository itself.
 2. If the target was removed, link to the content that replaced it, or remove the link and keep the sentence.
 Avoid recreating a file at the old path only to satisfy the link.
 """
