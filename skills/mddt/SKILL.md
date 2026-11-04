@@ -1,13 +1,13 @@
 ---
 name: mddt
 description: >
-  Write, restructure, and read Markdown documents as one tree whose hierarchy
-  holds up. Use when creating Markdown documents or adding, moving, or removing
-  content in them; when restructuring documents that have grown; when
-  navigating a set of Markdown documents to find or verify information; and
-  when checking documents against the model. Not needed for edits that stay
-  within existing sentences, such as fixing typos, rewording, or updating
-  values. Includes a checker for the rules a parser can see.
+  Write, restructure, and read Markdown documents with coherent structure
+  within and across files. Use when creating documents or adding, moving, or
+  removing content; choosing document boundaries or organizing headings,
+  lists, and tables; reviewing structure against the model; or navigating a
+  set of Markdown documents to find or verify information. Not needed for
+  edits confined to existing sentences, such as typo fixes, rewording, or
+  value updates, or for formatting-only changes that leave structure unchanged.
 license: CC-BY-4.0 for the instructions and references; MIT for the scripts; copyright 2026 Taeha Shin
 ---
 
