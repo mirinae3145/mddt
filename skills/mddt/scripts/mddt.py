@@ -323,8 +323,8 @@ def clean_prose(line: str, placeholder: str = '') -> str:
 def count_words(text: str) -> int:
     """Count whitespace-separated tokens that contain a letter or digit.
 
-    The same rule counts English words and Korean eojeol; languages written
-    without spaces between words are not measured meaningfully.
+    Languages written without spaces between words are not measured
+    meaningfully.
     """
     return sum(1 for token in text.split() if re.search(r'\w', token))
 

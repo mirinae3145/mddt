@@ -45,9 +45,8 @@ Following the skill can cost more than writing without it.
 An agent reads the reference documents, plans each document's place in the tree, and revises the document after running the checker.
 These steps take more tokens and time than a direct edit.
 
-The checker counts words as whitespace-separated tokens that contain a letter or digit, so one rule covers English words and Korean eojeol.
-Sentence boundaries were reviewed with English and Korean documents, and the sentence length threshold with English documents written to the model.
-Korean sentences written to the same model contain fewer words, so the threshold rarely applies to them.
+The checker counts words as whitespace-separated tokens that contain a letter or digit.
+Its length thresholds were calibrated with English documents written to the model.
 Sentence boundaries inside a line are recognized after Korean sentence endings and full-width stops and before capital letters, so other languages may get incomplete `line-sentences` findings.
 Languages written without spaces between words, such as Chinese, Japanese, and Thai, are not measured meaningfully.
 
