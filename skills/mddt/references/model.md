@@ -39,7 +39,9 @@ The following rules cover the two roles, the form of headings, and the movement 
 - **Topics and parts**: An H2 with H3 children is a topic; an H2 without them is a part of the file's topic.
   The H3 sections of a topic are that topic's parts.
   A topic H2 has its own overview paragraph before its first H3. <!-- code: topic-overview -->
-- **Parts come first**: A parent topic's own parts come before its subtopics. <!-- code: part-after-topic -->
+- **Parts come first**: A parent topic's own parts come before its subtopics, unless sections from the first subtopic on follow a date or number [order](#length-and-order). <!-- code: part-after-topic -->
+  Readers find such sections by their keys, such as the dates of a history, so parts may follow subtopics there.
+  Name order does not count here, because a few titles can fall into it by chance.
   Roles are inferred from H3 children, so a short subtopic without H3 looks like a part, and ordering findings are therefore only warnings.
 - **No skipped levels**: A heading is at most one level below the heading before it. <!-- code: heading-skip -->
 - **No section numbers**: Headings carry no section numbers, because levels and titles carry the hierarchy and numbers break when sections move. <!-- code: heading-number -->

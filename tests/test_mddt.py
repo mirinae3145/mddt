@@ -116,6 +116,32 @@ class FileAndHeadingRules(CheckerCase):
             '## Late one\n\nText.\n\n## Late two\n\nText.\n')
         self.assertEqual(found, [('part-after-topic', 17)])
 
+    def test_part_after_topic_unless_mechanically_ordered(self):
+        def history(titles, topic):
+            return '# T\n\nOverview.\n\n' + ''.join(
+                f'## {t}\n\nOverview.\n\n### A\n\nX.\n\n### B\n\nY.\n\n' if t == topic else f'## {t}\n\nText.\n\n'
+                for t in titles)
+        dated = ['Release, 2026-10-30', 'Pin check, 2026-10-28', 'Build, 2026-10-21', 'Plan, 2026-10-19']
+        self.assertCodes(history(dated, dated[1]), [])
+        self.assertCodes(history(list(reversed(dated)), dated[2]), [])
+        undated = dated[:3] + ['Plan']
+        self.assertCodes(history(undated, dated[1]), ['part-after-topic'])
+        shuffled = [dated[0], dated[2], dated[1], dated[3]]
+        self.assertCodes(history(shuffled, dated[2]), ['part-after-topic'])
+        # Two titles always sort in one direction, so they show no order.
+        self.assertCodes(history(['Zeta', 'Alpha'], 'Zeta'), ['part-after-topic'])
+        # Name order does not count, since a few titles fall into it by chance.
+        self.assertCodes(history(['Gamma', 'Beta', 'Alpha'], 'Beta'), ['part-after-topic'])
+        self.assertCodes(history(['4. Ship', '3. Run', '2. Build', '1. Plan'], '3. Run'), [])
+        # Parts before the first topic break no rule, so they are left out of
+        # the order.
+        self.assertCodes(history(['Records'] + dated, dated[1]), [])
+        self.assertCodes(history(['Records'] + shuffled, dated[2]), ['part-after-topic'])
+        # Only the H2s under one H1 are compared, so an ordered set under
+        # another H1 does not exempt them.
+        self.assertCodes(history(shuffled, dated[2]) + history(dated, dated[1]),
+                         ['h1-multiple', 'part-after-topic'])
+
     def test_topic_single_child(self):
         self.assertCodes(
             '# T\n\nOverview.\n\n## Topic\n\nOverview.\n\n### Only\n\nX.\n', ['topic-single-child'])
