@@ -122,7 +122,7 @@ rule = "model.md#lists"
 [name-form-mix]
 severity = "warning"
 group = "structure"
-summary = "list item names mix forms within one topic"
+summary = "list item names mix forms within one topic or changelog release"
 rule = "model.md#lists"
 
 [doc-unlinked]

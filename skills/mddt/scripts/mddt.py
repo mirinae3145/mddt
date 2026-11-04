@@ -62,7 +62,7 @@ HEADING_PUNCTUATION = '.,;:!?。，；：！？'
 ISO_DATE = re.compile(r'(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)')
 COLON_NAME = re.compile(r'^(?P<name>[^:：\n]{1,40}?)[:：](?:\s|$)')
 LINK_NAME_TAIL = re.compile(r'^\s*(?:[:：—–]|-\s)')
-CONVENTION_FILES = re.compile(r'^changelog(\..*)?$', re.IGNORECASE)
+CHANGELOG_NAME = re.compile(r'^changelog(\..*)?$', re.IGNORECASE)
 # Conventional closing notices and pointers, only as a README's final H2 group.
 # Exact titles keep substantive sections such as "License configuration" out.
 README_CLOSING_TITLES = {
@@ -493,6 +493,7 @@ def github_slug(text: str) -> str:
 class FileCheck:
     def __init__(self, path: str, text: str):
         self.path = path
+        self.is_changelog = bool(CHANGELOG_NAME.fullmatch(Path(path).name))
         self.text = text
         self.lines = text.splitlines()
         self._links: list[tuple[str, int, bool]] | None = None
@@ -527,15 +528,16 @@ class FileCheck:
         return headings
 
     def scope_of(self, index: int) -> str:
-        """Name-form scope: a topic H2 with its H3s, or the parent's own parts."""
+        """Name-form scope: a topic or release H2, or the parent's own parts."""
         owner = None
         for h in self.headings:
             if h.index > index:
                 break
             if h.level <= 2:
                 owner = h
-        if owner and owner.level == 2 and owner.is_topic:
-            return f'topic "{owner.text}"'
+        if owner and owner.level == 2 and (owner.is_topic or self.is_changelog):
+            role = 'release' if self.is_changelog else 'topic'
+            return f'{role} "{owner.text}"'
         return 'the parent topic'
 
     def run(self) -> list[Diagnostic]:
@@ -555,6 +557,9 @@ class FileCheck:
         return groups
 
     def check_sizes(self) -> None:
+        # Release history grows unevenly and keeps its convention's headings.
+        if self.is_changelog:
+            return
         if self.line_count > FILE_MAX_LINES:
             self.report('file-size', 1, f'file has {self.line_count} lines')
         for (owner, level), siblings in self.sibling_groups().items():
@@ -738,11 +743,18 @@ class FileCheck:
             self.report('h1-missing', 1, 'no level-1 heading')
         for extra in h1s[1:]:
             self.report('h1-multiple', extra.node, f'another level-1 heading "{extra.text}"')
+        previous = None
+        for h in self.headings:
+            if previous and h.level > previous.level + 1:
+                self.report('heading-skip', h.node,
+                            f'H{previous.level} is followed by H{h.level} "{h.text}"')
+            previous = h
+        if self.is_changelog:
+            return
         for h in h1s:
             problem = overview_problem(h)
             if problem:
                 self.report('h1-overview', h.node, f'"{h.text}" {problem}')
-        previous = None
         seen_topic = None
         # Parts after a topic share one cause, so they are reported once per run.
         late_parts: list[Heading] = []
@@ -763,9 +775,6 @@ class FileCheck:
             if len(run) > 2 and is_mechanically_ordered([self.headings[k].text for k in run], names=False):
                 ordered.update(self.headings[k].index for k in run)
         for h in self.headings:
-            if previous and h.level > previous.level + 1:
-                self.report('heading-skip', h.node,
-                            f'H{previous.level} is followed by H{h.level} "{h.text}"')
             if h.level >= 4:
                 self.report('heading-depth', h.node, f'H{h.level} "{h.text}"')
             if h.level == 1 or (h.level == 2 and h.is_topic):
@@ -783,7 +792,6 @@ class FileCheck:
                         self.report('topic-single-child', h.node, f'"{h.text}" has one H3')
                 elif seen_topic and h.index not in closing:
                     late_parts.append(h)
-            previous = h
         self.report_late_parts(late_parts, seen_topic, ordered)
 
     def report_late_parts(self, parts: list[Heading], topic: Heading | None, ordered: set[int]) -> None:
@@ -804,9 +812,11 @@ class FileCheck:
     def check_list_intros(self, h: Heading) -> None:
         """Check that lists and tables start with an introductory paragraph."""
         blocks = meaningful(h.region)
-        needs_overview = h.level == 1 or (h.level == 2 and h.is_topic)
+        needs_overview = not self.is_changelog and (h.level == 1 or (h.level == 2 and h.is_topic))
         for pos, block in enumerate(blocks):
             if block.type in LIST_TYPES:
+                if self.is_changelog:
+                    continue
                 code, what = 'list-intro', 'list'
             elif block.type == 'table':
                 code, what = 'table-intro', 'table'
@@ -857,10 +867,11 @@ class FileCheck:
         deepest.setdefault(depth, node)
         items = [c for c in node.children if c.type == 'list_item']
         # A single nested item still marks a detail or exception of its parent.
-        if len(items) == 1 and depth == 1:
-            self.report('list-single', node, 'list has one item')
-        if len(items) > MAX_LIST_ITEMS and not is_mechanically_ordered([item_key(i) for i in items]):
-            self.report('list-length', node, f'{len(items)} items without mechanical order')
+        if not self.is_changelog:
+            if len(items) == 1 and depth == 1:
+                self.report('list-single', node, 'list has one item')
+            if len(items) > MAX_LIST_ITEMS and not is_mechanically_ordered([item_key(i) for i in items]):
+                self.report('list-length', node, f'{len(items)} items without mechanical order')
         numbered = node.type == 'ordered_list'
         for item in items:
             named = name_of(item)
@@ -922,9 +933,9 @@ class FileCheck:
         for k, h in enumerate(self.headings):
             label = f'{"  " * (h.level - 1)}H{h.level} {h.text}'
             notes = [f'{self.section_lines(k)} lines']
-            if h.level == 2:
+            if h.level == 2 and not self.is_changelog:
                 notes.append('topic' if h.is_topic else 'part')
-            if h.level == 1 or (h.level == 2 and h.is_topic):
+            if not self.is_changelog and (h.level == 1 or (h.level == 2 and h.is_topic)):
                 notes.append('no overview' if overview_problem(h) else 'overview')
             stats = region_list_stats(h.region)
             if stats:
@@ -1122,7 +1133,8 @@ class Tree:
             if heading is None:
                 if anchor not in other.html_anchors():
                     check.report('anchor-missing', line, f'no heading in {where} has the anchor #{anchor}')
-            elif other is not check and (heading.level >= 3 or (heading.level == 2 and not heading.is_topic)):
+            elif (other is not check and not other.is_changelog
+                  and (heading.level >= 3 or (heading.level == 2 and not heading.is_topic))):
                 check.report('anchor-to-part', line, f'links to part "{heading.text}" in {where}')
 
     def check_parent(self, path: Path, check: FileCheck, root: Path) -> None:
@@ -1313,10 +1325,10 @@ def collect(paths: list[str], excludes: list[str],
             fixed_root: Path | None = None) -> tuple[list[tuple[Path, Path | None]], list[str]]:
     """Expand arguments into Markdown files, each with the directory it came from.
 
-    Convention-bound files such as changelogs, files matching an exclude
-    pattern, and files a .mddtignore ignores are skipped even when named
-    explicitly. A pattern matches a file's path relative to its tree root, the
-    same root that decides parents, or the file name, so it works however the
+    Files matching an exclude pattern and files a .mddtignore ignores are
+    skipped even when named explicitly. A pattern matches a file's path
+    relative to its tree root, the same root that decides parents, or the
+    file name, so it works however the
     file argument is spelled. Without a tree root, the path is taken relative
     to the current directory. The .mddtignore files are read from the tree
     root, or the current directory without one, down to the file's folder; a
@@ -1342,7 +1354,7 @@ def collect(paths: list[str], excludes: list[str],
             top = Path(root or os.getcwd())
             if top != f.parent and top not in f.parents:
                 top = f.parent
-            if CONVENTION_FILES.match(f.name) or ignore.ignores(f, top) or any(
+            if ignore.ignores(f, top) or any(
                     fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(f.name, pattern)
                     for pattern in excludes):
                 skipped.append(display(f))

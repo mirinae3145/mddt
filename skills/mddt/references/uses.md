@@ -20,9 +20,15 @@ It is organized as follows.
   This exception concerns their role and position, not every short section or every section with one of those titles.
 - **The docs folder**: `docs/README.md` is the folder's index, and a document that gains children gets a companion folder.
 - **Changelogs**: A changelog keeps the format of its convention, such as version headings and change categories without topic overviews.
-  Within that format, entries follow the rules for [lists](model.md#lists) and [paragraphs and sentences](model.md#paragraphs-and-sentences).
-  Limits on the number of items and sections do not apply, because a changelog grows with every release.
-  The checker skips changelogs, so these rules are applied by judgment.
+  It retains one H1, consecutive heading levels, and real headings rather than emphasized paragraphs.
+  The following exceptions preserve its format and growth across releases:
+  - File and topic overviews, section numbering restrictions, and the H3 depth limit do not apply.
+  - Topic and part ordering, single-child demotion, sibling size comparisons, and file size review do not apply.
+  - Lists need no introduction and may contain one or many items; section counts are also unrestricted.
+  - Other [list rules](model.md#lists), [paragraph and sentence rules](model.md#paragraphs-and-sentences), and table introductions still apply.
+    Each H2 release is a separate scope for list name forms, even without categories.
+  - Document links and summaries remain required, but links into changelog headings need no topic or part review.
+    Links from a changelog into ordinary documents retain that review.
 - **Files outside the checks**: Markdown that is not documentation, such as templates and fixtures, is not checked.
   The [checker reference](checker.md#files-checked) says which files a run skips and how to exclude others.
 

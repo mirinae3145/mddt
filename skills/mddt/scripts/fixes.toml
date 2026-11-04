@@ -60,8 +60,8 @@ Avoid:
 """
 
 bold-heading = """
-Turn it into a real heading (H3 at most), a named list item, or a plain sentence.
-Avoid creating an H4 to keep it as a heading.
+Turn it into a real heading, a named list item, or a plain sentence.
+Keep headings within H3 unless the document's convention allows deeper levels, as changelogs do.
 """
 
 list-depth-4 = """
@@ -150,7 +150,7 @@ The checker recognizes order by name, by number, or by a date written year first
 """
 
 name-form-mix = """
-Use one name form within a topic; in new writing, use bold names.
+Use one name form within a topic or changelog release; in new writing, use bold names.
 Link text is not counted, so this finding concerns bold terms and phrases followed by a colon.
 """
 

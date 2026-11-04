@@ -86,11 +86,28 @@ A file argument is checked as given, and a directory argument expands as follows
 - **Never entered**: The `.git` and `node_modules` folders and folders reached through symbolic links.
   Other hidden folders are checked, so exclude them with `--exclude` when they hold no documents.
 
-Files named CHANGELOG, files matching `--exclude`, and files a `.mddtignore` ignores are skipped even when named explicitly.
+Files matching `--exclude` and files a `.mddtignore` ignores are skipped even when named explicitly.
 A skipped file is listed as skipped and is not judged, but it stays in the tree.
 Links to it still resolve, and it still serves as a parent that must link its children.
-
 The [ignore file](ignore-file.md) describes `.mddtignore`, which lists the files of a folder to skip.
+
+Changelogs are checked with the exceptions in [repository documentation](uses.md#repository-documentation).
+The checker recognizes names matching `CHANGELOG` or `CHANGELOG.*`, without regard to case, including `CHANGELOG.md` and `changelog.en.md`.
+Directory searches still select only `.md` files; other matching names can be given explicitly.
+Other filenames use the ordinary document rules.
+
+The following findings are omitted for changelogs:
+
+| Scope | Codes omitted |
+| --- | --- |
+| Overviews and heading form | `h1-overview`, `topic-overview`, `heading-depth`, `heading-number` |
+| Topic organization | `part-after-topic`, `topic-single-child` |
+| Counts and sizes | `list-single`, `list-length`, `section-count`, `sibling-imbalance`, `file-size` |
+| List introductions | `list-intro`, and `heading-intro` for lists only |
+| Links into changelogs | `anchor-to-part`, regardless of which file contains the link |
+
+All other findings remain applicable, including table introductions and links from a changelog into ordinary documents.
+Outlines show heading levels and list statistics without topic, part, or overview labels.
 
 Lists inside block quotes are not checked.
 YAML front matter and HTML blocks, such as comments, are not judged as prose, and they neither introduce nor separate the blocks around them.
