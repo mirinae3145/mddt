@@ -111,8 +111,9 @@ The checker recognizes order by name, by number, or by a date written year first
 """
 
 part-after-topic = """
-A parent's own parts come before its subtopics, unless the sibling H2s are in mechanical order.
-The checker recognizes order among three or more H2s by name, by number, or by a date written year first in digits, such as 2026-11-03, anywhere in each title.
+A parent's own parts come before its subtopics, unless the H2s from the first topic on follow a date or number order.
+The checker recognizes that order among three or more such H2s by a number that starts each title, or by a date written year first in digits, such as 2026-11-03, anywhere in it.
+Name order does not count, because a few titles can fall into it by chance.
 When the H2s are meant to follow such an order, as in a dated history, keeping that order is valid.
 Giving every title its key, such as its date, lets the checker see the order.
 Otherwise fix, in order of preference:

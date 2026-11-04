@@ -130,6 +130,13 @@ class FileAndHeadingRules(CheckerCase):
         self.assertCodes(history(shuffled, dated[2]), ['part-after-topic'])
         # Two titles always sort in one direction, so they show no order.
         self.assertCodes(history(['Zeta', 'Alpha'], 'Zeta'), ['part-after-topic'])
+        # Name order does not count, since a few titles fall into it by chance.
+        self.assertCodes(history(['Gamma', 'Beta', 'Alpha'], 'Beta'), ['part-after-topic'])
+        self.assertCodes(history(['4. Ship', '3. Run', '2. Build', '1. Plan'], '3. Run'), [])
+        # Parts before the first topic break no rule, so they are left out of
+        # the order.
+        self.assertCodes(history(['Records'] + dated, dated[1]), [])
+        self.assertCodes(history(['Records'] + shuffled, dated[2]), ['part-after-topic'])
         # Only the H2s under one H1 are compared, so an ordered set under
         # another H1 does not exempt them.
         self.assertCodes(history(shuffled, dated[2]) + history(dated, dated[1]),

@@ -265,7 +265,7 @@ def item_key(item: SyntaxTreeNode) -> str:
     return ''
 
 
-def is_mechanically_ordered(keys: list[str]) -> bool:
+def is_mechanically_ordered(keys: list[str], names: bool = True) -> bool:
     """True when keys are sorted by date, name, or number, in either direction.
 
     Lists and headings in such an order can be scanned without understanding
@@ -274,6 +274,8 @@ def is_mechanically_ordered(keys: list[str]) -> bool:
     When every key holds a year-first date, such as a title ending in
     2026-10-29, the first date in each key decides, and keys of one date may
     come in any order.
+    With names false, only date and number order count, for checks where a
+    few keys could fall into name order by chance.
     """
     if not all(keys):
         return False
@@ -282,8 +284,10 @@ def is_mechanically_ordered(keys: list[str]) -> bool:
         values = [d.group() for d in dates]
     elif all(re.match(r'\d', k) for k in keys):
         values = [tuple(int(x) for x in re.findall(r'\d+', k)) for k in keys]
-    else:
+    elif names:
         values = [k.casefold() for k in keys]
+    else:
+        return False
     return values == sorted(values) or values == sorted(values, reverse=True)
 
 
@@ -609,15 +613,21 @@ class FileCheck:
         seen_topic = None
         # Parts after a topic share one cause, so they are reported once per run.
         late_parts: list[Heading] = []
-        # Readers find H2s in mechanical order, such as dated history entries,
-        # by their keys, so parts there may follow topics.  The order is judged
-        # over all H2 siblings under one owner, parts and topics together.
-        # H3s cannot be topics, so only H2 sibling sets need the exemption.
-        # Any two keys sort one way or the other, so two siblings show no order.
-        ordered = {self.headings[k].index
-                   for (_, level), siblings in self.sibling_groups().items() if level == 2
-                   and len(siblings) > 2 and is_mechanically_ordered([self.headings[k].text for k in siblings])
-                   for k in siblings}
+        # Readers find H2s in date or number order, such as dated history
+        # entries, by their keys, so parts there may follow topics.  The order
+        # is judged over the H2 siblings under one owner from the first topic
+        # on, since parts before it break no rule.  H3s cannot be topics, so
+        # only H2 sibling sets need the exemption.  Any two keys sort one way
+        # or the other, and a few titles fall into name order by chance, so
+        # the run needs three or more H2s and name order does not count.
+        ordered: set[int] = set()
+        for (_, level), siblings in self.sibling_groups().items():
+            if level != 2:
+                continue
+            first = next((n for n, k in enumerate(siblings) if self.headings[k].is_topic), len(siblings))
+            run = siblings[first:]
+            if len(run) > 2 and is_mechanically_ordered([self.headings[k].text for k in run], names=False):
+                ordered.update(self.headings[k].index for k in run)
         for h in self.headings:
             if previous and h.level > previous.level + 1:
                 self.report('heading-skip', h.node,
