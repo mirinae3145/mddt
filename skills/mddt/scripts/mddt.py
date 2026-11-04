@@ -36,7 +36,11 @@ from mdit_py_plugins.dollarmath import dollarmath_plugin
 from mdit_py_plugins.front_matter import front_matter_plugin
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-SKILL_DIR = SCRIPT_DIR.parent
+# Rule locations in the output name the skill folder as the script was run,
+# without resolving symbolic links, so that they match the folder the agent
+# installed; a script linked on its own falls back to the folder it lives in.
+_RUN_SKILL_DIR = Path(os.path.abspath(__file__)).parent.parent
+SKILL_DIR = _RUN_SKILL_DIR if (_RUN_SKILL_DIR / 'references').is_dir() else SCRIPT_DIR.parent
 FIXES = SCRIPT_DIR / 'fixes.toml'
 REGISTRY = SCRIPT_DIR / 'rules.toml'
 

@@ -488,6 +488,18 @@ class Interface(CheckerCase):
         out = run('--exclude', 'skip*', str(self.dir)).stdout
         self.assertIn('skipped: 6 files', out)
 
+    def test_rule_locations_name_the_skill_folder_as_run(self):
+        doc = self.write('bad.md', '# T\n')
+        linked, copied = self.dir / 'linked', self.dir / 'copied'
+        linked.symlink_to(SCRIPTS.parent)
+        shutil.copytree(SCRIPTS.parent, copied, ignore=shutil.ignore_patterns('__pycache__'))
+        (self.dir / 'alone.py').symlink_to(SCRIPT)
+        for script, folder in [(linked / 'scripts/mddt.py', linked), (copied / 'scripts/mddt.py', copied),
+                               (self.dir / 'alone.py', SCRIPTS.parent)]:
+            out = subprocess.run(['uv', 'run', '--quiet', str(script), str(doc)],
+                                 capture_output=True, text=True).stdout
+            self.assertIn(f'  rule: {folder / "references/model.md"}#', out, script)
+
     def test_outline_is_automatic_only_with_structural_findings(self):
         ok = self.write('ok.md', '# T\n\nOverview.\n\n## Part\n\nText.\n')
         self.assertNotIn('outline', run(str(ok)).stdout)
