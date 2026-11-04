@@ -234,18 +234,21 @@ def name_of(item: SyntaxTreeNode) -> tuple[str, str] | None:
         if rest is None or (rest.type == 'text' and LINK_NAME_TAIL.match(rest.content)):
             return 'link', plain_text(first).strip()
         return None
-    lead, used = '', 0
+    # A colon inside a code span, as in `C0: note`, belongs to the code and
+    # does not end a name, so the match runs on text whose code colons are masked.
+    lead, masked, used = '', '', 0
     for n in nodes:
         if n.type not in ('text', 'code_inline'):
             break
         lead += n.content
+        masked += re.sub('[:：]', ' ', n.content) if n.type == 'code_inline' else n.content
         used += 1
-    match = COLON_NAME.match(lead)
+    match = COLON_NAME.match(masked)
     # A phrase ending in a colon with nothing after it introduces the item's
     # content, such as a code block, rather than naming the item.
     described = bool(lead[match.end():].strip()) or used < len(nodes) if match else False
     if match and described and len(match['name'].split()) <= NAME_MAX_WORDS:
-        return 'colon', match['name'].strip()
+        return 'colon', lead[:match.end('name')].strip()
     return None
 
 

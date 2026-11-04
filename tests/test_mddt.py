@@ -235,6 +235,10 @@ class ListRules(CheckerCase):
         self.assertCodes(
             '# T\n\nOverview.\n\nList:\n\n- **A**: x\n- Install the tool with pipx:\n\n  ```sh\n  pipx install t\n  ```\n- **B**: y\n', [])
 
+    def test_colon_inside_code_does_not_end_a_name(self):
+        self.assertCodes('# T\n\nOverview.\n\nList:\n\n- `C0: 접속 및 코멘트 확인용.` 설명.\n- **B**: y\n- **C**: z\n', [])
+        self.assertCodes('# T\n\nOverview.\n\nList:\n\n- `--root`: sets the root.\n- **B**: y\n', ['name-form-mix'])
+
     def test_link_names_do_not_count_as_a_form(self):
         self.write('a.md', '# A\n\nOverview.\n')
         self.write('b.md', '# B\n\nOverview.\n')
