@@ -792,18 +792,22 @@ class Changelogs(CheckerCase):
 
     def test_table_introductions_remain_checked_at_every_heading_level(self):
         table = '| Old | New |\n| --- | --- |\n| a | b |\n\n'
-        for heading in ('# Changelog\n\n', '# Changelog\n\n## Unreleased\n\n',
-                        '# Changelog\n\n## Unreleased\n\n### Fixed\n\n'):
-            for suffix, expected in (('', set()), ('Notes.\n', {'heading-intro'}),
-                                     ('```\nexample\n```\n', {'table-intro'})):
-                with self.subTest(heading=heading, suffix=suffix):
-                    # The H2 is also tested with H3 children, so a missing
-                    # topic overview cannot hide a missing table introduction.
-                    text = heading + table + suffix
-                    if '## Unreleased' in heading:
-                        text += '\n### Added\n\n- Change.\n'
-                    data = self.inspect(text)
-                    self.assertEqual({d['code'] for d in data['diagnostics']}, expected)
+        for level in range(1, 7):
+            heading = '# Changelog\n\n' + ''.join(
+                '#' * n + f' Section {n}\n\n' for n in range(2, level + 1))
+            tails = ['']
+            if level < 6:
+                tails.append('\n' + '#' * (level + 1) + ' Details\n\n- Change.\n')
+            for tail in tails:
+                for suffix, leaf_codes in (('', set()), ('Notes.\n', {'heading-intro'}),
+                                           ('```\nexample\n```\n', {'table-intro'})):
+                    with self.subTest(level=level, tail=tail, suffix=suffix):
+                        # Only a leaf section below H1 can introduce its table.
+                        expected = {'table-intro'} if level == 1 or tail else leaf_codes
+                        data = self.inspect(heading + table + suffix + tail)
+                        self.assertEqual({d['code'] for d in data['diagnostics']}, expected)
+                        introduced = heading + 'The changed values are:\n\n' + table + suffix + tail
+                        self.assertEqual(self.inspect(introduced)['diagnostics'], [])
 
     def test_link_checks_depend_on_the_target_not_the_source(self):
         self.write('guide.md', '# Guide\n\nOverview.\n\n## Detail\n\nText.\n')

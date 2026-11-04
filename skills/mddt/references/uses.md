@@ -26,6 +26,7 @@ It is organized as follows.
   - Topic and part ordering, single-child demotion, sibling size comparisons, and file size review do not apply.
   - Lists need no introduction and may contain one or many items; section counts are also unrestricted.
   - Other [list rules](model.md#lists), [paragraph and sentence rules](model.md#paragraphs-and-sentences), and table introductions still apply.
+    A table directly under H1 or a heading with subheadings needs an introductory paragraph.
     Each H2 release is a separate scope for list name forms, even without categories.
   - Document links and summaries remain required, but links into changelog headings need no topic or part review.
     Links from a changelog into ordinary documents retain that review.

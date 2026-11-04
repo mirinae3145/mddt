@@ -139,6 +139,7 @@ class Heading:
     region: list[SyntaxTreeNode] = field(default_factory=list)
     is_topic: bool = False
     h3_count: int = 0
+    has_children: bool = False
 
 
 def load_registry() -> dict[str, dict]:
@@ -514,8 +515,10 @@ class FileCheck:
         headings = [Heading(i, int(b.tag[1]), block_text(b), start_line(b), b)
                     for i, b in enumerate(self.blocks) if b.type == 'heading']
         for k, h in enumerate(headings):
-            stop = headings[k + 1].index if k + 1 < len(headings) else len(self.blocks)
+            following = headings[k + 1] if k + 1 < len(headings) else None
+            stop = following.index if following else len(self.blocks)
             h.region = self.blocks[h.index + 1:stop]
+            h.has_children = following is not None and following.level > h.level
         for k, h in enumerate(headings):
             if h.level != 2:
                 continue
@@ -828,6 +831,12 @@ class FileCheck:
             if previous is None and needs_overview:
                 continue  # The missing overview is reported for the heading.
             if previous is None:
+                # Changelogs waive overviews, but a table still needs an
+                # introduction unless a leaf section below H1 introduces it.
+                if self.is_changelog and (h.level == 1 or h.has_children):
+                    self.report(code, start_line(block),
+                                f'{what} follows H{h.level} without an introductory paragraph')
+                    continue
                 if len(blocks) == 1:
                     continue  # The heading introduces a block that is its only content.
                 following = blocks[1]
