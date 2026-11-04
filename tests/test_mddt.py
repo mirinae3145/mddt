@@ -705,6 +705,147 @@ class TreeRules(CheckerCase):
         self.assertIn(('README.md', 'file-size'), found)
 
 
+class Changelogs(CheckerCase):
+    def inspect(self, text, name='CHANGELOG.md', *options):
+        path = self.write(name, text)
+        result = run('--format', 'json', '--review', *options, str(path))
+        self.assertIn(result.returncode, (0, 1), result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(data['files'], [str(path)])
+        self.assertEqual(data['skipped'], [])
+        return data
+
+    def test_conventional_releases_need_no_overviews_or_list_introductions(self):
+        text = ('# Changelog\n\n## Unreleased\n\n### Fixed\n\n- Fixed a crash.\n\n'
+                'A note about the fix.\n\n```\nexample\n```\n\n- Added a check.\n\n'
+                '## 1.0\n\n- First release.\n')
+        for name in ('CHANGELOG.md', 'changelog.en.md', 'ChAnGeLoG.MD', 'CHANGELOG'):
+            with self.subTest(name=name):
+                data = self.inspect(text, name)
+                self.assertEqual(data['diagnostics'], [])
+                outline = '\n'.join(data['outlines'][str(self.dir / name)])
+                self.assertNotRegex(outline, r'overview|; topic|; part')
+                self.assertIn('H3 Fixed', outline)
+                self.assertIn('list depth 1', outline)
+
+    def test_other_names_keep_ordinary_document_rules(self):
+        for name in ('changes.md', 'changelog-extra.md', 'my-changelog.md'):
+            with self.subTest(name=name):
+                data = self.inspect('# Changelog\n\n## Version\n\n- Change.\n', name)
+                self.assertEqual({d['code'] for d in data['diagnostics']}, {'h1-overview', 'list-single'})
+
+    def test_h1_heading_steps_and_emphasized_headings_remain_checked(self):
+        cases = [
+            ('## Version\n\n- Change.\n', {'h1-missing'}),
+            ('# Changelog\n\n# Extra\n', {'h1-multiple'}),
+            ('# Changelog\n\n### Fixed\n\n- Change.\n', {'heading-skip'}),
+            ('# Changelog\n\n**Fixed**\n\n- Change.\n', {'bold-heading'}),
+        ]
+        for text, expected in cases:
+            with self.subTest(text=text):
+                data = self.inspect(text)
+                self.assertEqual({d['code'] for d in data['diagnostics']}, expected)
+        self.assertEqual(run(str(self.dir / 'CHANGELOG.md')).returncode, 1)
+
+    def test_deep_and_numbered_headings_keep_their_convention(self):
+        text = ('# Changelog\n\n## 1. Current\n\n### Fixed\n\n#### Parser\n\n- Change.\n\n'
+                '## 2. Previous\n\n- Change.\n')
+        self.assertEqual(self.inspect(text)['diagnostics'], [])
+
+    def test_release_growth_does_not_trigger_counts_or_sizes(self):
+        labels = 'pear apple fig kiwi plum lime date cherry'.split()
+        changes = ''.join(f'- Updated {label}.\n' for label in labels)
+        text = '# Changelog\n\n' + ''.join(f'## {label}\n\n- Change.\n\n' for label in labels)
+        text += '## Large release\n\n### Fixed\n\n' + changes * 40
+        self.assertEqual(self.inspect(text)['diagnostics'], [])
+
+    def test_list_nesting_and_names_remain_checked(self):
+        cases = [
+            ('- a\n  - b\n    - c\n', {'list-depth-3'}),
+            ('- a\n  - b\n    - c\n      - d\n', {'list-depth-4'}),
+            ('- **Outer**: text\n  - **Inner**: text\n', {'name-nesting'}),
+            ('- **One**: text\n- Two: text\n', {'name-form-mix'}),
+            ('- First sentence.\n  Second sentence.\n', {'item-name'}),
+            ('- **Outer**: text\n  - First sentence.\n    Second sentence.\n', {'nested-block'}),
+        ]
+        for body, expected in cases:
+            with self.subTest(body=body):
+                data = self.inspect('# Changelog\n\n## Unreleased\n\n' + body)
+                self.assertEqual({d['code'] for d in data['diagnostics']}, expected)
+
+    def test_name_forms_are_scoped_to_each_release_without_categories(self):
+        text = '# Changelog\n\n## Unreleased\n\n- **One**: text\n\n## 1.0\n\n- Two: text\n'
+        self.assertEqual(self.inspect(text)['diagnostics'], [])
+
+    def test_prose_remains_checked(self):
+        cases = [
+            ('- First sentence. Second sentence.\n', {'line-sentences', 'item-name'}),
+            ('- ' + ' '.join(['word'] * 26) + '.\n', {'sentence-length'}),
+            ('- ' + '\n  '.join(f'Sentence {n}.' for n in range(6)) + '\n',
+             {'paragraph-length', 'item-name'}),
+            ('One.\n\nTwo.\n\nThree.\n\nFour.\n', {'paragraph-run'}),
+        ]
+        for body, expected in cases:
+            with self.subTest(body=body):
+                data = self.inspect('# Changelog\n\n## Unreleased\n\n' + body)
+                self.assertEqual({d['code'] for d in data['diagnostics']}, expected)
+
+    def test_table_introductions_remain_checked_at_every_heading_level(self):
+        table = '| Old | New |\n| --- | --- |\n| a | b |\n\n'
+        for level in range(1, 7):
+            heading = '# Changelog\n\n' + ''.join(
+                '#' * n + f' Section {n}\n\n' for n in range(2, level + 1))
+            tails = ['']
+            if level < 6:
+                tails.append('\n' + '#' * (level + 1) + ' Details\n\n- Change.\n')
+            for tail in tails:
+                for suffix, leaf_codes in (('', set()), ('Notes.\n', {'heading-intro'}),
+                                           ('```\nexample\n```\n', {'table-intro'})):
+                    with self.subTest(level=level, tail=tail, suffix=suffix):
+                        # Only a leaf section below H1 can introduce its table.
+                        expected = {'table-intro'} if level == 1 or tail else leaf_codes
+                        data = self.inspect(heading + table + suffix + tail)
+                        self.assertEqual({d['code'] for d in data['diagnostics']}, expected)
+                        introduced = heading + 'The changed values are:\n\n' + table + suffix + tail
+                        self.assertEqual(self.inspect(introduced)['diagnostics'], [])
+
+    def test_link_checks_depend_on_the_target_not_the_source(self):
+        self.write('guide.md', '# Guide\n\nOverview.\n\n## Detail\n\nText.\n')
+        self.write('changelog.old.md', '# History\n\n## 1.0\n\n### Fixed\n\n- Change.\n')
+        data = self.inspect('# Changelog\n\n## Unreleased\n\n'
+                            '- See [guide](guide.md#detail).\n'
+                            '- See [history](changelog.old.md#fixed).\n'
+                            '- See [missing anchor](changelog.old.md#gone).\n'
+                            '- See [missing file](gone.md).\n'
+                            '- See [own section](#unreleased).\n')
+        self.assertEqual({d['code'] for d in data['diagnostics']},
+                         {'anchor-to-part', 'anchor-missing', 'link-broken'})
+        incoming = self.inspect('# Guide\n\nSee [release](CHANGELOG.md#unreleased) and '
+                                '[category](changelog.old.md#fixed).\n', 'guide.md')
+        self.assertEqual(incoming['diagnostics'], [])
+
+    def test_parent_links_and_child_summaries_remain_checked(self):
+        self.write('README.md', '# Project\n\nOverview.\n')
+        (self.dir / 'CHANGELOG').mkdir()
+        self.write('CHANGELOG/details.md', '# Details\n\nOverview.\n')
+        text = '# Changelog\n\n## Unreleased\n\n- [Details](CHANGELOG/details.md)\n'
+        data = self.inspect(text, 'CHANGELOG.md', '--root', str(self.dir))
+        self.assertEqual({d['code'] for d in data['diagnostics']}, {'doc-unlinked', 'link-without-summary'})
+        self.write('README.md', '# Project\n\nSee [history](CHANGELOG.md).\n')
+        data = self.inspect(text.replace('details.md)', 'details.md): the change details.'),
+                            'CHANGELOG.md', '--root', str(self.dir))
+        self.assertEqual(data['diagnostics'], [])
+
+    def test_changelogs_can_still_be_explicitly_excluded(self):
+        path = self.write('CHANGELOG.md', 'no title\n')
+        for options in (('--exclude', 'CHANGELOG.*'), ()):
+            if not options:
+                self.write('.mddtignore', 'CHANGELOG.md\n')
+            result = run('--format', 'json', '--root', str(self.dir), *options, str(path))
+            data = json.loads(result.stdout)
+            self.assertEqual((data['files'], data['skipped'], data['diagnostics']), ([], [str(path)], []))
+
+
 class Interface(CheckerCase):
     def test_exit_codes(self):
         ok = self.write('ok.md', '# T\n\nOverview.\n')
@@ -758,16 +899,16 @@ class Interface(CheckerCase):
         bad = self.write('bad.md', '# T\n')
         self.assertIn('outline', run(str(bad)).stdout)
 
-    def test_directories_skip_changelogs_but_not_hidden_folders(self):
-        self.write('CHANGELOG.md', '## 1.0\n\n- one\n')
+    def test_directories_include_changelogs_and_hidden_folders(self):
+        self.write('CHANGELOG.md', '# Changelog\n\n## 1.0\n\n- one\n')
         (self.dir / '.claude').mkdir()
         self.write('.claude/x.md', '# X\n\nOverview.\n')
         (self.dir / 'node_modules').mkdir()
         self.write('node_modules/y.md', '# Y\n\nOverview.\n')
         self.write('doc.md', '# T\n\nOverview.\n')
         data = json.loads(run('--format', 'json', str(self.dir)).stdout)
-        self.assertEqual(sorted(Path(f).name for f in data['files']), ['doc.md', 'x.md'])
-        self.assertEqual([Path(f).name for f in data['skipped']], ['CHANGELOG.md'])
+        self.assertEqual(sorted(Path(f).name for f in data['files']), ['CHANGELOG.md', 'doc.md', 'x.md'])
+        self.assertEqual(data['skipped'], [])
 
     def test_directories_without_git_are_walked_with_a_notice(self):
         (self.dir / '.git').mkdir()

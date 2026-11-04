@@ -30,7 +30,9 @@ It does not represent any source in full or the positions of its authors.
 ## Checker
 
 The checker reads the Markdown files or directories it is given and reports findings by code.
+Changelogs are checked with exceptions that preserve their release structure, as [common uses](skills/mddt/references/uses.md#repository-documentation) describes.
 Its length checks use a local English parsing model to count independent clauses joined by semicolons, colons, or dashes separately.
+
 The [checker reference](skills/mddt/references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
 Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes.
 The checker covers the model's rules, not formatting, so run your repository's own Markdown linter for formatting rules.
