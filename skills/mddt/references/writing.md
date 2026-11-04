@@ -86,7 +86,9 @@ Structure changes as content grows or shrinks, and the promotion ladder in [head
 
 Moving content does not rewrite it.
 Keep the wording of moved content unless the move itself requires a change, such as replacing a position word with a link.
-Only a part or topic whose question the current task changed is rewritten.
+Restructuring alone rewrites only a part or topic whose question the current task changed.
+A task can also request content changes, such as adding, removing, correcting, or condensing facts.
+A part or topic that receives one may be rewritten as far as that change reaches.
 
 A heading that changes level within its file but keeps its text keeps its anchor, since GitHub derives the anchor from the text alone.
 Changing the text or moving the heading to another file changes the link target, so links to it are updated as [links resolve](model.md#links-between-documents) describes.
@@ -101,6 +103,7 @@ Check the result as follows:
    - **Alongside other work**: When the documents change with other work, such as code, the content settles when that work does.
    - **Unchanged rendering**: A part or topic whose changes all leave the rendered document as it was needs no reread.
      Such changes include one-sentence line splits and link target updates after a move, but not a blank line, which splits a paragraph.
+   - **Requested content changes**: A part or topic that received a content change the task requested is reread, even when the task otherwise only restructures.
 1. Run the checker on the files you created or changed.
    When the task moved or renamed files or headings, run it on the whole tree.
    Links to the old names can sit in files that the task did not change.
@@ -119,7 +122,7 @@ Findings the task did not cause, and requests to restructure, are handled as fol
 - **Existing errors**: Fix them inside the section you are editing, and report the rest without fixing them.
 - **Requested restructuring**: When the user asks for the structure to be reorganized, apply all structural findings.
   Apply sentence-level findings as well where the fix leaves the rendered document as it was, such as splitting lines for `line-sentences`.
-  Other sentence-level findings need rewriting, so fix them only where [growing and shrinking](#growing-and-shrinking) allows a rewrite: in parts and topics whose question the task changed.
+  Other sentence-level findings need rewriting, so fix them only in parts and topics that [growing and shrinking](#growing-and-shrinking) lets the task rewrite.
   Elsewhere leave them; like other warnings that remain after judgment, they are a valid outcome.
   Run the checker with `--review` to also see information such as oversized sections and links without summaries.
 
