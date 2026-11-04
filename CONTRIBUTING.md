@@ -15,7 +15,7 @@ What to read before a change depends on which files it touches:
 - **Repository documents**: A change to another document, such as README or this guide, needs the skill's reference documents.
   The repository's documents follow the model, as [self-conformance](#self-conformance) describes, and the checker covers only part of it.
   The change also needs the documents that the changed text summarizes or that summarize it.
-- **Licensing and configuration**: A change to `REUSE.toml`, `LICENSES/`, or `.gitignore` needs only this guide.
+- **Licensing and configuration**: A change to `REUSE.toml`, `LICENSES/`, `.gitignore`, or `.mddtignore` needs only this guide.
 
 ## Checker layout
 
@@ -60,7 +60,7 @@ The repository applies the skill to itself on a best-effort basis, aiming for th
 ## Licenses
 
 Every file is covered by a license entry in `REUSE.toml`.
-Code and checker data are MIT, documentation is CC BY 4.0, and trivial configuration such as `.gitignore` is CC0.
+Code and checker data are MIT, documentation is CC BY 4.0, and trivial configuration such as `.gitignore` and `.mddtignore` is CC0.
 Place a new file under a covered path, or add it to the matching entry.
 Running `reuse lint` from the [REUSE tool](https://reuse.software/) confirms that every file is covered.
 
@@ -98,11 +98,13 @@ Unreached lines in the code the change added or modified are judged as follows:
 ### Documents
 
 The repository's own documents follow the model, as [self-conformance](#self-conformance) describes.
-After changing them, check them with the generated material in `calibration/` excluded:
+After changing them, check them from the repository root:
 
 ```bash
-uv run skills/mddt/scripts/mddt.py --exclude 'calibration/outputs/*' --exclude 'calibration/briefs/*' --exclude 'calibration/skill/*' .
+uv run skills/mddt/scripts/mddt.py .
 ```
+
+The tracked `.mddtignore` leaves out the generated material in `calibration/`.
 
 The checker decides only the rules a parser can see.
 Also review the changed documents against the model's judgment rules, such as divisions, levels of detail among siblings, and summaries in parent documents.
