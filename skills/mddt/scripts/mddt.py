@@ -978,17 +978,146 @@ def region_list_stats(region: list[SyntaxTreeNode]) -> str:
     return text
 
 
+IGNORE_FILE = '.mddtignore'
+
+
+class IgnoreError(Exception):
+    """A .mddtignore file exists but cannot be read."""
+
+
+@dataclass
+class IgnoreRule:
+    pattern: re.Pattern
+    negated: bool
+    dir_only: bool
+
+
+def _class_end(segment: str, start: int) -> int:
+    """Index of the ] closing the character class opened at start, or -1."""
+    k = start + 1
+    if k < len(segment) and segment[k] in '!^':
+        k += 1
+    if k < len(segment) and segment[k] == ']':
+        k += 1
+    return segment.find(']', k)
+
+
+def _segment_regex(segment: str) -> str:
+    out, k = [], 0
+    while k < len(segment):
+        c = segment[k]
+        if c == '*':
+            while k + 1 < len(segment) and segment[k + 1] == '*':
+                k += 1
+            out.append('[^/]*')
+        elif c == '?':
+            out.append('[^/]')
+        elif c == '\\' and k + 1 < len(segment):
+            k += 1
+            out.append(re.escape(segment[k]))
+        elif c == '[' and _class_end(segment, k) != -1:
+            end = _class_end(segment, k)
+            body = segment[k + 1:end]
+            negate = body[:1] in ('!', '^')
+            body = body[1:] if negate else body
+            out.append('[' + ('^' if negate else '') + body.replace('\\', '\\\\') + ']')
+            k = end
+        else:
+            out.append(re.escape(c))
+        k += 1
+    return ''.join(out)
+
+
+def parse_ignore_line(line: str) -> IgnoreRule | None:
+    """Translate one .mddtignore line, or None for a blank line or comment.
+
+    The syntax is the part of gitignore that decides which paths match:
+    comments, negation, a trailing slash for folders, a slash inside the
+    pattern to anchor it to the file's folder, escapes, and the wildcards
+    *, ?, [...] and **.
+    """
+    while line.endswith(' ') and not line.endswith('\\ '):
+        line = line[:-1]
+    if not line or line.startswith('#'):
+        return None
+    negated = line.startswith('!')
+    if negated:
+        line = line[1:]
+    dir_only = line.endswith('/')
+    line = line.rstrip('/') if dir_only else line
+    if not line:
+        return None
+    anchored = '/' in line
+    segments = line.lstrip('/').split('/')
+    last = len(segments) - 1
+    parts = []
+    for i, segment in enumerate(segments):
+        if segment == '**':
+            parts.append('.+' if i == last else '(?:[^/]+/)*')
+        else:
+            parts.append(_segment_regex(segment) + ('' if i == last else '/'))
+    regex = ('' if anchored else '(?:[^/]+/)*') + ''.join(parts)
+    return IgnoreRule(re.compile(regex, re.DOTALL), negated, dir_only)
+
+
+class IgnoreRules:
+    """The .mddtignore files of a tree, read directly rather than through Git.
+
+    A file is read even when Git ignores it, since a repository that does not
+    track the file still wants its rules applied. Like .gitignore, a file
+    applies to the folder that holds it and below, patterns are relative to
+    that folder, a deeper file overrides a shallower one, and the last
+    matching line in the order of reading wins. A path inside an ignored
+    folder stays ignored.
+    """
+
+    def __init__(self):
+        self.cache: dict[Path, list[IgnoreRule]] = {}
+
+    def rules_in(self, folder: Path) -> list[IgnoreRule]:
+        if folder not in self.cache:
+            path = folder / IGNORE_FILE
+            rules: list[IgnoreRule] = []
+            if path.is_file():
+                try:
+                    text = path.read_text(encoding='utf-8')
+                except (OSError, UnicodeDecodeError) as exc:
+                    raise IgnoreError(f'cannot read {path}: {exc}') from exc
+                rules = [r for r in map(parse_ignore_line, text.splitlines()) if r]
+            self.cache[folder] = rules
+        return self.cache[folder]
+
+    def ignores(self, path: Path, base: Path) -> bool:
+        """True when a .mddtignore from base down to the path's folder ignores the path."""
+        parts = path.relative_to(base).parts
+        for i in range(1, len(parts) + 1):
+            ignored = False
+            for j in range(i):
+                relative_path = '/'.join(parts[j:i])
+                for rule in self.rules_in(base.joinpath(*parts[:j])):
+                    if (i < len(parts) or not rule.dir_only) and rule.pattern.fullmatch(relative_path):
+                        ignored = not rule.negated
+            if ignored:
+                return True
+        return False
+
+
 def collect(paths: list[str], excludes: list[str],
             fixed_root: Path | None = None) -> tuple[list[tuple[Path, Path | None]], list[str]]:
     """Expand arguments into Markdown files, each with the directory it came from.
 
-    Convention-bound files such as changelogs and files matching an exclude
-    pattern are skipped even when named explicitly. A pattern matches a file's
-    path relative to its tree root, the same root that decides parents, or the
-    file name, so it works however the file argument is spelled. Without a
-    tree root, the path is taken relative to the current directory.
+    Convention-bound files such as changelogs, files matching an exclude
+    pattern, and files a .mddtignore ignores are skipped even when named
+    explicitly. A pattern matches a file's path relative to its tree root, the
+    same root that decides parents, or the file name, so it works however the
+    file argument is spelled. Without a tree root, the path is taken relative
+    to the current directory. The .mddtignore files are read from the tree
+    root, or the current directory without one, down to the file's folder; a
+    file outside that top is judged by the .mddtignore in its own folder.
+    Skipped files stay on disk, so links to them still resolve.
     """
     files, skipped = [], []
+    ignore = IgnoreRules()
     for arg in paths:
         p = Path(os.path.abspath(arg))
         if p.is_dir():
@@ -1003,7 +1132,10 @@ def collect(paths: list[str], excludes: list[str],
                 rel = os.path.relpath(f, root or os.getcwd()).replace(os.sep, '/')
             except ValueError:  # on another Windows drive
                 rel = f.name
-            if CONVENTION_FILES.match(f.name) or any(
+            top = Path(root or os.getcwd())
+            if top != f.parent and top not in f.parents:
+                top = f.parent
+            if CONVENTION_FILES.match(f.name) or ignore.ignores(f, top) or any(
                     fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(f.name, pattern)
                     for pattern in excludes):
                 skipped.append(display(f))
@@ -1151,7 +1283,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument('--format', choices=('text', 'json'), default='text', help='output format')
     ap.add_argument('--exclude', action='append', default=[], metavar='GLOB',
                     help='skip files whose path relative to the tree root, or whose name, matches GLOB, '
-                         'such as templates or fixtures; repeatable')
+                         'such as templates or fixtures, in addition to the files a .mddtignore '
+                         'ignores; repeatable')
     ap.add_argument('--root', metavar='DIR',
                     help='top of the document tree; defaults to the Git repository root, '
                          'then to a directory argument')
@@ -1163,6 +1296,9 @@ def main(argv: list[str] | None = None) -> int:
         files, skipped = collect(args.paths, args.exclude, fixed_root)
     except FileNotFoundError as missing:
         print(f'mddt: no such file or directory: {missing}', file=sys.stderr)
+        return 2
+    except IgnoreError as exc:
+        print(f'mddt: {exc}', file=sys.stderr)
         return 2
 
     diagnostics: list[Diagnostic] = []

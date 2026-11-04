@@ -571,6 +571,152 @@ class Interface(CheckerCase):
         self.assertEqual(data['files'], [])
 
 
+class IgnoreFile(CheckerCase):
+    """The .mddtignore file: gitignore-style patterns relative to the folder holding it."""
+    BAD = 'no heading\n'
+
+    def make(self, files):
+        for name, text in files.items():
+            path = self.dir / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding='utf-8')
+
+    def selected(self, *args, cwd=None):
+        """Return the checked and skipped files, relative to the tree folder, and the findings."""
+        data = json.loads(run('--format', 'json', *args, str(self.dir), cwd=cwd).stdout)
+        names = lambda found: sorted(Path(f).relative_to(self.dir).as_posix() for f in found)
+        return names(data['files']), names(data['skipped']), sorted(
+            (Path(d['file']).relative_to(self.dir).as_posix(), d['code']) for d in data['diagnostics'])
+
+    def skipped_by(self, patterns, paths):
+        self.make({'.mddtignore': patterns, **{p: '# T\n\nOverview.\n' for p in paths}})
+        return self.selected('--root', str(self.dir))[1]
+
+    def test_ignored_files_are_skipped_not_checked(self):
+        self.make({'README.md': '# R\n\nSee [A](a.md).\n', 'a.md': '# A\n\nOverview.\n',
+                   'raw/x.md': self.BAD, '.mddtignore': 'raw/\n'})
+        checked, skipped, found = self.selected()
+        self.assertEqual((checked, skipped, found), (['README.md', 'a.md'], ['raw/x.md'], []))
+
+    def test_pattern_syntax(self):
+        paths = ['a.md', 'sub/a.md', 'sub/deep/a.md', 'b1.md', 'keep.md', 'gen/x.md', 'docs/g/y.md', 'docs/z.md']
+        cases = [
+            ('# comment\n\na.md\n', ['a.md', 'sub/a.md', 'sub/deep/a.md']),
+            ('/a.md\n', ['a.md']),
+            ('sub/a.md\n', ['sub/a.md']),
+            ('*.md\n!keep.md\n', [p for p in paths if p != 'keep.md']),
+            ('b?.md\n[ab].md\n', ['a.md', 'sub/a.md', 'sub/deep/a.md', 'b1.md']),
+            ('gen/\ngen\n', ['gen/x.md']),
+            ('gen/**\n', ['gen/x.md']),
+            ('**/deep/a.md\n', ['sub/deep/a.md']),
+            ('docs/**/y.md\n', ['docs/g/y.md']),
+            ('docs/*.md\n', ['docs/z.md']),
+            ('sub/*/a.md\n', ['sub/deep/a.md']),
+            ('a.md\n!sub/a.md\n', ['a.md', 'sub/deep/a.md']),
+            ('gen/\n!gen/x.md\n', ['gen/x.md']),
+            ('\\#x.md\n/keep.md   \n', ['keep.md']),
+        ]
+        for patterns, expected in cases:
+            with self.subTest(patterns=patterns):
+                self.assertEqual(self.skipped_by(patterns, paths), sorted(expected))
+
+    def test_directory_pattern_does_not_match_a_file_of_that_name(self):
+        self.assertEqual(self.skipped_by('a.md/\n', ['a.md']), [])
+
+    def test_escaped_and_bracket_patterns(self):
+        self.assertEqual(self.skipped_by('\\#x.md\n[!a]*.md\n', ['#x.md', 'a.md', 'b.md']), ['#x.md', 'b.md'])
+        self.assertEqual(self.skipped_by('[a.md\n', ['[a.md', 'a.md']), ['[a.md'])
+        self.assertEqual(self.skipped_by('[]x].md\n', [']a.md', '].md', 'x.md']), ['].md', 'x.md'])
+        self.assertEqual(self.skipped_by('a**c.md\n/\n', ['abc.md', 'a/c.md']), ['abc.md'])
+
+    def test_folder_files_apply_to_their_folder_and_deeper_ones_win(self):
+        self.make({'.mddtignore': 'a.md\n', 'a.md': self.BAD, 'sub/a.md': self.BAD, 'sub/b.md': self.BAD,
+                   'sub/.mddtignore': '!a.md\n/b.md\n', 'other/a.md': self.BAD, 'other/b.md': self.BAD,
+                   'other/sub/b.md': self.BAD})
+        checked, skipped, _ = self.selected('--root', str(self.dir))
+        self.assertEqual(skipped, ['a.md', 'other/a.md', 'sub/b.md'])
+        self.assertEqual(checked, ['other/b.md', 'other/sub/b.md', 'sub/a.md'])
+
+    def test_a_file_in_an_ignored_folder_cannot_be_reincluded_by_a_deeper_file(self):
+        self.make({'.mddtignore': 'raw/\n', 'raw/x.md': self.BAD, 'raw/.mddtignore': '!x.md\n'})
+        self.assertEqual(self.selected('--root', str(self.dir))[:2], ([], ['raw/x.md']))
+
+    def test_file_is_read_even_when_git_ignores_it(self):
+        if shutil.which('git') is None:
+            self.skipTest('git is not installed')
+        subprocess.run(['git', 'init', '--quiet', str(self.dir)], check=True)
+        self.make({'.gitignore': '.mddtignore\nignored/\n', '.mddtignore': 'raw.md\n', 'raw.md': self.BAD,
+                   'ignored/x.md': self.BAD, 'doc.md': '# D\n\nOverview.\n'})
+        subprocess.run(['git', '-C', str(self.dir), 'check-ignore', '-q', '.mddtignore'], check=True)
+        checked, skipped, found = self.selected()
+        self.assertEqual((checked, skipped, found), (['doc.md'], ['raw.md'], []))
+
+    def test_union_with_exclude(self):
+        self.make({'.mddtignore': 'one.md\n', 'one.md': self.BAD, 'two.md': self.BAD, 'three.md': self.BAD})
+        checked, skipped, _ = self.selected('--root', str(self.dir), '--exclude', 'two.md')
+        self.assertEqual((checked, skipped), (['three.md'], ['one.md', 'two.md']))
+
+    def test_explicit_file_arguments_are_skipped_however_spelled(self):
+        self.make({'.mddtignore': 'sub/\n', 'sub/x.md': self.BAD})
+        for arg, cwd in [(str(self.dir / 'sub/x.md'), None), ('sub/x.md', self.dir), ('x.md', self.dir / 'sub')]:
+            data = json.loads(run('--format', 'json', '--root', str(self.dir), arg, cwd=cwd).stdout)
+            self.assertEqual((data['files'], len(data['skipped'])), ([], 1), arg)
+
+    def test_the_tree_root_bounds_which_files_are_read(self):
+        self.make({'.mddtignore': 'x.md\n', 'sub/x.md': self.BAD, 'sub/y.md': self.BAD})
+        sub = self.dir / 'sub'
+        data = json.loads(run('--format', 'json', '--root', str(sub), str(sub)).stdout)
+        self.assertEqual(len(data['files']), 2)
+
+    def test_a_file_outside_the_root_uses_its_own_folder(self):
+        root = self.dir / 'tree'
+        self.make({'tree/.mddtignore': 'x.md\n', 'out/.mddtignore': 'x.md\n', 'out/x.md': self.BAD,
+                   'out/y.md': self.BAD})
+        data = json.loads(run('--format', 'json', '--root', str(root), str(self.dir / 'out/x.md'),
+                              str(self.dir / 'out/y.md')).stdout)
+        self.assertEqual([Path(f).name for f in data['files']], ['y.md'])
+
+    def test_without_a_tree_root_patterns_are_relative_to_the_current_directory(self):
+        if any((folder / '.git').exists() for folder in self.dir.parents):
+            self.skipTest('the temporary directory is inside a Git tree')
+        self.make({'.mddtignore': 'templates/\n', 'templates/t.md': self.BAD})
+        data = json.loads(run('--format', 'json', 'templates/t.md', cwd=self.dir).stdout)
+        self.assertEqual(data['files'], [])
+
+    def test_ignored_files_still_resolve_links_and_parents(self):
+        self.make({'.mddtignore': 'raw/\nspec.md\n',
+                   'README.md': '# R\n\nSee [A](a.md) and [raw](raw/index.md).\n',
+                   'a.md': '# A\n\nSee [spec](spec.md#goal) and [raw](raw/index.md#top).\n',
+                   'spec.md': '# Spec\n\nOverview.\n\n## Goal\n\nText.\n',
+                   'raw/index.md': '# Top\n\nSee [child](child.md).\n',
+                   'raw/child.md': self.BAD, 'raw/more/extra.md': self.BAD})
+        checked, skipped, found = self.selected('--root', str(self.dir))
+        self.assertEqual((checked, skipped, found), (['README.md', 'a.md'],
+                         ['raw/child.md', 'raw/index.md', 'raw/more/extra.md', 'spec.md'], []))
+        self.make({'a.md': '# A\n\nSee [spec](spec.md#nowhere) and [gone](gone.md).\n'})
+        self.assertEqual(self.selected('--root', str(self.dir))[2],
+                         [('a.md', 'anchor-missing'), ('a.md', 'link-broken')])
+
+    def test_an_ignored_parent_still_decides_whether_a_child_is_linked(self):
+        self.make({'.mddtignore': 'docs/index.md\n', 'README.md': '# R\n\nSee [docs](docs/).\n',
+                   'docs/index.md': '# Docs\n\nSee [A](a.md).\n', 'docs/a.md': '# A\n\nOverview.\n',
+                   'docs/b.md': '# B\n\nOverview.\n'})
+        self.assertEqual(self.selected('--root', str(self.dir))[2], [('docs/b.md', 'doc-unlinked')])
+
+    def test_unreadable_file_is_a_usage_error(self):
+        self.make({'doc.md': '# T\n\nOverview.\n'})
+        (self.dir / '.mddtignore').write_bytes('caf\u00e9.md\n'.encode('latin-1'))
+        result = run(str(self.dir / 'doc.md'))
+        self.assertEqual(result.returncode, 2)
+        self.assertIn('.mddtignore', result.stderr)
+
+    def test_text_output_reports_ignored_files_as_skipped(self):
+        self.make({'.mddtignore': 'raw.md\n', 'raw.md': self.BAD, 'doc.md': '# D\n\nOverview.\n'})
+        out = run('--root', str(self.dir), str(self.dir)).stdout
+        self.assertIn('skipped: ', out)
+        self.assertIn('raw.md', out)
+
+
 SKILL = ROOT / 'skills/mddt'
 CODE_COMMENT = re.compile(r'<!-- code: ([^>]*?) -->')
 LINK = re.compile(r'\]\(([^)\s]+)\)')

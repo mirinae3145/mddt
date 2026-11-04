@@ -59,7 +59,12 @@ A file argument is checked as given, and a directory argument expands as follows
 - **Never entered**: The `.git` and `node_modules` folders and folders reached through symbolic links.
   Other hidden folders are checked, so exclude them with `--exclude` when they hold no documents.
 
-Files named CHANGELOG and files matching `--exclude` are skipped even when named explicitly.
+Files named CHANGELOG, files matching `--exclude`, and files a `.mddtignore` ignores are skipped even when named explicitly.
+A skipped file is listed as skipped and is not judged, but it stays in the tree.
+Links to it still resolve, and it still serves as a parent that must link its children.
+
+The [ignore file](ignore-file.md) describes `.mddtignore`, which lists the files of a folder to skip.
+
 Lists inside block quotes are not checked.
 YAML front matter and HTML blocks, such as comments, are not judged as prose, and they neither introduce nor separate the blocks around them.
 
@@ -88,4 +93,4 @@ The command ends with one of these statuses:
 | --- | --- |
 | 0 | No errors were found |
 | 1 | At least one error was found |
-| 2 | A path does not exist or a file is not readable as UTF-8, and no findings are reported |
+| 2 | A path does not exist or a file, including a `.mddtignore`, is not readable as UTF-8, and no findings are reported |
