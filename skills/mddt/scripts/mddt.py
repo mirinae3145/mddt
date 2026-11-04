@@ -269,7 +269,8 @@ def is_mechanically_ordered(keys: list[str]) -> bool:
     """True when keys are sorted by date, name, or number, in either direction.
 
     Lists and headings in such an order can be scanned without understanding
-    their content, so their length is not a structural problem.
+    their content, so their length, and for headings the order of parts and
+    topics, is not a structural problem.
     When every key holds a year-first date, such as a title ending in
     2026-10-29, the first date in each key decides, and keys of one date may
     come in any order.
@@ -446,14 +447,18 @@ class FileCheck:
         self.check_sizes()
         return self.diagnostics
 
-    def check_sizes(self) -> None:
-        if self.line_count > FILE_MAX_LINES:
-            self.report('file-size', 1, f'file has {self.line_count} lines')
+    def sibling_groups(self) -> dict[tuple[int, int], list[int]]:
+        """Heading indexes grouped by (owner heading index or -1, level)."""
         groups: dict[tuple[int, int], list[int]] = {}
         for k, h in enumerate(self.headings):
             owner = next((j for j in range(k - 1, -1, -1) if self.headings[j].level < h.level), -1)
             groups.setdefault((owner, h.level), []).append(k)
-        for (owner, level), siblings in groups.items():
+        return groups
+
+    def check_sizes(self) -> None:
+        if self.line_count > FILE_MAX_LINES:
+            self.report('file-size', 1, f'file has {self.line_count} lines')
+        for (owner, level), siblings in self.sibling_groups().items():
             keys = [self.headings[k].text for k in siblings]
             self.check_section_numbers([self.headings[k] for k in siblings],
                                        self.headings[owner] if owner >= 0 else None)
@@ -604,6 +609,15 @@ class FileCheck:
         seen_topic = None
         # Parts after a topic share one cause, so they are reported once per run.
         late_parts: list[Heading] = []
+        # Readers find H2s in mechanical order, such as dated history entries,
+        # by their keys, so parts there may follow topics.  The order is judged
+        # over all H2 siblings under one owner, parts and topics together.
+        # H3s cannot be topics, so only H2 sibling sets need the exemption.
+        # Any two keys sort one way or the other, so two siblings show no order.
+        ordered = {self.headings[k].index
+                   for (_, level), siblings in self.sibling_groups().items() if level == 2
+                   and len(siblings) > 2 and is_mechanically_ordered([self.headings[k].text for k in siblings])
+                   for k in siblings}
         for h in self.headings:
             if previous and h.level > previous.level + 1:
                 self.report('heading-skip', h.node,
@@ -611,7 +625,7 @@ class FileCheck:
             if h.level >= 4:
                 self.report('heading-depth', h.node, f'H{h.level} "{h.text}"')
             if h.level == 1 or (h.level == 2 and h.is_topic):
-                self.report_late_parts(late_parts, seen_topic)
+                self.report_late_parts(late_parts, seen_topic, ordered)
                 late_parts = []
             if h.level == 1:
                 seen_topic = None
@@ -626,10 +640,10 @@ class FileCheck:
                 elif seen_topic:
                     late_parts.append(h)
             previous = h
-        self.report_late_parts(late_parts, seen_topic)
+        self.report_late_parts(late_parts, seen_topic, ordered)
 
-    def report_late_parts(self, parts: list[Heading], topic: Heading | None) -> None:
-        if not parts or topic is None:
+    def report_late_parts(self, parts: list[Heading], topic: Heading | None, ordered: set[int]) -> None:
+        if not parts or topic is None or topic.index in ordered:
             return
         detail = f'part "{parts[0].text}" follows topic "{topic.text}"'
         if len(parts) > 1:

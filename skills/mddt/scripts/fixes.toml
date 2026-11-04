@@ -111,8 +111,11 @@ The checker recognizes order by name, by number, or by a date written year first
 """
 
 part-after-topic = """
-A parent's own parts come before its subtopics.
-Fix, in order of preference:
+A parent's own parts come before its subtopics, unless the sibling H2s are in mechanical order.
+The checker recognizes order among three or more H2s by name, by number, or by a date written year first in digits, such as 2026-11-03, anywhere in each title.
+When the H2s are meant to follow such an order, as in a dated history, keeping that order is valid.
+Giving every title its key, such as its date, lets the checker see the order.
+Otherwise fix, in order of preference:
 1. Move the part before the topics.
 2. Keep it when it is really a short subtopic that the checker reads as a part because it has no H3.
 """

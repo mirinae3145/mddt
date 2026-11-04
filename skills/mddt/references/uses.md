@@ -41,7 +41,7 @@ Projects that keep the following common roles structure them like this:
 | Role | Dominant types | Structure |
 | --- | --- | --- |
 | Current state | Fact, principle | Named lists by category; rewritten as conditions change rather than appended to |
-| History | Fact, process | Dated headings or items; dates are a mechanical order, so long lists are fine |
+| History | Fact, process | Dated headings or items; dates are a mechanical order, so long lists and parts after topics are fine |
 | Decision | Principle, concept | One decision per topic with the choice and its rationale; alternatives compared in a table; reconsideration conditions as principles |
 
 ## Agent instructions and skills
