@@ -82,6 +82,7 @@ Documents form a tree through links that follow these rules.
 - **Landing pages**: A document that introduces other documents reads as an overview, not as a bare list of links.
   It may introduce each of its other children in the part where the reader's task needs it.
 - **Links resolve**: A relative link points to a file or folder that exists, and its anchor matches a heading or an HTML `id` in the target. <!-- code: link-broken, anchor-missing -->
+  A GitHub link to a branch of the same repository counts as such a link, so a README can use full URLs.
   Moving or renaming a file or heading therefore includes updating the links to it, even in files the change does not otherwise touch.
 - **Anchor targets**: A link to an anchor in another file that expects its target to be read alone points to a topic. <!-- code: anchor-to-part -->
   An anchor to a part only locates content inside a file that the reader reads whole.

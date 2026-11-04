@@ -78,7 +78,11 @@ Links in the checked files are resolved as follows, while images and links writt
   A heading ID is the heading text in lowercase, without punctuation, with spaces as hyphens, and with `-1`, `-2`, and so on for repeats.
 - **Anchor IDs**: This rule only approximates GitHub's, so a missing anchor is a warning.
   For example, GitHub keeps the variation selector that follows some emoji, while the checker drops it, so anchors to such headings are reported falsely.
-- **Not resolved**: URLs with a scheme and absolute paths are left alone, since their base depends on where the documents are served.
+- **Own repository on GitHub**: A link into a branch of the linking file's own repository is resolved in the working tree.
+  An example is `https://github.com/owner/name/blob/main/CONTRIBUTING.md`.
+  The repository is the one whose `origin` remote is on GitHub, and links to commits or tags are left alone.
+  This lets a README use full URLs, as packages often need, and still place its children in the tree.
+- **Not resolved**: Other URLs with a scheme and absolute paths are left alone, since their base depends on where the documents are served.
   Anchors are also left alone when the link has a query, such as `?plain=1`, or its target is not a Markdown file.
 - **Linked trees**: A target reached through a symbolic link, such as a linked repository, is checked only for existence.
   Its headings belong to another tree, which the checker does not enter.
