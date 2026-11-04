@@ -96,6 +96,8 @@ The tool copies a folder once or watches it for changes.
 ```
 
 "Requirements" has no H3, so it is a part of the file's own topic, while "Usage" is a subtopic.
+In a README, a closing License section may stay after Usage under the [README closing sections exception](uses.md#repository-documentation).
+Requirements still comes first, because it helps readers start using the project rather than providing a closing notice.
 
 ### Level of detail among siblings
 

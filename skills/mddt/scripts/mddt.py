@@ -57,6 +57,13 @@ ISO_DATE = re.compile(r'(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)')
 COLON_NAME = re.compile(r'^(?P<name>[^:：\n]{1,40}?)[:：](?:\s|$)')
 LINK_NAME_TAIL = re.compile(r'^\s*(?:[:：—–]|-\s)')
 CONVENTION_FILES = re.compile(r'^changelog(\..*)?$', re.IGNORECASE)
+# Conventional closing notices and pointers, only as a README's final H2 group.
+# Exact titles keep substantive sections such as "License configuration" out.
+README_CLOSING_TITLES = {
+    'license', 'licenses', 'licence', 'licences', 'copyright',
+    'acknowledgments', 'acknowledgements', 'credits', 'citation', 'citing',
+    'ai disclosure', 'contributing',
+}
 # Section numbers such as "1.", "2.3", "B)", or "IV." followed by a title.
 SECTION_NUMBER = re.compile(r'^(?:(?P<arabic>\d+(?:\.\d+)*)(?P<punct>[.)])?|(?P<alpha>[A-Z])[.)]|(?P<roman>[IVXLC]+)[.)])\s+\S')
 ROMAN = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100}
@@ -604,6 +611,24 @@ class FileCheck:
         return {m.group(1) for node in self.root.walk() if node.type in ('html_block', 'html_inline')
                 for m in HTML_ANCHOR.finditer(node.content)}
 
+    def readme_closing_sections(self) -> set[int]:
+        """Indexes of the final consecutive H2 group with recognized closing titles.
+
+        Closing sections retain their topic or part roles and all other checks.
+        An unrecognized H2 or a new H1 ends the group, so an earlier notice
+        cannot exempt intervening substantive content.
+        """
+        closing: set[int] = set()
+        if Path(self.path).name.casefold() != 'readme.md':
+            return closing
+        for h in reversed(self.headings):
+            if h.level > 2:
+                continue
+            if h.level == 1 or ' '.join(h.text.casefold().split()) not in README_CLOSING_TITLES:
+                break
+            closing.add(h.index)
+        return closing
+
     def check_headings(self) -> None:
         h1s = [h for h in self.headings if h.level == 1]
         if not h1s:
@@ -618,6 +643,7 @@ class FileCheck:
         seen_topic = None
         # Parts after a topic share one cause, so they are reported once per run.
         late_parts: list[Heading] = []
+        closing = self.readme_closing_sections()
         # Readers find H2s in date or number order, such as dated history
         # entries, by their keys, so parts there may follow topics.  The order
         # is judged over the H2 siblings under one owner from the first topic
@@ -630,7 +656,7 @@ class FileCheck:
             if level != 2:
                 continue
             first = next((n for n, k in enumerate(siblings) if self.headings[k].is_topic), len(siblings))
-            run = siblings[first:]
+            run = [k for k in siblings[first:] if self.headings[k].index not in closing]
             if len(run) > 2 and is_mechanically_ordered([self.headings[k].text for k in run], names=False):
                 ordered.update(self.headings[k].index for k in run)
         for h in self.headings:
@@ -652,7 +678,7 @@ class FileCheck:
                         self.report('topic-overview', h.node, f'"{h.text}" {problem}')
                     if h.h3_count == 1:
                         self.report('topic-single-child', h.node, f'"{h.text}" has one H3')
-                elif seen_topic:
+                elif seen_topic and h.index not in closing:
                     late_parts.append(h)
             previous = h
         self.report_late_parts(late_parts, seen_topic, ordered)

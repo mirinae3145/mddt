@@ -146,6 +146,60 @@ class FileAndHeadingRules(CheckerCase):
         self.assertCodes(
             '# T\n\nOverview.\n\n## Topic\n\nOverview.\n\n### Only\n\nX.\n', ['topic-single-child'])
 
+    def test_readme_closing_sections_may_follow_topics(self):
+        body = '# Tool\n\nOverview.\n\n## Usage\n\nOverview.\n\n### Copy\n\nCopy files.\n\n### Watch\n\nWatch files.\n\n'
+        for title in ('License', 'Licenses', 'Licence', 'Licences', 'Copyright',
+                      'Acknowledgments', 'Acknowledgements', 'Credits', 'Citation', 'Citing',
+                      'AI disclosure', 'Contributing', '**LICENSE**', 'AI   disclosure'):
+            with self.subTest(title=title):
+                self.assertEqual(self.codes(body + f'## {title}\n\nNotice.\n', 'README.md'), [])
+        closing = '## Contributing\n\nSend patches.\n\n## License\n\nMIT.\n\n## AI disclosure\n\nAI assisted.\n'
+        self.assertEqual(self.codes(body + closing, 'readme.MD'), [])
+        (self.dir / 'docs').mkdir()
+        self.assertEqual(self.codes(body + closing, 'docs/README.md'), [])
+
+    def test_readme_closing_exception_keeps_other_ordering_findings(self):
+        body = '# Tool\n\nOverview.\n\n## Usage\n\nOverview.\n\n### Copy\n\nCopy files.\n\n### Watch\n\nWatch files.\n\n'
+        license = '## License\n\nMIT.\n\n'
+        for name, tail, line in (
+                ('guide.md', license, 17),
+                ('README.extra.md', license, 17),
+                ('README.md', '## Requirements\n\nPython.\n\n' + license, 17),
+                ('README.md', license + '## Requirements\n\nPython.\n', 17),
+                ('README.md', license + '## Configuration\n\nOverview.\n\n### Cache\n\nLocal.\n\n### Proxy\n\nNone.\n', 17),
+                ('README.md', '## License configuration\n\nSettings.\n', 17),
+                ('README.md', '## License and credits\n\nNotice.\n', 17),
+                ('README.md', '## 라이선스\n\nMIT.\n', 17)):
+            with self.subTest(name=name, tail=tail):
+                self.assertEqual(self.codes(body + tail, name), [('part-after-topic', line)])
+        # The closing group does not hide or count toward earlier late parts.
+        path = self.write('README.md', body + '## Requirements\n\nPython.\n\n' + license)
+        data = json.loads(run('--format', 'json', str(path)).stdout)
+        self.assertTrue(data['diagnostics'][0]['message'].endswith('part "Requirements" follows topic "Usage"'))
+
+    def test_readme_closing_sections_keep_roles_and_other_checks(self):
+        self.assertEqual(self.codes('## License\n\nMIT.\n', 'README.md'), [('h1-missing', 1)])
+        self.assertEqual(self.codes('', 'README.md'), [('h1-missing', 1)])
+        body = '# Tool\n\nOverview.\n\n## Usage\n\nOverview.\n\n### Copy\n\nCopy files.\n\n### Watch\n\nWatch files.\n\n'
+        closing = '## License\n\nMIT.\n\n## Credits\n\n### Authors\n\nNames.\n\n## AI disclosure\n\nAI assisted.\n'
+        self.assertEqual(self.codes(body + closing, 'README.md'),
+                         [('topic-overview', 21), ('topic-single-child', 21)])
+        path = self.write('README.md', body + '## License\n\nSee [terms](missing.txt).\n')
+        data = json.loads(run('--format', 'json', '--outline', str(path)).stdout)
+        self.assertEqual([d['code'] for d in data['diagnostics']], ['link-broken'])
+        self.assertIn('H2 License  [3 lines; part]', '\n'.join(data['outlines'][str(path)]))
+        # A new H1 ends the earlier document; only the file's closing group is exempt.
+        self.assertEqual(self.codes(body + '## License\n\nMIT.\n\n# Other\n\nOverview.\n', 'README.md'),
+                         [('h1-multiple', 21), ('part-after-topic', 17)])
+
+    def test_readme_closing_sections_do_not_break_date_order(self):
+        body = ('# Tool\n\nOverview.\n\n## Release 2026-11-03\n\nOverview.\n\n'
+                '### Added\n\nFeature.\n\n### Fixed\n\nBug.\n\n'
+                '## Release 2026-11-02\n\nText.\n\n## Release 2026-11-01\n\nText.\n\n')
+        self.assertEqual(self.codes(body + '## License\n\nMIT.\n', 'README.md'), [])
+        shuffled = body.replace('2026-11-01', '2026-11-04')
+        self.assertEqual(self.codes(shuffled + '## License\n\nMIT.\n', 'README.md'), [('part-after-topic', 17)])
+
     def test_bold_paragraph_used_as_heading(self):
         self.assertCodes('# T\n\nOverview.\n\n**Pseudo heading**\n\nText.\n', ['bold-heading'])
         self.assertCodes('# T\n\nOverview.\n\n**A bold sentence.**\n\nText.\n', [])

@@ -98,7 +98,7 @@ rule = "model.md#siblings"
 [part-after-topic]
 severity = "warning"
 group = "structure"
-summary = "part H2 follows a topic H2 outside date or number order"
+summary = "part H2 follows a topic H2 outside date or number order or README closing sections"
 rule = "model.md#headings-and-promotion"
 
 [topic-single-child]

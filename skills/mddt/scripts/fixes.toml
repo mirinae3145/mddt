@@ -116,6 +116,9 @@ The checker recognizes that order among three or more such H2s by a number that 
 Name order does not count, because a few titles can fall into it by chance.
 When the H2s are meant to follow such an order, as in a dated history, keeping that order is valid.
 Giving every title its key, such as its date, lets the checker see the order.
+Repository notices, credits, citation, and contribution pointers may also close a README after its substantive content.
+The checker recognizes a limited set of closing titles, listed in checker.md's Findings, only in a final consecutive group in README.md.
+Keep other titles in that position when they serve the same closing role; the title alone does not justify the exception.
 Otherwise fix, in order of preference:
 1. Move the part before the topics.
 2. Keep it when it is really a short subtopic that the checker reads as a part because it has no H3.

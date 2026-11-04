@@ -28,6 +28,18 @@ Information findings rest on approximate detection, so judge each one before act
 For example, a summary in a table cell beside a link is not recognized.
 An item counts as a block by its number of sentences alone.
 
+For `part-after-topic`, the checker recognizes [README closing sections](uses.md#repository-documentation) by a limited set of titles.
+In files named `README.md`, it exempts the final consecutive group of H2s with these titles:
+
+- **License notices**: License, Licenses, Licence, Licences, Copyright.
+- **Credits and citation**: Acknowledgments, Acknowledgements, Credits, Citation, Citing, AI disclosure.
+- **Contribution pointers**: Contributing.
+
+File names and titles are compared without case, and title whitespace and inline formatting do not affect matching.
+The closing group is left out when checking date or number order among the preceding H2s.
+Other titles, including translations and combined titles, need judgment; a warning can remain when they serve the same closing role.
+The exception changes only ordering findings, so the sections retain their topic or part roles and their other checks.
+
 ## Output
 
 Text output prints each code once with its summary and rule location, then every location where it occurs, then its fix guidance.

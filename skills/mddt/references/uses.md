@@ -14,6 +14,10 @@ It is organized as follows.
   It links with summaries to CONTRIBUTING, to `docs/README.md`, and to other top-level documents.
 - **Kinds within the README**: README sections may differ in kind: installation is action, configuration options are reference, and design is explanation.
   The kind then divides the sections, while each document below `docs/` keeps one kind.
+- **README closing sections**: Repository notices and credits, such as License, Acknowledgments, Citation, and AI disclosure, may form a closing group after the substantive content.
+  Contribution pointers may join this group.
+  These closing sections are exempt from [parts before topics](model.md#headings-and-promotion), even when they have no H3 children.
+  This exception concerns their role and position, not every short section or every section with one of those titles.
 - **The docs folder**: `docs/README.md` is the folder's index, and a document that gains children gets a companion folder.
 - **Changelogs**: A changelog keeps the format of its convention, such as version headings and change categories without topic overviews.
   Within that format, entries follow the rules for [lists](model.md#lists) and [paragraphs and sentences](model.md#paragraphs-and-sentences).
