@@ -657,6 +657,15 @@ class Registry(unittest.TestCase):
         for option in options:
             self.assertIn(f'`{option}', reference)
 
+    def test_checker_reference_names_every_json_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            doc = Path(tmp, 'doc.md')
+            doc.write_text('# T\n', encoding='utf-8')
+            data = json.loads(run('--format', 'json', '--outline', str(doc)).stdout)
+        reference = (SKILL / 'references' / 'checker.md').read_text(encoding='utf-8')
+        for key in [*data, *data['diagnostics'][0]]:
+            self.assertIn(f'`{key}`', reference)
+
     def test_example_results_follow_the_model(self):
         # The "After" side of each example must itself conform; snippets are
         # fragments, so codes about whole files, parents, and the files that
