@@ -49,6 +49,7 @@ MAX_LIST_ITEMS = 7
 NAME_MAX_WORDS = 6
 # MD036 treats emphasis ending in punctuation as a sentence, not a heading.
 HEADING_PUNCTUATION = '.,;:!?。，；：！？'
+ISO_DATE = re.compile(r'(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)')
 COLON_NAME = re.compile(r'^(?P<name>[^:：\n]{1,40}?)[:：](?:\s|$)')
 LINK_NAME_TAIL = re.compile(r'^\s*(?:[:：—–]|-\s)')
 CONVENTION_FILES = re.compile(r'^changelog(\..*)?$', re.IGNORECASE)
@@ -258,14 +259,20 @@ def item_key(item: SyntaxTreeNode) -> str:
 
 
 def is_mechanically_ordered(keys: list[str]) -> bool:
-    """True when keys are sorted by name or number, in either direction.
+    """True when keys are sorted by date, name, or number, in either direction.
 
     Lists and headings in such an order can be scanned without understanding
     their content, so their length is not a structural problem.
+    When every key holds a year-first date, such as a title ending in
+    2026-10-29, the first date in each key decides, and keys of one date may
+    come in any order.
     """
     if not all(keys):
         return False
-    if all(re.match(r'\d', k) for k in keys):
+    dates = [ISO_DATE.search(k) for k in keys]
+    if all(dates):
+        values = [d.group() for d in dates]
+    elif all(re.match(r'\d', k) for k in keys):
         values = [tuple(int(x) for x in re.findall(r'\d+', k)) for k in keys]
     else:
         values = [k.casefold() for k in keys]

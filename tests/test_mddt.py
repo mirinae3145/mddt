@@ -185,6 +185,12 @@ class ListRules(CheckerCase):
         self.assertCodes(f'# T\n\nOverview.\n\nFruit:\n\n{ordered}\n', [])
         dates = '\n'.join(f'- 2026-10-{d:02d}: entry' for d in range(20, 10, -1))
         self.assertCodes(f'# T\n\nOverview.\n\nLog:\n\n{dates}\n', [])
+        versions = '\n'.join(f'- {v} release' for v in ['1.2', '1.9', '1.10', '1.11', '2.0', '2.1', '2.10', '3.0'])
+        self.assertCodes(f'# T\n\nOverview.\n\nReleases:\n\n{versions}\n', [])
+        trailing = '\n'.join(f'- {w} review, 2026-10-{d:02d}' for w, d in zip('pear apple fig kiwi plum lime date cherry'.split(), [3, 3, 5, 8, 12, 21, 21, 29]))
+        self.assertCodes(f'# T\n\nOverview.\n\nLog:\n\n{trailing}\n', [])
+        shuffled = '\n'.join(f'- {w} review, 2026-10-{d:02d}' for w, d in zip('pear apple fig kiwi plum lime date cherry'.split(), [3, 12, 5, 8, 3, 21, 21, 29]))
+        self.assertCodes(f'# T\n\nOverview.\n\nLog:\n\n{shuffled}\n', ['list-length'])
 
     def test_named_item_with_named_descendant(self):
         self.assertCodes(
@@ -416,6 +422,12 @@ class TreeRules(CheckerCase):
         self.assertEqual(self.tree({'README.md': f'# T\n\nOverview.\n\n{sections}'}), [('README.md', 'section-count')])
         dated = ''.join(f'## 2026-10-{d:02d}\n\nText.\n\n' for d in range(20, 10, -1))
         self.assertEqual(self.tree({'README.md': f'# T\n\nOverview.\n\n{dated}'}), [])
+        titles = ['RC5 Registry 공개, 2026-10-29', 'Pin 확인, 2026-10-21~22', 'Build, 2026-10-21', 'Plan, 2026-10-19',
+                  'Board, 2026-10-02~03', 'Kickoff, 2026-09-30', 'Order, 2026-09-30', 'Idea, 2026-09-01']
+        ending = ''.join(f'## {t}\n\nText.\n\n' for t in titles)
+        self.assertEqual(self.tree({'README.md': f'# T\n\nOverview.\n\n{ending}'}), [])
+        undated = ''.join(f'## {t}\n\nText.\n\n' for t in titles[:-1] + ['Idea'])
+        self.assertEqual(self.tree({'README.md': f'# T\n\nOverview.\n\n{undated}'}), [('README.md', 'section-count')])
 
     def test_sibling_imbalance_and_file_size(self):
         big = ''.join(f'Line {n}.\n\n' for n in range(30))
