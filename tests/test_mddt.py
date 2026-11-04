@@ -367,6 +367,134 @@ class ProseRules(CheckerCase):
         self.assertCodes('# T\n\nAsk the U.S. Office and call foo. bar handles it.\n', [])
 
 
+class SentenceUnits(CheckerCase):
+    LEFT = 'The worker reads every input file from the local folder before it starts the scheduled validation process'
+    RIGHT = 'it writes the complete results to the selected output directory after all checks finish successfully'
+
+    def findings(self, texts, *options):
+        paths = [self.write(f'case{n}.md', f'# T\n\n{text}\n') for n, text in enumerate(texts)]
+        result = run('--format', 'json', *options, *map(str, paths))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        return [[d for d in data['diagnostics'] if d['file'] == str(p)] for p in paths]
+
+    def test_punctuation_linked_clauses_have_separate_word_limits(self):
+        separators = ['; ', ': ', ':', ' — ', ' – ', '—', ' &mdash; ', ' &ndash; ',
+                      ' &#8212; ', ' &#x2014; ', '&semi; ', '&colon; ', ';\n', ':\n', ' —\n']
+        texts = [f'{self.LEFT}{sep}{self.RIGHT}.' for sep in separators]
+        self.assertEqual(self.findings(texts), [[] for _ in texts])
+
+    def test_paragraph_limit_counts_the_same_units_as_the_word_limit(self):
+        clauses = ['The build failed', 'the tests stopped', 'the job ended',
+                   'the logs vanished', 'the worker crashed', 'the queue stalled']
+        five = '; '.join(clauses[:5]) + '.'
+        six = '; '.join(clauses) + '.'
+        found = self.findings([five, six, six.replace('; ', ';\n'), six.replace('; ', '.\n')])
+        self.assertEqual(found[0], [])
+        for result in found[1:]:
+            self.assertEqual([d['code'] for d in result], ['paragraph-length'])
+            self.assertIn('paragraph has 6 sentence units', result[0]['message'])
+
+    def test_conjunctions_without_strong_punctuation_keep_one_unit(self):
+        texts = [f'{self.LEFT}{sep}{self.RIGHT}.' for sep in (' and ', ', and ', ', but ', ', so ')]
+        for result in self.findings(texts):
+            self.assertEqual([d['code'] for d in result], ['sentence-length'])
+            self.assertIn('sentence unit has 33 words', result[0]['message'])
+
+    def test_complete_clauses_can_start_with_a_condition(self):
+        left = 'When the cache is warm, the worker reads each file before starting the validation process'
+        self.assertEqual(self.findings([f'{left}; {self.RIGHT}.']), [[]])
+
+    def test_enumeration_and_fragments_do_not_create_length_boundaries(self):
+        cases = [
+            ('The tool accepts these values',
+             'red, green, blue, yellow, orange, purple, white, black, gray, cyan, magenta, '
+             'brown, pink, gold, silver, beige, teal, ivory, indigo, and violet'),
+            (self.LEFT, 'a complete and detailed report of every result for every input'),
+            (self.LEFT, 'if the service receives every input before the scheduled validation process'),
+            (self.LEFT, 'when the service receives every input before the scheduled validation process'),
+            (self.LEFT, 'to write every result to the output folder after the checks finish'),
+        ]
+        texts = [f'{left}{sep}{right}.' for left, right in cases for sep in (': ', ':\n', '; ', ' — ')]
+        for result in self.findings(texts):
+            self.assertEqual([d['code'] for d in result], ['sentence-length'])
+
+    def test_inserted_phrases_and_bracketed_clauses_stay_with_the_sentence(self):
+        texts = [
+            'The worker—a small Python module maintained by our team—reads every input file '
+            'from the local folder before it starts the scheduled validation process for all configured projects every single morning.',
+            'The worker (the build failed; the tests stopped) reads every input file '
+            'from the local folder before it starts the scheduled validation process for all configured projects every single morning.',
+        ]
+        for result in self.findings(texts):
+            self.assertEqual([d['code'] for d in result], ['sentence-length'])
+
+    def test_enumeration_with_words_that_can_be_verbs_is_not_a_clause(self):
+        text = ('Limits decided earlier on stated grounds stayed in the copy: '
+                'about seven list items and sibling headings, headings to H3, and lists to three levels in total.')
+        found = self.findings([text])[0]
+        self.assertEqual([d['code'] for d in found], ['sentence-length'])
+        self.assertIn('sentence unit has 27 words', found[0]['message'])
+
+    def test_long_second_unit_reports_its_source_line(self):
+        right = f'{self.RIGHT} and keeps every previous result in a separate directory for later review'
+        texts = [f'The build failed; {right}.', f'The build failed;\n{right}.',
+                 f'The build failed:\n{right}.', f'The build failed &mdash;\n  {right}.']
+        for result, line in zip(self.findings(texts), (3, 4, 4, 4)):
+            self.assertEqual([(d['code'], d['line']) for d in result], [('sentence-length', line)])
+            self.assertIn('sentence unit has 27 words', result[0]['message'])
+
+    def test_code_links_and_entities_do_not_create_spurious_boundaries(self):
+        texts = [
+            f'{self.LEFT} `; {self.RIGHT}`.',
+            f'{self.LEFT} https://example.com/a;b:c.',
+            f'{self.LEFT} &rightarrow; {self.RIGHT}.',
+            f'[{self.LEFT}; {self.RIGHT}](https://example.com).',
+            f'{self.LEFT} <!-- ; {self.RIGHT} -->.',
+            f'`worker` reads every file before the scheduled validation process; {self.RIGHT}.',
+            f'{self.LEFT}; `worker` writes every result after the checks finish successfully.',
+        ]
+        found = self.findings(texts)
+        self.assertEqual([[d['code'] for d in ds] for ds in found],
+                         [[], [], ['sentence-length'], ['sentence-length'], [], [], []])
+
+    def test_imperatives_split_but_other_scripts_keep_existing_boundaries(self):
+        imperative = ('Read every input file from the local folder before starting the scheduled validation process; '
+                      'write every result to the output folder after finishing the scheduled validation process.')
+        korean = ' '.join(['이름'] * 13) + '; ' + ' '.join(['이름'] * 13) + '.'
+        found = self.findings([imperative, korean])
+        self.assertEqual(found[0], [])
+        self.assertEqual([d['code'] for d in found[1]], ['sentence-length'])
+
+    def test_length_units_do_not_change_line_layout_or_list_item_naming(self):
+        text = '# T\n\nOverview.\n\nSteps:\n\n- The build failed; the tests stopped.\n- Restart the worker.\n'
+        self.assertEqual(self.review(text), [])
+        self.assertCodes(text, [])
+        self.assertCodes(text.replace('; the', '. The'), ['line-sentences'])
+
+    def test_list_item_labels_are_not_separate_units(self):
+        for label in ('**Parts come first**:', '__Parts come first__:', 'Parts come first:',
+                      '[Parts come first](https://example.com):'):
+            with self.subTest(label=label):
+                self.assertCodes('# T\n\nOverview.\n\nRules:\n\n'
+                                 f'- {label} The build failed.\n  The tests stopped.\n  The job ended.\n'
+                                 '  The worker crashed.\n  The queue stalled.\n- Other.\n', [])
+
+    def test_missing_model_is_an_explicit_usage_error(self):
+        # A deliberately unavailable model exercises the actual CLI error path
+        # without uninstalling the model or changing the user's environment.
+        self.write('en_core_web_md.py', 'raise ImportError("model unavailable")\n')
+        path = self.write('doc.md', '# T\n\nThe build failed; the tests stopped.\n')
+        result = run('--format', 'json', str(path), env={**os.environ, 'PYTHONPATH': str(self.dir)})
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, '')
+        self.assertIn('cannot load the English sentence model', result.stderr)
+        # Ordinary prose does not load a model it does not need.
+        path.write_text('# T\n\nThe build failed.\n', encoding='utf-8')
+        result = run('--format', 'json', str(path), env={**os.environ, 'PYTHONPATH': str(self.dir)})
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+
 class TreeRules(CheckerCase):
     def tree(self, files, *options):
         for name, text in files.items():
@@ -904,8 +1032,8 @@ class Registry(unittest.TestCase):
         sentences, run_after = word[limit['MAX_SENTENCES']], word[limit['MAX_PARAGRAPH_RUN'] + 1]
         items, words = word[limit['MAX_LIST_ITEMS']], limit['MAX_WORDS']
         for text, phrase in [
-            (model, f'at most {sentences} sentences'),
-            (summary['paragraph-length'], f'more than {sentences} sentences'),
+            (model, f'at most {sentences} sentence units'),
+            (summary['paragraph-length'], f'more than {sentences} sentence units'),
             (model, f'{run_after.capitalize()} or more paragraphs in a row'),
             (summary['paragraph-run'], f'{run_after} or more paragraphs'),
             (model, f'at most {words} words'),

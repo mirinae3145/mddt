@@ -152,7 +152,7 @@ rule = "model.md#links-between-documents"
 [paragraph-length]
 severity = "warning"
 group = "sentence"
-summary = "paragraph has more than five sentences"
+summary = "paragraph has more than five sentence units"
 rule = "model.md#paragraphs-and-sentences"
 
 [paragraph-run]
@@ -164,7 +164,7 @@ rule = "model.md#paragraphs-and-sentences"
 [sentence-length]
 severity = "warning"
 group = "sentence"
-summary = "sentence has more than 25 words"
+summary = "sentence unit has more than 25 words"
 rule = "model.md#paragraphs-and-sentences"
 
 [line-sentences]

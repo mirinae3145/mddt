@@ -5,7 +5,23 @@ When it is unclear how a rule applies to the text at hand, compare it with them.
 
 ## Structure within a file
 
-These examples show how headings, overviews, and siblings change as content grows inside one file, and when content stays in one file.
+These examples show sentence units, changes to headings and siblings as content grows, and when content stays in one file.
+
+### Sentence units
+
+Length checks use the same boundaries for words per unit and units per paragraph.
+Punctuation connecting independent clauses adds a boundary, while conjunctions, enumeration, and inserted phrases do not:
+
+| Text | Sentence units |
+| --- | --- |
+| The build failed; the tests stopped. | 2 |
+| The cause was clear: the cache was stale. | 2 |
+| The build failed &mdash; the tests stopped. | 2 |
+| The build failed, so the tests stopped. | 1 |
+| Supported systems: Linux and Windows. | 1 |
+| The parser &mdash; a small Python module &mdash; runs locally. | 1 |
+
+Each example may stay on one source line, because length boundaries do not change the one-sentence-per-line rule.
 
 ### Promotion
 

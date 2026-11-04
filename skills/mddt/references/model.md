@@ -61,10 +61,15 @@ Prose follows these rules about lines, paragraphs, and sentences.
 - **One sentence per line**: Each sentence of prose starts on its own line, including in list items. <!-- code: line-sentences -->
   Later sentences of a list item go on indented continuation lines.
   Tools can then find sentence boundaries at line ends instead of guessing at periods in abbreviations, versions, file names, and URLs.
-- **Paragraph size**: A paragraph usually has at most five sentences, and a longer one that carries a single line of argument can stay. <!-- code: paragraph-length, paragraph-run -->
+- **Sentence units**: Length checks count a sentence as one unit, except where a semicolon, colon, or dash connects independent clauses.
+  Each connected clause counts separately for both words per unit and units per paragraph.
+  A conjunction alone, or with a comma, does not divide a unit.
+  Enumeration, list item labels, and inserted phrases do not create boundaries.
+  These measurement boundaries do not require new lines or change the sentence count used for list item names.
+- **Paragraph size**: A paragraph usually has at most five sentence units, and a longer one that carries a single line of argument can stay. <!-- code: paragraph-length, paragraph-run -->
   Four or more paragraphs in a row without a list, table, heading, or code block suggest structure that has not been made visible.
-- **Sentence length**: A sentence usually has at most 25 words, counted as whitespace-separated tokens that contain a letter or digit. <!-- code: sentence-length -->
-  A long sentence can usually be split, or holds content that belongs in separate sections.
+- **Sentence length**: A sentence unit usually has at most 25 words, counted as whitespace-separated tokens that contain a letter or digit. <!-- code: sentence-length -->
+  A long unit can usually be split, or holds content that belongs in separate sections.
   Languages written without spaces between words are not measured.
 - **Condition placement**: A condition that decides whether an instruction applies comes before the instruction, so readers it does not concern can skip it.
   An exception to a rule that almost always applies comes after the rule.

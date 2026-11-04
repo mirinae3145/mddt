@@ -3,7 +3,10 @@
 # SPDX-License-Identifier: MIT
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["markdown-it-py>=3", "mdit-py-plugins>=0.4"]
+# dependencies = [
+#   "markdown-it-py>=3", "mdit-py-plugins>=0.4", "spacy==3.8.18",
+#   "en-core-web-md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl",
+# ]
 # ///
 """Check Markdown files against the mddt document-tree model.
 
@@ -21,6 +24,8 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass, field
 import fnmatch
+from functools import cache, lru_cache
+from html import unescape
 import json
 import os
 from pathlib import Path
@@ -28,6 +33,7 @@ import re
 import subprocess
 import sys
 import tomllib
+import unicodedata
 from urllib.parse import unquote
 
 from markdown_it import MarkdownIt
@@ -94,6 +100,8 @@ MAX_WORDS = 25
 # Prose keeps one sentence per line, so a sentence ends where a line ends with
 # sentence punctuation; a colon ends the sentence that introduces a list.
 SENTENCE_END = re.compile(r'[.!?。！？:：][\'"”’)\]*_]*$')
+UNIT_END = re.compile(r'[.!?。！？][\'"”’)\]*_]*$')
+CLAUSE_SEPARATOR = re.compile(r';|(?<!\d)[:—–]|[:—–](?!\d)')
 CONTAINER_PREFIX = re.compile(r'^\s*(?:>\s?)*(?:[-*+]\s+|\d+[.)]\s+)?')
 COMMENT = re.compile(r'<!--.*?-->')
 BOUNDARY = re.compile(r'([.!?。！？])([\'"”’)\]*_]*)\s+([\'"“‘(*_]*)(\S)')
@@ -314,7 +322,7 @@ def is_heading_like_emphasis(block: SyntaxTreeNode) -> bool:
     return bool(text) and text[-1] not in HEADING_PUNCTUATION
 
 
-def clean_prose(line: str, placeholder: str = '') -> str:
+def clean_prose(line: str, placeholder: str = '', *, units: bool = False) -> str:
     """Remove what does not count as prose: comments, code, link targets, and URLs.
 
     With a placeholder, code spans become a single token and link text loses its
@@ -322,12 +330,14 @@ def clean_prose(line: str, placeholder: str = '') -> str:
     """
     line = COMMENT.sub(' ', line)
     # Entities such as &rightarrow; stand for symbols, not words.
-    line = re.sub(r'&(?:[A-Za-z][A-Za-z0-9]*|#\d+|#x[0-9A-Fa-f]+);', ' ', line)
+    line = re.sub(r'&(?:[A-Za-z][A-Za-z0-9]*|#\d+|#x[0-9A-Fa-f]+);',
+                  lambda m: unescape(m.group()) if units and unescape(m.group()) in ';:—–' else ' ', line)
     line = re.sub(r'`[^`]*`', f' {placeholder} ' if placeholder else ' ', line)
     line = re.sub(r'!\[([^\]]*)\]\([^)]*\)', ' ', line)
     # Link text counts as words, but punctuation inside a link never ends a sentence.
     line = re.sub(r'\[([^\]]*)\]\([^)]*\)',
-                  lambda m: re.sub(r'[.!?。！？]', '', m.group(1)) if placeholder else m.group(1), line)
+                  lambda m: re.sub(r'[.!?。！？;:—–]' if units else r'[.!?。！？]', '', m.group(1))
+                  if placeholder else m.group(1), line)
     line = re.sub(r'<https?://[^>]*>|https?://\S+|<[^>]+>', ' ', line)
     return line
 
@@ -362,6 +372,79 @@ def sentence_breaks(line: str) -> list[int]:
         hangul = '\uac00' <= previous[-1] <= '\ud7a3'
         if hangul or m.group(1) in '。！？' or (m.group(4).isupper() and m.group(4).isalpha()):
             breaks.append(m.start(3))
+    return breaks
+
+
+class SentenceAnalysisError(Exception):
+    """The required English parser could not be loaded."""
+
+
+@cache
+def english_parser():
+    # Pin the runtime and model together in the script metadata. Loading is
+    # deferred until a sentence contains a possible clause boundary.
+    try:
+        import en_core_web_md
+        return en_core_web_md.load(exclude=['ner', 'lemmatizer'])
+    except (ImportError, OSError) as exc:
+        raise SentenceAnalysisError(
+            'cannot load the English sentence model; run the checker with uv '
+            'to install its declared dependencies') from exc
+
+
+@lru_cache(maxsize=2048)
+def independent_clause(text: str) -> bool:
+    """Ask the parser whether a span has a complete main clause.
+
+    Parsing each side separately avoids treating the model's attachment of
+    one punctuation-linked clause to another as evidence of subordination.
+    Subjects may be omitted in imperative instructions, but not in fragments
+    such as "runs locally". A subordinate clause alone is not independent.
+    """
+    doc = english_parser()(re.sub(r'[*_~]', ' ', text).strip())
+    roots = [t for t in doc if t.dep_ == 'ROOT']
+    if len(roots) != 1:
+        return False
+    root = roots[0]
+    children = list(root.children)
+    if root.pos_ not in ('VERB', 'AUX') or any(t.dep_ == 'mark' for t in children):
+        return False
+    first = next(t for t in doc if not t.is_space and not t.is_punct)
+    if first.head == root and (first.pos_ == 'SCONJ' or first.tag_ == 'WRB'):
+        return False
+    subject = any(t.dep_ in ('nsubj', 'nsubjpass', 'csubj', 'csubjpass', 'expl') for t in children)
+    finite = 'Fin' in root.morph.get('VerbForm') or any(
+        t.dep_ in ('aux', 'auxpass') and 'Fin' in t.morph.get('VerbForm') for t in children)
+    imperative = not subject and root.tag_ == 'VB' and not any(t.tag_ == 'TO' for t in children)
+    return subject and finite or imperative
+
+
+def clause_breaks(text: str) -> list[int]:
+    """Extra length boundaries at punctuation joining complete English clauses.
+
+    Conjunctions and commas never create candidates. Bracketed material is
+    kept with its enclosing prose, and non-Latin text is not sent to the
+    English model. Other Latin-script languages are outside this analysis.
+    """
+    candidates = list(CLAUSE_SEPARATOR.finditer(text))
+    if not candidates or any(c.isalpha() and 'LATIN' not in unicodedata.name(c, '') for c in text):
+        return []
+    depth, outside = 0, set()
+    for i, c in enumerate(text):
+        if c in '([{':
+            depth += 1
+        elif c in ')]}':
+            depth = max(0, depth - 1)
+        elif depth == 0:
+            outside.add(i)
+    breaks, start = [], 0
+    for match in candidates:
+        if match.start() not in outside:
+            continue
+        left, right = text[start:match.start()], text[match.end():]
+        if left.strip() and right.strip() and independent_clause(left) and independent_clause(right):
+            breaks.append(match.end())
+            start = match.end()
     return breaks
 
 
@@ -510,35 +593,55 @@ class FileCheck:
                             f'"{first.text}" and {count - 1} more sibling heading(s) carry section numbers')
                 return
 
-    def sentences(self, paragraph: SyntaxTreeNode) -> list[tuple[int, int]]:
+    def sentences(self, paragraph: SyntaxTreeNode, *, units: bool = False) -> list[tuple[int, int]]:
         """Return (first line, word count) for each sentence of a paragraph.
 
-        Sentences are counted across line breaks until a line ends with
-        sentence punctuation, so breaking a long sentence over several lines
-        does not hide its length.
+        With units, split punctuation-linked independent clauses for length
+        checks. Without it, preserve the sentence count for list item names.
+        Wrapping at a colon alone does not create a length boundary.
         """
-        found, words, start = [], 0, None
+        found, pending = [], []
+
+        def finish():
+            if not pending:
+                return
+            text = '\n'.join(part for _, part in pending)
+            boundaries = [0, *(clause_breaks(text) if units else []), len(text)]
+            for a, b in zip(boundaries, boundaries[1:]):
+                piece = text[a:b]
+                words = count_words(piece.replace(' X ', ' '))
+                if words:
+                    leading = next(i for i, line in enumerate(piece.splitlines())
+                                   if count_words(line.replace(' X ', ' ')))
+                    line = pending[0][0] + text[:a].count('\n') + leading
+                    found.append((line, words))
+            pending.clear()
+
         first, last = paragraph.map
+        item = paragraph.parent
+        named = name_of(item) if (units and item.type == 'list_item' and item.children[0] is paragraph) else None
         for no in range(first, last):
             raw = self.lines[no]
             raw = CONTAINER_PREFIX.sub('', raw) if no == first else re.sub(r'^\s*(?:>\s?)*', '', raw)
-            text = clean_prose(raw, placeholder='X')
+            text = clean_prose(raw, placeholder='X', units=units)
+            if no == first and named:
+                # A label can itself be a complete clause ("Parts come
+                # first:"). Its delimiter names the item, not another unit.
+                pattern = (r'^\s*(?:\*\*.*?\*\*|__.*?__)\s*[:—–]?' if named[0] == 'bold'
+                           else r'^.*?[:—–]' if named[0] == 'link' else r'^[^:]*:')
+                label = re.match(pattern, text)
+                if label:
+                    text = re.sub(r'[;:—–]', ',', text[:label.end()]) + text[label.end():]
             # Sentences that end inside a line, as in hard-wrapped text, also end here.
             pieces = [text[a:b] for a, b in zip([0] + sentence_breaks(text),
                                                 sentence_breaks(text) + [len(text)])]
             for k, piece in enumerate(pieces):
                 if k:
-                    if start is not None:
-                        found.append((start, words))
-                    words, start = 0, None
-                n = count_words(piece.replace(' X ', ' '))
-                if n and start is None:
-                    start = no + 1
-                words += n
-            if SENTENCE_END.search(COMMENT.sub('', raw).rstrip()) or no == last - 1:
-                if start is not None:
-                    found.append((start, words))
-                words, start = 0, None
+                    finish()
+                pending.append((no + 1, piece))
+            ending = UNIT_END if units else SENTENCE_END
+            if ending.search(COMMENT.sub('', raw).rstrip()) or no == last - 1:
+                finish()
         return found
 
     def check_prose(self) -> None:
@@ -550,12 +653,12 @@ class FileCheck:
                 text = clean_prose(CONTAINER_PREFIX.sub('', self.lines[no]), placeholder='X')
                 if sentence_breaks(text):
                     self.report('line-sentences', no + 1, 'line holds more than one sentence')
-            found = self.sentences(node)
+            found = self.sentences(node, units=True)
             if len(found) > MAX_SENTENCES:
-                self.report('paragraph-length', node, f'paragraph has {len(found)} sentences')
+                self.report('paragraph-length', node, f'paragraph has {len(found)} sentence units')
             for line, words in found:
                 if words > MAX_WORDS:
-                    self.report('sentence-length', line, f'sentence has {words} words')
+                    self.report('sentence-length', line, f'sentence unit has {words} words')
         run: list[SyntaxTreeNode] = []
         for block in self.blocks + [None]:
             if block is not None and block.type in TRANSPARENT:
@@ -1415,7 +1518,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f'mddt: cannot read {f}: {exc}', file=sys.stderr)
             return 2
         check = FileCheck(display(f), text)
-        found = check.run()
+        try:
+            found = check.run()
+        except SentenceAnalysisError as exc:
+            print(f'mddt: {exc}', file=sys.stderr)
+            return 2
         tree.check(f, check, fixed_root or find_root(f) or base)
         # Information supports deliberate structural review and stays hidden otherwise.
         found = [d for d in check.diagnostics

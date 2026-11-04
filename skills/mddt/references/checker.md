@@ -13,7 +13,10 @@ It needs Python 3.11 or later, and [uv](https://docs.astral.sh/uv/) installs the
 uv run <skill-dir>/scripts/mddt.py FILE...
 ```
 
-Without uv, install `markdown-it-py` and `mdit-py-plugins` and run the script with Python.
+The dependencies include spaCy 3.8.18 and its English model `en_core_web_md` 3.8.0, pinned together to keep sentence analysis reproducible.
+uv downloads the model wheel from the official spaCy model releases with the other dependencies.
+Without uv, install every dependency in the script's metadata into the Python environment used to run it.
+The checker loads the model locally when prose contains a possible clause boundary; it sends no document text to a service.
 
 ## Findings
 
@@ -27,6 +30,18 @@ The codes, their severities, and their rule locations are listed in `scripts/rul
 Information findings rest on approximate detection, so judge each one before acting on it.
 For example, a summary in a table cell beside a link is not recognized.
 An item counts as a block by its number of sentences alone.
+
+Length checks apply the [sentence unit rule](model.md#paragraphs-and-sentences) as follows:
+
+- **Boundaries**: Semicolons, colons, and em or en dashes between complete English clauses divide units, including imperative instructions without subjects.
+  The checker uses dependency parsing to distinguish complete clauses from enumeration, subordinate clauses, and inserted phrases.
+- **Kept together**: Conjunctions and commas do not add boundaries, and wrapping a line after a colon does not end a unit.
+  List item labels and bracketed material stay with their enclosing prose.
+  The line layout and list item naming checks keep their existing sentence boundaries.
+- **Limits**: This analysis is an estimate from an English model, not a grammar guarantee.
+  Non-Latin text receives no additional clause boundaries.
+  Other Latin-script languages are outside the model's scope.
+  The numeric thresholds predate these additional boundaries, so their suitability for sentence units remains a matter for review.
 
 For `part-after-topic`, the checker recognizes [README closing sections](uses.md#repository-documentation) by a limited set of titles.
 In files named `README.md`, it exempts the final consecutive group of H2s with these titles:
@@ -109,4 +124,4 @@ The command ends with one of these statuses:
 | --- | --- |
 | 0 | No errors were found |
 | 1 | At least one error was found |
-| 2 | A path does not exist or a file, including a `.mddtignore`, is not readable as UTF-8, and no findings are reported |
+| 2 | An input cannot be read or the English sentence model cannot be loaded, and no findings are reported |

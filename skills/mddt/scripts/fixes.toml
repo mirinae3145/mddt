@@ -187,6 +187,7 @@ A link that expects its target to be read alone should point to a topic.
 
 paragraph-length = """
 Keeping the paragraph is a valid outcome when it is one line of argument.
+Independent clauses connected by a semicolon, colon, or dash count as separate sentence units, just as in the word limit.
 1. Turn parallel points into a list, or points with shared attributes into a table.
 2. Split the paragraph where its subject shifts.
 """
@@ -199,17 +200,21 @@ Long runs of paragraphs often hide structure; keeping them is a valid outcome fo
 
 sentence-length = """
 Fix, in order of preference:
-1. Split the sentence.
+1. Split the long sentence unit.
 2. Check whether its parts belong in separate sections or list items.
 3. Keep it, breaking the line at a clause boundary if that helps reading.
 Avoid breaking lines only to hide the length.
-A sentence is counted across line breaks until a line ends with sentence punctuation or a colon, and code spans, link targets, and URLs are not counted.
+A unit is counted across line breaks; wrapping at a colon does not end it.
+Independent clauses connected by a semicolon, colon, or dash count separately for both the word limit and paragraph size.
+Conjunctions, enumeration, and inserted phrases do not add boundaries.
+Code spans, link targets, and URLs are not counted.
 """
 
 line-sentences = """
 Start each sentence on its own line; in a list item, put later sentences on indented continuation lines.
 Keep the line when the period belongs to an abbreviation, a version, or a name.
 Within a line, a new sentence is recognized after sentence punctuation and a space, when Korean text ends the sentence, a full-width stop is used, or a capital letter follows.
+The extra clause boundaries used by length checks do not require new lines.
 """
 
 link-without-summary = """

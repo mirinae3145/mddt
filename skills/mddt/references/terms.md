@@ -9,6 +9,7 @@ Each entry says briefly what the term means and points to where it is defined, s
 - **Entry document**: A document that needs no parent, as [files and topics](model.md#files-and-topics) describes.
 - **Name**: A lead-in that says what a list item is about, as [names](model.md#names) describes.
 - **Part**: An H2 without H3 children, or an H3 section of a topic, as [headings and promotion](model.md#headings-and-promotion) describes.
+- **Sentence unit**: A unit for length checks, separated at sentence endings or punctuation connecting independent clauses, as [paragraphs and sentences](model.md#paragraphs-and-sentences) describes.
 - **Structure**: How files, headings, links, sections, and lists are arranged.
   The checker groups findings about structure apart from findings about lines, paragraphs, and sentences.
 - **Topic**: A unit of meaning that can be read on its own, as [files and topics](model.md#files-and-topics) describes.

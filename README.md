@@ -30,6 +30,7 @@ It does not represent any source in full or the positions of its authors.
 ## Checker
 
 The checker reads the Markdown files or directories it is given and reports findings by code.
+Its length checks use a local English parsing model to count independent clauses joined by semicolons, colons, or dashes separately.
 The [checker reference](skills/mddt/references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
 Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes.
 The checker covers the model's rules, not formatting, so run your repository's own Markdown linter for formatting rules.
@@ -46,6 +47,7 @@ An agent reads the reference documents, plans each document's place in the tree,
 These steps take more tokens and time than a direct edit.
 
 The checker counts words as whitespace-separated tokens that contain a letter or digit.
+Its [sentence units](skills/mddt/references/model.md#paragraphs-and-sentences) differ from grammatical sentences, and their boundaries depend partly on the English parsing model.
 Its length thresholds were calibrated with English documents written to the model.
 Sentence boundaries inside a line are recognized after Korean sentence endings and full-width stops and before capital letters, so other languages may get incomplete `line-sentences` findings.
 Languages written without spaces between words, such as Chinese, Japanese, and Thai, are not measured meaningfully.
@@ -63,6 +65,6 @@ The documentation, including the skill's instructions and reference documents, i
 
 ## AI disclosure
 
-Claude by Anthropic assisted with the design, implementation, documentation, and tests of this project.
+Claude by Anthropic and Codex by OpenAI assisted with the design, implementation, documentation, and tests of this project.
 The maintainer directed the design and decided its rules.
 The skill is written for AI agents, and the checker's findings support a writer's judgment rather than replace it.
