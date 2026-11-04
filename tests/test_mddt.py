@@ -185,6 +185,12 @@ class ListRules(CheckerCase):
         self.assertCodes(f'# T\n\nOverview.\n\nFruit:\n\n{ordered}\n', [])
         dates = '\n'.join(f'- 2026-10-{d:02d}: entry' for d in range(20, 10, -1))
         self.assertCodes(f'# T\n\nOverview.\n\nLog:\n\n{dates}\n', [])
+        versions = '\n'.join(f'- {v} release' for v in ['1.2', '1.9', '1.10', '1.11', '2.0', '2.1', '2.10', '3.0'])
+        self.assertCodes(f'# T\n\nOverview.\n\nReleases:\n\n{versions}\n', [])
+        trailing = '\n'.join(f'- {w} review, 2026-10-{d:02d}' for w, d in zip('pear apple fig kiwi plum lime date cherry'.split(), [3, 3, 5, 8, 12, 21, 21, 29]))
+        self.assertCodes(f'# T\n\nOverview.\n\nLog:\n\n{trailing}\n', [])
+        shuffled = '\n'.join(f'- {w} review, 2026-10-{d:02d}' for w, d in zip('pear apple fig kiwi plum lime date cherry'.split(), [3, 12, 5, 8, 3, 21, 21, 29]))
+        self.assertCodes(f'# T\n\nOverview.\n\nLog:\n\n{shuffled}\n', ['list-length'])
 
     def test_named_item_with_named_descendant(self):
         self.assertCodes(
@@ -208,6 +214,17 @@ class ListRules(CheckerCase):
         holder = f'# T\n\nOverview.\n\nList:\n\n- {long}\n  - **Name**: x\n  - **Other**: y\n- short\n'
         self.assertEqual(self.review(holder), ['nested-block'])
 
+    def test_numbered_steps_are_not_blocks_or_names(self):
+        long = 'First sentence.\n   Second sentence.'
+        holder = f'# T\n\nOverview.\n\nSteps:\n\n1. {long}\n   - **Name**: x\n   - **Other**: y\n1. short\n'
+        self.assertEqual(self.review(holder), [])
+        inside = '# T\n\nOverview.\n\nList:\n\n- **Name**: rule.\n  1. First sentence.\n     Second sentence.\n  1. short\n- **Other**: x\n'
+        self.assertEqual(self.review(inside), [])
+        labeled = '# T\n\nOverview.\n\nSteps:\n\n1. **Settings** opens.\n   - First sentence.\n     Second sentence.\n   - short\n1. Close it.\n'
+        self.assertEqual(self.review(labeled), ['item-name'])
+        self.assertCodes('# T\n\nOverview.\n\nScope:\n\n- In: x\n- Out: y\n\n'
+                         'Steps:\n\n1. **Settings** 메뉴를 연다.\n1. **Save**를 누른다.\n', [])
+
     def test_name_forms_are_compared_per_topic(self):
         text = ('# T\n\nOverview.\n\n## Topic A\n\nOverview.\n\n### One\n\nList:\n\n- **a**: x\n- **b**: y\n\n'
                 '### Two\n\nList:\n\n- c: x\n- d: y\n\n'
@@ -217,6 +234,10 @@ class ListRules(CheckerCase):
     def test_step_ending_in_colon_is_not_a_name(self):
         self.assertCodes(
             '# T\n\nOverview.\n\nList:\n\n- **A**: x\n- Install the tool with pipx:\n\n  ```sh\n  pipx install t\n  ```\n- **B**: y\n', [])
+
+    def test_colon_inside_code_does_not_end_a_name(self):
+        self.assertCodes('# T\n\nOverview.\n\nList:\n\n- `C0: 접속 및 코멘트 확인용.` 설명.\n- **B**: y\n- **C**: z\n', [])
+        self.assertCodes('# T\n\nOverview.\n\nList:\n\n- `--root`: sets the root.\n- **B**: y\n', ['name-form-mix'])
 
     def test_link_names_do_not_count_as_a_form(self):
         self.write('a.md', '# A\n\nOverview.\n')
@@ -416,6 +437,12 @@ class TreeRules(CheckerCase):
         self.assertEqual(self.tree({'README.md': f'# T\n\nOverview.\n\n{sections}'}), [('README.md', 'section-count')])
         dated = ''.join(f'## 2026-10-{d:02d}\n\nText.\n\n' for d in range(20, 10, -1))
         self.assertEqual(self.tree({'README.md': f'# T\n\nOverview.\n\n{dated}'}), [])
+        titles = ['RC5 Registry 공개, 2026-10-29', 'Pin 확인, 2026-10-21~22', 'Build, 2026-10-21', 'Plan, 2026-10-19',
+                  'Board, 2026-10-02~03', 'Kickoff, 2026-09-30', 'Order, 2026-09-30', 'Idea, 2026-09-01']
+        ending = ''.join(f'## {t}\n\nText.\n\n' for t in titles)
+        self.assertEqual(self.tree({'README.md': f'# T\n\nOverview.\n\n{ending}'}), [])
+        undated = ''.join(f'## {t}\n\nText.\n\n' for t in titles[:-1] + ['Idea'])
+        self.assertEqual(self.tree({'README.md': f'# T\n\nOverview.\n\n{undated}'}), [('README.md', 'section-count')])
 
     def test_sibling_imbalance_and_file_size(self):
         big = ''.join(f'Line {n}.\n\n' for n in range(30))
@@ -460,6 +487,18 @@ class Interface(CheckerCase):
             self.write(f'skip{n}.md', '# S\n\nOverview.\n')
         out = run('--exclude', 'skip*', str(self.dir)).stdout
         self.assertIn('skipped: 6 files', out)
+
+    def test_rule_locations_name_the_skill_folder_as_run(self):
+        doc = self.write('bad.md', '# T\n')
+        linked, copied = self.dir / 'linked', self.dir / 'copied'
+        linked.symlink_to(SCRIPTS.parent)
+        shutil.copytree(SCRIPTS.parent, copied, ignore=shutil.ignore_patterns('__pycache__'))
+        (self.dir / 'alone.py').symlink_to(SCRIPT)
+        for script, folder in [(linked / 'scripts/mddt.py', linked), (copied / 'scripts/mddt.py', copied),
+                               (self.dir / 'alone.py', SCRIPTS.parent)]:
+            out = subprocess.run(['uv', 'run', '--quiet', str(script), str(doc)],
+                                 capture_output=True, text=True).stdout
+            self.assertIn(f'  rule: {folder / "references/model.md"}#', out, script)
 
     def test_outline_is_automatic_only_with_structural_findings(self):
         ok = self.write('ok.md', '# T\n\nOverview.\n\n## Part\n\nText.\n')
@@ -617,6 +656,15 @@ class Registry(unittest.TestCase):
         reference = (SKILL / 'references' / 'checker.md').read_text(encoding='utf-8')
         for option in options:
             self.assertIn(f'`{option}', reference)
+
+    def test_checker_reference_names_every_json_key(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            doc = Path(tmp, 'doc.md')
+            doc.write_text('# T\n', encoding='utf-8')
+            data = json.loads(run('--format', 'json', '--outline', str(doc)).stdout)
+        reference = (SKILL / 'references' / 'checker.md').read_text(encoding='utf-8')
+        for key in [*data, *data['diagnostics'][0]]:
+            self.assertIn(f'`{key}`', reference)
 
     def test_example_results_follow_the_model(self):
         # The "After" side of each example must itself conform; snippets are

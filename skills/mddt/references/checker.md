@@ -32,7 +32,10 @@ An item counts as a block by its number of sentences alone.
 
 Text output prints each code once with its summary and rule location, then every location where it occurs, then its fix guidance.
 Files with structural findings also get an outline that shows how the checker interpreted them.
-JSON output lists the checked files, the skipped files, and the findings without fix guidance, and it holds outlines only with `--outline` or `--review`.
+
+JSON output is an object whose keys `files` and `skipped` list the checked and skipped files.
+Its key `diagnostics` lists the findings without fix guidance, each with the fields `file`, `line`, `endLine`, `code`, `severity`, and `message`.
+The message joins the code's summary and the finding's detail, and the key `outlines` appears only with `--outline` or `--review`.
 
 ## Options
 
@@ -58,6 +61,7 @@ A file argument is checked as given, and a directory argument expands as follows
 
 Files named CHANGELOG and files matching `--exclude` are skipped even when named explicitly.
 Lists inside block quotes are not checked.
+YAML front matter and HTML blocks, such as comments, are not judged as prose, and they neither introduce nor separate the blocks around them.
 
 ## Links checked
 

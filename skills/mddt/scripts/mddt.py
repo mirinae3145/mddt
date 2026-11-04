@@ -36,7 +36,11 @@ from mdit_py_plugins.dollarmath import dollarmath_plugin
 from mdit_py_plugins.front_matter import front_matter_plugin
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-SKILL_DIR = SCRIPT_DIR.parent
+# Rule locations in the output name the skill folder as the script was run,
+# without resolving symbolic links, so that they match the folder the agent
+# installed; a script linked on its own falls back to the folder it lives in.
+_RUN_SKILL_DIR = Path(os.path.abspath(__file__)).parent.parent
+SKILL_DIR = _RUN_SKILL_DIR if (_RUN_SKILL_DIR / 'references').is_dir() else SCRIPT_DIR.parent
 FIXES = SCRIPT_DIR / 'fixes.toml'
 REGISTRY = SCRIPT_DIR / 'rules.toml'
 
@@ -49,6 +53,7 @@ MAX_LIST_ITEMS = 7
 NAME_MAX_WORDS = 6
 # MD036 treats emphasis ending in punctuation as a sentence, not a heading.
 HEADING_PUNCTUATION = '.,;:!?。，；：！？'
+ISO_DATE = re.compile(r'(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)')
 COLON_NAME = re.compile(r'^(?P<name>[^:：\n]{1,40}?)[:：](?:\s|$)')
 LINK_NAME_TAIL = re.compile(r'^\s*(?:[:：—–]|-\s)')
 CONVENTION_FILES = re.compile(r'^changelog(\..*)?$', re.IGNORECASE)
@@ -233,18 +238,21 @@ def name_of(item: SyntaxTreeNode) -> tuple[str, str] | None:
         if rest is None or (rest.type == 'text' and LINK_NAME_TAIL.match(rest.content)):
             return 'link', plain_text(first).strip()
         return None
-    lead, used = '', 0
+    # A colon inside a code span, as in `C0: note`, belongs to the code and
+    # does not end a name, so the match runs on text whose code colons are masked.
+    lead, masked, used = '', '', 0
     for n in nodes:
         if n.type not in ('text', 'code_inline'):
             break
         lead += n.content
+        masked += re.sub('[:：]', ' ', n.content) if n.type == 'code_inline' else n.content
         used += 1
-    match = COLON_NAME.match(lead)
+    match = COLON_NAME.match(masked)
     # A phrase ending in a colon with nothing after it introduces the item's
     # content, such as a code block, rather than naming the item.
     described = bool(lead[match.end():].strip()) or used < len(nodes) if match else False
     if match and described and len(match['name'].split()) <= NAME_MAX_WORDS:
-        return 'colon', match['name'].strip()
+        return 'colon', lead[:match.end('name')].strip()
     return None
 
 
@@ -258,14 +266,20 @@ def item_key(item: SyntaxTreeNode) -> str:
 
 
 def is_mechanically_ordered(keys: list[str]) -> bool:
-    """True when keys are sorted by name or number, in either direction.
+    """True when keys are sorted by date, name, or number, in either direction.
 
     Lists and headings in such an order can be scanned without understanding
     their content, so their length is not a structural problem.
+    When every key holds a year-first date, such as a title ending in
+    2026-10-29, the first date in each key decides, and keys of one date may
+    come in any order.
     """
     if not all(keys):
         return False
-    if all(re.match(r'\d', k) for k in keys):
+    dates = [ISO_DATE.search(k) for k in keys]
+    if all(dates):
+        values = [d.group() for d in dates]
+    elif all(re.match(r'\d', k) for k in keys):
         values = [tuple(int(x) for x in re.findall(r'\d+', k)) for k in keys]
     else:
         values = [k.casefold() for k in keys]
@@ -689,32 +703,35 @@ class FileCheck:
             self.report('list-single', node, 'list has one item')
         if len(items) > MAX_LIST_ITEMS and not is_mechanically_ordered([item_key(i) for i in items]):
             self.report('list-length', node, f'{len(items)} items without mechanical order')
+        numbered = node.type == 'ordered_list'
         for item in items:
             named = name_of(item)
             descendant = first_named_descendant(item)
             if named:
-                # Link text follows its target's title, so it is not a form choice.
-                if named[0] != 'link':
+                # Link text follows its target's title, so it is not a form choice,
+                # and a numbered step is labeled by its position, so leading bold
+                # text in it, such as a UI label, is not one either.
+                if named[0] != 'link' and not numbered:
                     forms.setdefault(named[0], []).append(start_line(item))
                 if descendant:
                     self.report('name-nesting', item,
                                 f'"{named[1]}" has named descendant "{descendant[1]}" '
                                 f'at line {descendant[0]}')
-            self.check_item_block(item, named, descendant, named_ancestor,
-                                  numbered=node.type == 'ordered_list')
+            if not numbered:
+                self.check_item_block(item, named, descendant, named_ancestor)
             for child in item.children:
                 if child.type in LIST_TYPES:
                     self.walk_list(child, depth + 1, deepest, forms,
-                                   named[1] if named else named_ancestor)
+                                   named[1] if named and not numbered else named_ancestor)
 
-    def check_item_block(self, item: SyntaxTreeNode, named, descendant, ancestor: str | None,
-                         numbered: bool) -> None:
-        """Treat a list item of several sentences as a block that deserves a name.
+    def check_item_block(self, item: SyntaxTreeNode, named, descendant, ancestor: str | None) -> None:
+        """Treat an unnumbered list item of several sentences as a block that deserves a name.
 
         Where the name rules forbid a name, because a named item encloses this
         one or this one encloses named items, blocks are nested inside blocks,
         which suggests promoting the enclosing item to a heading. A numbered
-        step is labeled by its position, so it needs no name of its own.
+        step is labeled by its position, so the caller does not treat it as a
+        block, and its leading text does not name the items nested in it.
         """
         if named and descendant:
             return  # Reported as name-nesting.
@@ -727,7 +744,7 @@ class FileCheck:
         elif descendant and not named:
             self.report('nested-block', item,
                         f'item of {count} sentences holds named item "{descendant[1]}"')
-        elif not named and not numbered:
+        elif not named:
             self.report('item-name', item, f'item of {count} sentences has no name')
 
     def section_lines(self, k: int) -> int:

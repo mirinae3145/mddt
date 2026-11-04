@@ -95,6 +95,7 @@ The heading may introduce a list or table that opens the section even when parag
 3. Otherwise add a sentence before it that states its scope, such as which of the section's decisions it holds.
 Avoid a sentence that only repeats the heading, such as "The decisions are as follows:".
 It adds nothing, and it can claim that the list or table covers the whole section.
+Removing such a sentence can raise this warning, which is the expected result.
 """
 
 list-single = """
@@ -103,7 +104,7 @@ Write the item as a sentence or paragraph.
 
 section-count = """
 Many sibling sections are hard to scan unless their order is mechanical; keeping them is a valid outcome.
-The checker recognizes order by name or number, so dates count only when written year first in digits, such as 2026-11-03.
+The checker recognizes order by name, by number, or by a date written year first in digits, such as 2026-11-03, anywhere in each title.
 1. Group related sections under a topic, or move a group to its own file.
 2. Merge sections that do not need their own heading into lists or tables.
 3. Keep them when restructuring would cost more than it helps.
@@ -133,7 +134,7 @@ Avoid cramming items into one long sentence to silence the warning.
 
 list-length = """
 Long lists are hard to scan unless their order is mechanical; keeping the list is a valid outcome.
-The checker recognizes order by name or number, so dates count only when written year first in digits, such as 2026-11-03.
+The checker recognizes order by name, by number, or by a date written year first in digits, such as 2026-11-03, anywhere in each item.
 1. Group items by role into sublists, noting that this adds a nesting level.
 2. Turn the list into a table if the items share attributes.
 3. Promote groups to headings.
