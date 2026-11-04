@@ -88,6 +88,9 @@ Moving content does not rewrite it.
 Keep the wording of moved content unless the move itself requires a change, such as replacing a position word with a link.
 Only a part or topic whose question the current task changed is rewritten.
 
+A heading that changes level within its file but keeps its text keeps its anchor, since GitHub derives the anchor from the text alone.
+Changing the text or moving the heading to another file changes the link target, so links to it are updated as [links resolve](model.md#links-between-documents) describes.
+
 ## Checking
 
 Checking combines a reread against the model's judgment rules with the checker, which reports what a parser can decide or flag.

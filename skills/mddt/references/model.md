@@ -73,6 +73,7 @@ Documents form a tree through links that follow these rules.
 - **Downward links**: A parent document links to each of its child documents with a short summary. <!-- code: doc-unlinked, link-without-summary -->
   When a subtopic moves to its own file, its original place keeps that summary and link.
   The summary condenses the child's overview, which remains the canonical version.
+  A parent with only one child introduces it in a sentence, because a [top-level list](#length-and-order) has at least two items.
   Upward links are needed only when the folder tree does not show where a document belongs.
 - **Groups of peer documents**: Sibling topics that are parallel instances of one subject, such as one page per backend, are introduced together in one part.
   The part has an introductory sentence followed by a list of links with summaries.

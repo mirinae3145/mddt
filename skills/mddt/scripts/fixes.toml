@@ -95,6 +95,7 @@ The heading may introduce a list or table that opens the section even when parag
 3. Otherwise add a sentence before it that states its scope, such as which of the section's decisions it holds.
 Avoid a sentence that only repeats the heading, such as "The decisions are as follows:".
 It adds nothing, and it can claim that the list or table covers the whole section.
+Removing such a sentence can raise this warning, which is the expected result.
 """
 
 list-single = """
