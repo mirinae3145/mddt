@@ -186,16 +186,20 @@ A link that expects its target to be read alone should point to a topic.
 """
 
 paragraph-length = """
-Keeping the paragraph is a valid outcome when it is one line of argument.
+A long paragraph often holds parallel points; keeping it is a valid outcome when it is one line of argument.
 Independent clauses connected by a semicolon, colon, or dash count as separate sentence units, just as in the word limit.
 1. Turn parallel points into a list, or points with shared attributes into a table.
 2. Split the paragraph where its subject shifts.
+3. Keep it when it is one line of argument.
+Avoid splitting only to clear the warning, which leaves parallel points in prose and can start a run of paragraphs.
 """
 
 paragraph-run = """
 Long runs of paragraphs often hide structure; keeping them is a valid outcome for continuous argument.
 1. Turn parallel points into a list, or points with shared attributes into a table.
 2. Start a section where the subject changes.
+3. Keep them when each paragraph builds on the one before.
+Avoid keeping a run only because its paragraphs share a subject, since parallel material on one subject still belongs in a list or table.
 """
 
 sentence-length = """
