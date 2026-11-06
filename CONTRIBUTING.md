@@ -99,8 +99,11 @@ Unreached lines in the code the change added or modified are judged as follows:
 ### Documents
 
 The repository's own documents follow the model, as [self-conformance](#self-conformance) describes.
-Changes to them follow the skill's [writing procedure](skills/mddt/references/writing.md), whose checking step starts with a reread.
-Reread each changed part or topic whole against the model's judgment rules, such as divisions, levels of detail among siblings, and summaries in parent documents.
+Changes to them follow the skill's [writing procedure](skills/mddt/references/writing.md) at both ends.
+Before writing, place new content as [placing a document](skills/mddt/references/writing.md#placing-a-document) describes.
+
+Once the content settles, reread each changed part or topic whole against the model's judgment rules.
+These include divisions, levels of detail among siblings, and summaries in parent documents.
 Where a rule's application is unclear, compare with the [examples](skills/mddt/references/examples.md).
 
 Then run the checker from the repository root, which decides only the rules a parser can see:
@@ -110,3 +113,5 @@ uv run skills/mddt/scripts/mddt.py .
 ```
 
 The tracked `.mddtignore` leaves out the generated material in `calibration/`.
+Self-conformance aims for no warnings.
+A change that keeps one reports it with the reason in its commit message or pull request.

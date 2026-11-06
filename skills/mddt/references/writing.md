@@ -146,7 +146,6 @@ Findings the task did not cause, and requests to restructure, are handled as fol
   Apply sentence-level findings as well where the fix leaves the rendered document as it was, such as splitting lines for `line-sentences`.
   Other sentence-level findings need rewriting, so fix them only in parts and topics that [growing and shrinking](#growing-and-shrinking) lets the task rewrite.
   Elsewhere leave them; like other warnings that remain after judgment, they are a valid outcome.
-  Run the checker with `--review` to also see information such as oversized sections and links without summaries.
 
 When a structural finding is unclear, read the outline the checker prints for that file.
 It shows how each H2 was classified, the deepest list nesting in each section, and how many items carry names in each form.
