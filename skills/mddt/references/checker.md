@@ -39,9 +39,12 @@ Length checks apply the [sentence unit rule](model.md#paragraphs-and-sentences) 
   List item labels and bracketed material stay with their enclosing prose.
   The line layout and list item naming checks keep their existing sentence boundaries.
 - **Limits**: This analysis is an estimate from an English model, not a grammar guarantee.
-  Non-Latin text receives no additional clause boundaries.
-  Other Latin-script languages are outside the model's scope.
   The numeric thresholds predate these additional boundaries, so their suitability for sentence units remains a matter for review.
+- **Other languages**: Non-Latin text receives no additional clause boundaries, and other Latin-script languages are outside the model's scope.
+  The thresholds were calibrated with English documents only, so length findings in other languages need more judgment.
+
+The `line-sentences` check finds a new sentence inside a line only after a Korean sentence ending or a full-width stop, or before a capital letter.
+Other languages can therefore miss its findings.
 
 For `part-after-topic`, the checker recognizes [README closing sections](uses.md#repository-documentation) by a limited set of titles.
 In files named `README.md`, it exempts the final consecutive group of H2s with these titles:
