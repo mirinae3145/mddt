@@ -70,7 +70,27 @@ A `.mddtignore` file leaves them out of the check, as the [ignore file](referenc
 
 ## Scope
 
-This skill covers hierarchy, not formatting or prose quality.
-Run the repository's own Markdown linter for formatting rules.
-For the quality of explanations and tutorials, use this skill together with a technical writing skill or guideline, if one is available.
+This skill covers document hierarchy and supporting paragraph and sentence rules.
+It does not assess factual accuracy or overall prose quality.
 Academic papers follow their own conventions and are out of scope.
+
+## Working with other skills
+
+Combine skills when their requirements can hold together for the same documents.
+Check their actual instructions, because a technical writing or formatting skill may also prescribe structure.
+These pairings illustrate where responsibilities meet:
+
+| Companion | Recommendation | Possible conflict |
+| --- | --- | --- |
+| Technical writing or subject review | Recommended for explanation quality, audience, terminology, and accuracy | Prescribed section order or paragraph forms may differ from this model |
+| Markdown formatting or linting | Recommended for formatting rules outside this model | Hard wrapping may break one sentence per line; heading and list rules may disagree |
+| Another document organization skill | Use together only where their structural requirements agree | Heading depth, file boundaries, parent links, and list nesting may prescribe incompatible structures |
+| A workflow with required templates | Use mddt only where the template leaves structure open | Required headings, ordering, or a single-file deliverable may prevent conformance |
+| Search or retrieval | Use to locate relevant material before reading it | An excerpt-only workflow conflicts with reading selected conforming documents whole |
+
+Use the existing exceptions in [common uses](references/uses.md), such as those for changelogs, before treating a difference as a conflict.
+Avoid applying incompatible structural skills as equal authorities over the same files, or alternating their fixes until one undoes the other.
+Resolve conflicts through the governing instructions; ask which convention to use only when those instructions leave the choice open.
+
+Preserve required formats and state any resulting limits on mddt conformance.
+For whole files outside the model, use the [ignore file](references/ignore-file.md) to exclude them from checking.

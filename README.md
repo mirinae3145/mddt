@@ -21,6 +21,9 @@ Some requirements live only in the procedures, such as placing content before wr
 
 A repository that adopts mddt for its documents therefore points its contributors to the skill and its procedures, not to the model alone.
 
+The skill's [compatibility guidance](skills/mddt/SKILL.md#working-with-other-skills) describes useful companions, potential conflicts, and combinations to avoid.
+It covers writing guidance, formatters, other structure models, required templates, and retrieval workflows.
+
 ## Document model
 
 The skill's [document model](skills/mddt/references/model.md) describes the properties that a conforming Markdown document has.
