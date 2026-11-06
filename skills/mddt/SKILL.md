@@ -4,8 +4,9 @@ description: >
   Write, restructure, and read Markdown documents with coherent structure
   within and across files. Use when creating documents or adding, moving, or
   removing content; choosing document boundaries or organizing headings,
-  lists, and tables; reviewing structure against the model; or navigating a
-  set of Markdown documents to find or verify information. Not needed for
+  lists, and tables; reviewing structure against the model; navigating a
+  set of Markdown documents to find or verify information; or making mddt
+  part of a repository's writing conventions. Not needed for
   edits confined to existing sentences, such as typo fixes, rewording, or
   value updates, or for formatting-only changes that leave structure unchanged.
 license: CC-BY-4.0 for the instructions and references; MIT for the scripts; copyright 2026 Taeha Shin
