@@ -23,15 +23,25 @@ Some requirements live only in the procedures, such as placing content first and
 The guidance states the following:
 
 - **Procedures**: Contributors follow the [writing procedure](skills/mddt/references/writing.md) before and after editing Markdown.
+  The guidance names both ends of it: placing content before writing, and rereading changed topics whole once the content settles.
   Sentence-only corrections and formatting changes that leave the structure as it was need no placement plan.
 - **Getting the skill**: Contributors use an installed copy of the skill or a checkout of this repository.
   Either one gives them the reference documents and the checker.
 - **Repository placement**: The guidance adds only what is specific to the repository.
   Examples are what the README holds, where canonical contracts live, and which index introduces the guides.
-  Link to the procedures instead of restating their steps, so that the guidance does not fall behind mddt.
+  Link to the procedures for their full steps rather than restating them, so that the guidance does not fall behind mddt.
+  A summary that keeps only the checker's part, such as running it and judging its findings, invites skipping the rest.
 - **Role of the checker**: Writers and reviewers judge placement, kinds, and summaries, which the checker does not decide.
   A run without errors is the minimum, not evidence that a document conforms.
 - **Reports**: A change reports the checker revision, the files it checked, and the findings kept after judgment with their reasons.
+
+The guidance can open with sentences like the following, which name the procedure before the model or the checker:
+
+```markdown
+For Markdown changes, follow the mddt skill's writing procedure.
+Place content in the document tree before writing it, and reread each changed topic whole once it settles.
+The checker then covers only the requirements a parser can decide.
+```
 
 Point to this guidance from the contributing guide, where contributors look before a change.
 Add it before the first restructuring, or in the same change, so that reviewers judge the restructuring against it.
@@ -48,11 +58,16 @@ Warnings that remain after judgment are a valid outcome, as [checking](skills/md
 A CI job can run the checker as an automated minimum check, but it is optional and does not replace review.
 A job that fits the checker's design has these properties:
 
-- **Pinned revision**: The job runs the checker from a fixed revision of this repository, so that results do not change with new rules.
-  Update the pin in a change of its own, because new rules can report errors in documents that the change did not touch.
 - **Errors on the whole tree**: Errors fail the job in every file.
   A moved or renamed heading can break links in files that a change did not edit.
 - **Warnings on changed files**: Warnings call for a writer's judgment, so the job reports them only in changed files and does not fail on them.
-- **Local and pinned results**: A contributor whose local skill differs from the pinned revision tells the two sets of findings apart.
+
+The job either pins a revision of this repository or follows its current default branch.
+Both are valid, and each asks for its own upkeep:
+
+| Approach | Findings | Upkeep |
+| --- | --- | --- |
+| Pinned revision | Change only when the pin changes, so a run can be reproduced | Update the pin in a change of its own, since new rules can report errors in untouched documents; contributors whose local skill differs tell the two sets of findings apart |
+| Current branch | Follow the latest rules and fixes without a change to the repository | Print the commit each run used, since a new rule can fail the job without a change to the repository |
 
 The [checker reference](skills/mddt/references/checker.md) describes the output formats and exit statuses that a CI script reads.
