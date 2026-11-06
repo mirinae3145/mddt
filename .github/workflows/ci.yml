@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests with coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: skills/mddt/scripts/mddt.py
+      - name: Run the tests under coverage
+        env:
+          MDDT_COVERAGE: '1'
+        run: python3 -m unittest discover -s tests -v
+      - name: Require full line and branch coverage
+        run: |
+          uvx coverage@7.17.2 combine
+          uvx coverage@7.17.2 report -m --fail-under=100
+
+  documents:
+    name: Documents
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: skills/mddt/scripts/mddt.py
+      # The plain run also confirms that the documented command works.
+      - name: Check the documents against the model, failing on warnings
+        shell: bash
+        run: |
+          uv run skills/mddt/scripts/mddt.py . | tee "$RUNNER_TEMP/findings.txt"
+          ! grep -qE '^(error|warning) ' "$RUNNER_TEMP/findings.txt"
+      - name: Lint the documents
+        run: uvx rumdl@0.3.2 check .
+
+  license:
+    name: License
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - name: Check that every file has a license
+        run: uvx reuse@6.3.0 lint

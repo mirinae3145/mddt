@@ -15,7 +15,7 @@ What to read before a change depends on which files it touches:
 - **Repository documents**: A change to another document, such as README or this guide, needs the skill's reference documents.
   The repository's documents follow the model, as [self-conformance](#self-conformance) describes, and the checker covers only part of it.
   The change also needs the documents that the changed text summarizes or that summarize it.
-- **Licensing and configuration**: A change to `REUSE.toml`, `LICENSES/`, `.gitignore`, `.mddtignore`, or `.rumdl.toml` needs only this guide.
+- **Licensing and configuration**: A change to `REUSE.toml`, `LICENSES/`, `.github/`, `.gitignore`, `.mddtignore`, or `.rumdl.toml` needs only this guide.
 
 ## Checker layout
 
@@ -62,14 +62,16 @@ The repository applies the skill to itself on a best-effort basis, aiming for th
 ## Licenses
 
 Every file is covered by a license entry in `REUSE.toml`.
-Code and checker data are MIT, documentation is CC BY 4.0, and trivial configuration such as `.gitignore`, `.mddtignore`, and `.rumdl.toml` is CC0.
+Code and checker data are MIT, documentation is CC BY 4.0, and configuration such as `.gitignore`, `.mddtignore`, `.rumdl.toml`, and the CI workflow is CC0.
 Place a new file under a covered path, or add it to the matching entry.
-Running `reuse lint` from the [REUSE tool](https://reuse.software/) confirms that every file is covered.
+Running `uvx reuse@6.3.0 lint` from the [REUSE tool](https://reuse.software/) confirms that every file is covered.
 
 ## Verification
 
 A change is verified by the tests, and a change to the repository's documents also by checking them against the model and linting them.
-Each command exits with a nonzero status when its check fails, so a CI job can run it unchanged.
+The CI workflow in `.github/workflows/ci.yml` runs these checks on pull requests and pushes to `main`.
+It runs the tests only under coverage, and its document check is the plain run of the documented command.
+Self-conformance aims for no warnings, so the document check fails on mddt warnings as well as errors.
 
 ### Tests
 
@@ -82,21 +84,26 @@ python3 -m unittest discover -s tests -v
 The tests run the checker through `uv run`, so uv must be installed.
 Add a test with each new code or behavior change, including a case that must not be reported.
 
-After changing `mddt.py`, also run the tests with coverage to find the lines and branches they never reach:
+After changing `mddt.py`, also run the tests with coverage, which must reach every line and branch:
 
 ```bash
 MDDT_COVERAGE=1 python3 -m unittest discover -s tests
-uvx coverage combine
-uvx coverage report -m
+uvx coverage@7.17.2 combine
+uvx coverage@7.17.2 report -m --fail-under=100
 ```
 
-The coverage run starts the checker through coverage rather than as the documentation tells users to, so it does not replace the plain run.
-Its report supports judgment rather than setting a target, so it has no required percentage.
-Unreached lines in the code the change added or modified are judged as follows:
+The coverage run starts the checker with `python -m coverage` in an environment built from the script's dependencies.
+It skips uv's script mode and the script's Python requirement, so the plain run remains the check that the documented command works.
 
-- **Specified behavior**: A line that decides a finding, file selection, output, or exit status needs a test.
+Code that the tests do not reach is handled as follows:
+
+- **Specified behavior**: A line that decides a finding, file selection, output, or exit status needs a test, and it is never excluded.
   Specified behavior is what the model, the checker reference, or a comment in the checker states.
-- **Unspecified conditions**: A line that guards against another platform, a broken registry, or a similar unspecified condition can stay unreached.
+- **Unspecified conditions**: A guard against another platform, a broken registry, impossible parser output, or a similar unspecified condition is excluded.
+  Mark it with `# pragma: no cover`, or `# pragma: no branch` for one side of a branch, followed by the reason on the same line.
+
+Reviewers judge each new exclusion in the diff.
+The coverage version is pinned in this guide, the test helper, and the CI workflow, and it is updated in all three together.
 
 ### Documents
 
@@ -115,8 +122,8 @@ uv run skills/mddt/scripts/mddt.py .
 ```
 
 The tracked `.mddtignore` leaves out the generated material in `calibration/`.
-Self-conformance aims for no warnings.
-A change that keeps one reports it with the reason in its commit message or pull request.
+Self-conformance aims for no warnings, and CI fails on them.
+Raise a warning that judgment would keep in the pull request, since keeping it means changing the checker, its rule, or this aim.
 
 Finally, lint the documents with the pinned version of [rumdl](https://github.com/rvben/rumdl):
 
