@@ -18,6 +18,7 @@ Some requirements live only in the procedures, such as placing content before wr
 - **[Reading](skills/mddt/references/reading.md)**: Chooses files from the tree, reads them whole, and relies on the model's guarantees.
 
 A repository that adopts mddt for its documents therefore points its contributors to the skill and its procedures, not to the model alone.
+[Adopting mddt in a repository](ADOPTING.md) covers the documents in scope, the contributor guidance, the first restructuring, and an optional CI check.
 
 ## Document model
 
