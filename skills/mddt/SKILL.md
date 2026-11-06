@@ -31,7 +31,8 @@ When a term such as part or division is unclear, look it up in the [terms](refer
 ## Writing and restructuring
 
 Before creating a document or adding, moving, or removing content in one, read [writing and restructuring](references/writing.md).
-It covers planning a document's place in the tree, choosing forms, rules for new writing, growing and shrinking structure, and checking the result.
+It covers planning a document's place in the tree, choosing forms, and rules for new writing.
+It also covers growing and shrinking structure, restructuring an existing tree, and checking the result.
 Read the document model as well, since the writing procedure applies it rather than repeating it.
 
 ## Reading

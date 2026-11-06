@@ -14,7 +14,7 @@ Link or copy the whole folder into your agent's skill directory, keeping `SKILL.
 Once installed, the agent follows the skill's procedures, which say how to write and read documents that meet the [document model](skills/mddt/references/model.md).
 Some requirements live only in the procedures, such as placing content before writing it, rewriting summaries once content settles, and rereading changed topics whole.
 
-- **[Writing and restructuring](skills/mddt/references/writing.md)**: Places content in the tree, chooses forms, grows and shrinks structure, and checks the result by rereading and running the checker.
+- **[Writing and restructuring](skills/mddt/references/writing.md)**: Places content, chooses forms, restructures trees as content changes, and checks the result by rereading and running the checker.
 - **[Reading](skills/mddt/references/reading.md)**: Chooses files from the tree, reads them whole, and relies on the model's guarantees.
 
 A repository that adopts mddt for its documents therefore points its contributors to the skill and its procedures, not to the model alone.

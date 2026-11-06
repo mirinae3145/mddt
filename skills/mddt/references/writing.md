@@ -1,7 +1,8 @@
 # Writing and restructuring
 
-This procedure applies the [document model](model.md) when creating a document or adding, moving, or removing content in one.
-It covers placing a document in the tree, choosing forms, rules for new writing, growing and shrinking structure, and checking the result.
+This procedure applies the [document model](model.md) when creating a document, adding, moving, or removing content in one, or restructuring a tree.
+It covers placing a document in the tree, choosing forms, and rules for new writing.
+It also covers growing and shrinking structure, restructuring an existing tree, and checking the result.
 The model holds the rules, and this document adds only the steps and the rules that apply only when writing.
 
 ## Placing a document
@@ -93,6 +94,27 @@ A part or topic that receives one may be rewritten as far as that change reaches
 A heading that changes level within its file but keeps its text keeps its anchor, since GitHub derives the anchor from the text alone.
 Changing the text or moving the heading to another file changes the link target, so links to it are updated as [links resolve](model.md#links-between-documents) describes.
 
+## Restructuring an existing tree
+
+A requested restructuring, such as bringing a repository's documents to the model for the first time, places existing content again rather than adding new content.
+It applies the other steps of this procedure in the following order, so that moves, rewrites, and checks do not undo one another:
+
+1. Read the tree from its entry document, as [choosing files](reading.md#choosing-files) describes, and run the checker on the whole tree with `--review`.
+   Keep the findings as a baseline to compare the result with, not as a list of work to clear.
+1. Note the question, kind, and reader of each file and topic.
+   Also note links into the tree from outside it, such as other repositories or instructions, which the checker cannot see.
+1. Design the target tree from the entry document down before moving anything, placing each topic as [placing a document](#placing-a-document) describes.
+1. Move files first and headings within files second, updating the links to each moved target.
+   Keep the wording of moved content, as [growing and shrinking](#growing-and-shrinking) describes.
+1. Rewrite only the parts and topics whose question the new structure changed.
+   Then rewrite overviews and parent summaries from the deepest changed documents up, as [rules for new writing](#rules-for-new-writing) describe.
+1. Check the result as [checking](#checking) describes for a requested restructuring, running the checker on the whole tree.
+   Compare the facts in the old and new documents, so that the moves neither dropped nor duplicated content.
+
+Keep moves and rewrites in separate steps that a reviewer can follow, such as separate commits.
+A large tree can be restructured one subtree at a time, from the entry document down.
+Report outside links whose targets changed, since updating them lies outside the tree.
+
 ## Checking
 
 Checking combines a reread against the model's judgment rules with the checker, which reports what a parser can decide or flag.
@@ -120,7 +142,7 @@ Findings the task did not cause, and requests to restructure, are handled as fol
 
 - **Existing warnings**: Leave them, or reconsider them while giving the existing structure priority.
 - **Existing errors**: Fix them inside the section you are editing, and report the rest without fixing them.
-- **Requested restructuring**: When the user asks for the structure to be reorganized, apply all structural findings.
+- **Requested restructuring**: When the user asks for the structure to be reorganized, as in [restructuring an existing tree](#restructuring-an-existing-tree), apply all structural findings.
   Apply sentence-level findings as well where the fix leaves the rendered document as it was, such as splitting lines for `line-sentences`.
   Other sentence-level findings need rewriting, so fix them only in parts and topics that [growing and shrinking](#growing-and-shrinking) lets the task rewrite.
   Elsewhere leave them; like other warnings that remain after judgment, they are a valid outcome.
