@@ -42,7 +42,8 @@ It also shows which reading strategy each guarantee of the model supports.
 
 ## Checking
 
-The checker decides the rules a parser can see and flags the ones that need judgment.
+The checker decides the rules a parser can see and flags some that need judgment.
+It does not replace the reread that [checking](references/writing.md#checking) starts with, where the writer applies the other judgment rules.
 Run it on the Markdown files you created or changed:
 
 ```bash

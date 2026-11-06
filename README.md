@@ -2,13 +2,22 @@
 
 `mddt` is an agent skill for writing and reading Markdown documents whose hierarchy holds up.
 It covers how documents link into a tree, how far sections nest, and how lists carry structure in their nesting.
-The skill guides an agent through writing, restructuring, and reading such documents, and a checker verifies the model's rules.
+The skill gives an agent procedures for writing, restructuring, and reading such documents.
+A checker decides the rules a parser can see, while the writer judges the rest by following those procedures.
 The repository follows the model it presents, as [self-conformance](CONTRIBUTING.md#self-conformance) describes.
 
-## Install
+## Install and use
 
 The skill is the folder `skills/mddt/`, and it works with agents that read `SKILL.md` skills.
 Link or copy the whole folder into your agent's skill directory, keeping `SKILL.md`, `references/`, and `scripts/` together.
+
+Once installed, the agent follows the skill's procedures, which say how to write and read documents that meet the [document model](skills/mddt/references/model.md).
+Some requirements live only in the procedures, such as placing content before writing it, rewriting summaries once content settles, and rereading changed topics whole.
+
+- **[Writing and restructuring](skills/mddt/references/writing.md)**: Places content in the tree, chooses forms, grows and shrinks structure, and checks the result by rereading and running the checker.
+- **[Reading](skills/mddt/references/reading.md)**: Chooses files from the tree, reads them whole, and relies on the model's guarantees.
+
+A repository that adopts mddt for its documents therefore points its contributors to the skill and its procedures, not to the model alone.
 
 ## Document model
 
@@ -30,12 +39,16 @@ It does not represent any source in full or the positions of its authors.
 ## Checker
 
 The checker reads the Markdown files or directories it is given and reports findings by code.
+It decides the rules a parser can see and flags some others for judgment.
+Rules that depend on meaning, such as where content belongs and whether a summary is accurate, stay with the writer.
+A run without findings therefore does not show that a document conforms to the model.
+
 Changelogs are checked with exceptions that preserve their release structure, as [common uses](skills/mddt/references/uses.md#repository-documentation) describes.
 Its length checks use a local English parsing model to count independent clauses joined by semicolons, colons, or dashes separately.
+Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes.
 
 The [checker reference](skills/mddt/references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
-Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes.
-The checker covers the model's rules, not formatting, so run your repository's own Markdown linter for formatting rules.
+The checker does not cover formatting, so run your repository's own Markdown linter for formatting rules.
 
 ## Limits
 
@@ -45,8 +58,9 @@ In the maintainer's judgment, the skill is effective at getting agents to write 
 Its effect on agents as readers of those documents has not been tested.
 
 Following the skill can cost more than writing without it.
-An agent reads the reference documents, plans each document's place in the tree, and revises the document after running the checker.
+An agent reads the reference documents, plans each document's place in the tree, rereads what it changed, and revises the document after running the checker.
 These steps take more tokens and time than a direct edit.
+They are also where the judgment rules are applied, so skipping them leaves only what the checker can see.
 
 The checker counts words as whitespace-separated tokens that contain a letter or digit.
 Its [sentence units](skills/mddt/references/model.md#paragraphs-and-sentences) differ from grammatical sentences, and their boundaries depend partly on the English parsing model.

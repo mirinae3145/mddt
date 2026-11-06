@@ -53,7 +53,8 @@ The calibration material records one past round, so it is not updated when a rul
 
 The repository applies the skill to itself on a best-effort basis, aiming for these properties:
 
-- **Model conformance**: The repository's documents follow the document model and pass the checker without errors or warnings, apart from the generated calibration material.
+- **Model conformance**: The repository's documents follow the document model, including the judgment rules that the checker does not decide.
+  Apart from the generated calibration material, they also pass the checker without errors or warnings.
 - **Checker consistency**: Tests keep the checker's codes, rule locations, numeric limits, and options in step with the reference documents.
 - **Self-containment**: The skill folder works without files outside it, since it holds the checker's specification and an index of terms.
 
@@ -98,14 +99,14 @@ Unreached lines in the code the change added or modified are judged as follows:
 ### Documents
 
 The repository's own documents follow the model, as [self-conformance](#self-conformance) describes.
-After changing them, check them from the repository root:
+Changes to them follow the skill's [writing procedure](skills/mddt/references/writing.md), whose checking step starts with a reread.
+Reread each changed part or topic whole against the model's judgment rules, such as divisions, levels of detail among siblings, and summaries in parent documents.
+Where a rule's application is unclear, compare with the [examples](skills/mddt/references/examples.md).
+
+Then run the checker from the repository root, which decides only the rules a parser can see:
 
 ```bash
 uv run skills/mddt/scripts/mddt.py .
 ```
 
 The tracked `.mddtignore` leaves out the generated material in `calibration/`.
-
-The checker decides only the rules a parser can see.
-Also review the changed documents against the model's judgment rules, such as divisions, levels of detail among siblings, and summaries in parent documents.
-Where a rule's application is unclear, compare with the [examples](skills/mddt/references/examples.md).
