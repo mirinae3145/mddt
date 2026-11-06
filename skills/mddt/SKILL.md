@@ -35,6 +35,9 @@ It covers planning a document's place in the tree, choosing forms, and rules for
 It also covers growing and shrinking structure, restructuring an existing tree, and checking the result.
 Read the document model as well, since the writing procedure applies it rather than repeating it.
 
+When making mddt part of a repository's writing conventions, read [adopting mddt in a repository](references/adopting.md).
+It covers the documents in scope, what contributor guidance requires, the first restructuring, and an optional CI check.
+
 ## Reading
 
 Before exploring a set of Markdown documents to answer a question or verify a fact, read [reading a document tree](references/reading.md).

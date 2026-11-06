@@ -6,7 +6,7 @@ SPDX-FileCopyrightText = "2026 Taeha Shin"
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
-path = ["README.md", "ADOPTING.md", "CONTRIBUTING.md", "skills/mddt/SKILL.md", "skills/mddt/references/**"]
+path = ["README.md", "CONTRIBUTING.md", "skills/mddt/SKILL.md", "skills/mddt/references/**"]
 SPDX-FileCopyrightText = "2026 Taeha Shin"
 SPDX-License-Identifier = "CC-BY-4.0"
 

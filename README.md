@@ -6,6 +6,8 @@ The skill gives an agent procedures for writing, restructuring, and reading such
 A checker decides the rules a parser can see, while the writer judges the rest by following those procedures.
 The repository follows the model it presents, as [self-conformance](CONTRIBUTING.md#self-conformance) describes.
 
+To make mddt part of a repository's writing conventions, start from [adopting mddt in a repository](skills/mddt/references/adopting.md), which the skill includes.
+
 ## Install and use
 
 The skill is the folder `skills/mddt/`, and it works with agents that read `SKILL.md` skills.
@@ -18,7 +20,6 @@ Some requirements live only in the procedures, such as placing content before wr
 - **[Reading](skills/mddt/references/reading.md)**: Chooses files from the tree, reads them whole, and relies on the model's guarantees.
 
 A repository that adopts mddt for its documents therefore points its contributors to the skill and its procedures, not to the model alone.
-[Adopting mddt in a repository](ADOPTING.md) covers the documents in scope, the contributor guidance, the first restructuring, and an optional CI check.
 
 ## Document model
 
