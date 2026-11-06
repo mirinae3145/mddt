@@ -15,7 +15,7 @@ What to read before a change depends on which files it touches:
 - **Repository documents**: A change to another document, such as README or this guide, needs the skill's reference documents.
   The repository's documents follow the model, as [self-conformance](#self-conformance) describes, and the checker covers only part of it.
   The change also needs the documents that the changed text summarizes or that summarize it.
-- **Licensing and configuration**: A change to `REUSE.toml`, `LICENSES/`, `.gitignore`, or `.mddtignore` needs only this guide.
+- **Licensing and configuration**: A change to `REUSE.toml`, `LICENSES/`, `.gitignore`, `.mddtignore`, or `.rumdl.toml` needs only this guide.
 
 ## Checker layout
 
@@ -55,19 +55,21 @@ The repository applies the skill to itself on a best-effort basis, aiming for th
 
 - **Model conformance**: The repository's documents follow the document model, including the judgment rules that the checker does not decide.
   Apart from the generated calibration material, they also pass the checker without errors or warnings.
+- **Formatting**: The same documents pass the Markdown linter configured in `.rumdl.toml`, which covers formatting that the model leaves out.
 - **Checker consistency**: Tests keep the checker's codes, rule locations, numeric limits, and options in step with the reference documents.
 - **Self-containment**: The skill folder works without files outside it, since it holds the checker's specification and an index of terms.
 
 ## Licenses
 
 Every file is covered by a license entry in `REUSE.toml`.
-Code and checker data are MIT, documentation is CC BY 4.0, and trivial configuration such as `.gitignore` and `.mddtignore` is CC0.
+Code and checker data are MIT, documentation is CC BY 4.0, and trivial configuration such as `.gitignore`, `.mddtignore`, and `.rumdl.toml` is CC0.
 Place a new file under a covered path, or add it to the matching entry.
 Running `reuse lint` from the [REUSE tool](https://reuse.software/) confirms that every file is covered.
 
 ## Verification
 
-A change is verified by the tests, and a change to the repository's documents also by checking them against the model.
+A change is verified by the tests, and a change to the repository's documents also by checking them against the model and linting them.
+Each command exits with a nonzero status when its check fails, so a CI job can run it unchanged.
 
 ### Tests
 
@@ -115,3 +117,14 @@ uv run skills/mddt/scripts/mddt.py .
 The tracked `.mddtignore` leaves out the generated material in `calibration/`.
 Self-conformance aims for no warnings.
 A change that keeps one reports it with the reason in its commit message or pull request.
+
+Finally, lint the documents with the pinned version of [rumdl](https://github.com/rvben/rumdl):
+
+```bash
+uvx rumdl@0.3.2 check .
+```
+
+`.rumdl.toml` turns off the line length rule, since each sentence has its own line, and fixes the list and emphasis markers in use.
+It also leaves out the generated calibration material.
+`uvx rumdl@0.3.2 fmt .` fixes most formatting findings automatically.
+Update the pinned version in a change of its own, because new rules can report findings in unchanged documents.
