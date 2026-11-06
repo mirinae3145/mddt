@@ -1,0 +1,16 @@
+# Formatting rules for the repository's Markdown; mddt checks structure separately.
+[global]
+disable = ["MD013"]
+exclude = ["calibration/outputs", "calibration/briefs", "calibration/skill"]
+
+[MD004]
+style = "dash"
+
+[MD029]
+style = "one"
+
+[MD049]
+style = "asterisk"
+
+[MD050]
+style = "asterisk"

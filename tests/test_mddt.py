@@ -14,6 +14,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / 'skills/mddt/scripts'
 SCRIPT = SCRIPTS / 'mddt.py'
+# Pinned with the coverage commands in CONTRIBUTING.md and the CI workflow.
+COVERAGE = 'coverage==7.17.2'
 
 
 def run(*args, cwd=None, env=None, uv='uv'):
@@ -24,7 +26,7 @@ def run(*args, cwd=None, env=None, uv='uv'):
     The dependencies still come from the script's inline metadata.
     """
     if os.environ.get('MDDT_COVERAGE'):
-        command = [uv, 'run', '--quiet', '--with', 'coverage', '--with-requirements', str(SCRIPT),
+        command = [uv, 'run', '--quiet', '--with', COVERAGE, '--with-requirements', str(SCRIPT),
                    'python', '-m', 'coverage', 'run', '--branch', '--parallel-mode',
                    f'--data-file={ROOT / ".coverage"}', f'--include={SCRIPT}', str(SCRIPT)]
     else:
@@ -330,6 +332,16 @@ class ListRules(CheckerCase):
         self.assertCodes(
             '# T\n\nOverview.\n\nList:\n\n- **A**: x\n'
             '  - [Spec](https://example.com/u)을 확인했다.\n  - Meet at 10:30 today.\n- **B**: y\n', [])
+
+
+    def test_a_name_broken_across_lines_keeps_its_form(self):
+        self.assertCodes('# T\n\nOptions:\n\n- **Alpha\n  beta**: First.\n- **Gamma**: Second.\n', [])
+
+    def test_empty_items_give_a_list_no_mechanical_order(self):
+        words = ['Alpha', 'Beta', 'Delta', 'Echo', 'Golf', 'Hotel', 'India', 'Juliet']
+        items = ''.join(f'- {word}\n' for word in words)
+        self.assertCodes(f'# T\n\nWords:\n\n{items}', [])
+        self.assertCodes(f'# T\n\nWords:\n\n{items}-\n', ['list-length'])
 
 
 class ProseRules(CheckerCase):
@@ -646,6 +658,17 @@ class TreeRules(CheckerCase):
                 })
                 self.assertEqual(found, [('CONTRIBUTING.md', 'doc-unlinked')])
 
+    def test_links_with_only_a_query_are_left_alone(self):
+        self.assertEqual(self.link_findings({'README.md': '# R\n\nOpen [the source](?plain=1).\n'}), [])
+
+    def test_unreadable_documents_are_skipped_as_link_targets_and_parents(self):
+        (self.dir / 'README.md').write_bytes(b'# R\n\n\xff\n')
+        (self.dir / 'b.md').write_bytes(b'# B\n\n\xff\n')
+        doc = self.write('a.md', '# A\n\nSee [B](b.md#part).\n')
+        result = run('--format', 'json', '--root', str(self.dir), str(doc))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout)['diagnostics'], [])
+
     def test_math_is_not_read_as_links(self):
         found = self.link_findings({
             'README.md': '# R\n\nThe ratio $[A](z,t)/[A]_0$ falls.\n\n$$\n[A](z,T) = 1\n$$\n\nSee [gone](gone.md).\n',
@@ -920,6 +943,16 @@ class Interface(CheckerCase):
                      env={**os.environ, 'PATH': str(bin_dir)})
         self.assertEqual([Path(f).name for f in json.loads(result.stdout)['files']], ['doc.md'])
         self.assertIn('.gitignore is not applied', result.stderr)
+
+    def test_github_links_without_git_are_left_alone(self):
+        (self.dir / '.git').mkdir()
+        self.write('doc.md', '# T\n\nSee [the guide](https://github.com/owner/pkg/blob/main/none.md).\n')
+        bin_dir = self.dir / 'bin'
+        bin_dir.mkdir()
+        (bin_dir / 'uv').symlink_to(shutil.which('uv'))
+        result = run('--format', 'json', str(self.dir), uv=str(bin_dir / 'uv'),
+                     env={**os.environ, 'PATH': str(bin_dir)})
+        self.assertEqual(json.loads(result.stdout)['diagnostics'], [])
 
     def test_git_repositories_list_the_files_git_sees(self):
         if shutil.which('git') is None:

@@ -11,7 +11,7 @@ SPDX-FileCopyrightText = "2026 Taeha Shin"
 SPDX-License-Identifier = "CC-BY-4.0"
 
 [[annotations]]
-path = [".gitignore", ".mddtignore"]
+path = [".gitignore", ".mddtignore", ".rumdl.toml", ".github/**"]
 SPDX-FileCopyrightText = "2026 Taeha Shin"
 SPDX-License-Identifier = "CC0-1.0"
 

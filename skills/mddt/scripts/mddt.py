@@ -147,7 +147,7 @@ def load_registry() -> dict[str, dict]:
         registry = tomllib.load(f)
     for code, entry in registry.items():
         for key in ('severity', 'group', 'summary', 'rule'):
-            if key not in entry:
+            if key not in entry:  # pragma: no cover - the registry tests reject a missing key
                 raise SystemExit(f'mddt: registry entry {code} lacks {key}')
     return registry
 
@@ -180,7 +180,7 @@ def end_line(node: SyntaxTreeNode) -> int:
 
 def inline_children(block: SyntaxTreeNode) -> list[SyntaxTreeNode]:
     """Return the inline nodes of a paragraph or heading, without empty text."""
-    if not block.children or block.children[0].type != 'inline':
+    if not block.children or block.children[0].type != 'inline':  # pragma: no cover - markdown-it gives paragraphs and headings one inline child
         return []
     return [n for n in block.children[0].children
             if not (n.type == 'text' and not n.content)]
@@ -201,7 +201,7 @@ def block_text(block: SyntaxTreeNode) -> str:
 def is_badge_paragraph(block: SyntaxTreeNode) -> bool:
     """A paragraph of images or image links, such as README badges."""
     nodes = inline_children(block)
-    if not nodes:
+    if not nodes:  # pragma: no cover - a parsed paragraph has inline content
         return False
     for n in nodes:
         if n.type == 'image' or n.type == 'softbreak':
@@ -249,7 +249,7 @@ def name_of(item: SyntaxTreeNode) -> tuple[str, str] | None:
     if not item.children or item.children[0].type != 'paragraph':
         return None
     nodes = inline_children(item.children[0])
-    if not nodes:
+    if not nodes:  # pragma: no cover - a parsed paragraph has inline content
         return None
     first = nodes[0]
     if first.type == 'strong':
@@ -404,7 +404,7 @@ def independent_clause(text: str) -> bool:
     """
     doc = english_parser()(re.sub(r'[*_~]', ' ', text).strip())
     roots = [t for t in doc if t.dep_ == 'ROOT']
-    if len(roots) != 1:
+    if len(roots) != 1:  # pragma: no cover - parser output; which inputs give several roots depends on the model
         return False
     root = roots[0]
     children = list(root.children)
@@ -611,7 +611,7 @@ class FileCheck:
         found, pending = [], []
 
         def finish():
-            if not pending:
+            if not pending:  # pragma: no cover - every call follows an append
                 return
             text = '\n'.join(part for _, part in pending)
             boundaries = [0, *(clause_breaks(text) if units else []), len(text)]
@@ -956,7 +956,7 @@ class FileCheck:
 def index_file(folder: Path, skip: Path | None = None) -> Path | None:
     try:
         names = {p.name.lower(): p for p in folder.iterdir() if p.is_file()}
-    except OSError:
+    except OSError:  # pragma: no cover - an unreadable folder, which tests cannot create portably
         return None
     for name in INDEX_NAMES:
         found = names.get(name)
@@ -1358,7 +1358,7 @@ def collect(paths: list[str], excludes: list[str],
             root = fixed_root or find_root(f) or base
             try:
                 rel = os.path.relpath(f, root or os.getcwd()).replace(os.sep, '/')
-            except ValueError:  # on another Windows drive
+            except ValueError:  # pragma: no cover - only on another Windows drive
                 rel = f.name
             top = Path(root or os.getcwd())
             if top != f.parent and top not in f.parents:
@@ -1423,7 +1423,7 @@ def display(path: Path) -> str:
     """Show paths below the working directory relatively, others in full."""
     try:
         rel = os.path.relpath(path)
-    except ValueError:
+    except ValueError:  # pragma: no cover - only on another Windows drive
         return str(path)
     return str(path) if rel.startswith('..') else rel
 
@@ -1562,5 +1562,5 @@ def main(argv: list[str] | None = None) -> int:
     return 1 if any(registry[d.code]['severity'] == 'error' for d in diagnostics) else 0
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no branch - the checker runs only as a script
     sys.exit(main())
