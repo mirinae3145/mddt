@@ -92,8 +92,14 @@ Restructuring alone rewrites only a part or topic whose question the current tas
 A task can also request content changes, such as adding, removing, correcting, or condensing facts.
 A part or topic that receives one may be rewritten as far as that change reaches.
 
-A heading that changes level within its file but keeps its text keeps its anchor, since GitHub derives the anchor from the text alone.
-Changing the text or moving the heading to another file changes the link target, so links to it are updated as [links resolve](model.md#links-between-documents) describes.
+GitHub's generated heading IDs depend on both the heading text and IDs already used in the file.
+Reordering or inserting repeated headings can change IDs even when their text stays unchanged.
+For example, swapping two sections named `Examples` can exchange which content `#examples` and `#examples-1` identify.
+After a move, addition, or removal, compare the affected headings' old and new IDs and update links to preserve their intended content.
+A resolving link alone does not prove that it still identifies the same topic.
+
+Moving a heading to another file also changes its path.
+Update links to the old path as [links resolve](model.md#links-between-documents) describes.
 
 ## Restructuring an existing tree
 
