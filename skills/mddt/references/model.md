@@ -1,6 +1,6 @@
 # Document model
 
-This document describes the properties that a conforming Markdown document has.
+This document describes the properties of conforming Markdown documents and the trees they form.
 It covers files, headings, paragraphs and sentences, links between documents, sections versus lists and tables, siblings, and lists.
 Writers treat each property as a condition to satisfy, and readers treat it as a guarantee to rely on.
 
@@ -11,6 +11,8 @@ What a topic contains and which form each block takes by default are described i
 ## Files and topics
 
 A topic is a unit of meaning that can be read on its own, and a file is a unit of storage.
+An entry document and its descendants form a document tree.
+A collection can hold several trees, such as repository documentation and an independently entered skill.
 Files relate to topics, to their names and folders, and to the documents above them as follows.
 
 - **Topics stand alone**: A topic does not assume that the reader has read what comes before or after it.
@@ -24,14 +26,15 @@ Files relate to topics, to their names and folders, and to the documents above t
   Badges and other image-only paragraphs do not count as an overview.
 - **File names identify, titles explain**: A file name is read together with the folder tree, while a title must make sense on its own.
   File names are link targets, so keep them short and stable, and keep the name and the title about the same subject.
-- **Folders follow the tree**: Where a file sits determines its parent document.
+- **Folders follow the tree**: For documents other than entries, where a file sits determines its parent document.
   A folder's index file is the parent of the other documents in that folder and its subfolders.
   It is the first of `SKILL.md`, `README.md`, and `index.md` that the folder holds.
   A file `x.md` is the parent of the documents in a companion folder `x/` beside it, so a document gains children without moving.
   A folder with neither belongs to the parent found the same way one level up.
 - **Entry documents**: The root `README.md` and files that tools read by name, such as `SKILL.md` and `AGENTS.md`, are entry documents.
   So is a `README.md` beside a `SKILL.md`, which introduces the folder to people browsing it.
-  They need no parent; every other document, including community files such as `CONTRIBUTING.md`, has one.
+  Each entry can be read as the root of its own tree and needs no parent.
+  Every other document, including community files such as `CONTRIBUTING.md`, has a parent within its tree.
 
 ## Headings and promotion
 
@@ -78,7 +81,8 @@ Prose follows these rules about lines, paragraphs, and sentences.
 
 ## Links between documents
 
-Documents form a tree through links that follow these rules.
+Within each tree, documents follow these link rules.
+A link to another tree's entry connects the trees without making that entry a child.
 
 - **Downward links**: A parent document links to each of its child documents with a short summary. <!-- code: doc-unlinked, link-without-summary -->
   When a subtopic moves to its own file, its original place keeps that summary and link.
@@ -98,7 +102,9 @@ Documents form a tree through links that follow these rules.
   The sentence shows why the link is there, such as evidence, the canonical location, or further detail.
   A separate list of related documents is optional.
 - **Tree before lateral links**: Lateral links do not replace the tree.
-  Because every document except an entry document is linked from its parent, every document is reachable through downward links alone.
+  Every document within a tree is reachable through downward links from that tree's entry.
+  This does not promise discovery of other trees in the collection.
+  A collection overview introduces the other entries its readers need with links and summaries.
 
 ## Sections, lists, and tables
 

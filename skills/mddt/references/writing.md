@@ -10,14 +10,15 @@ The model holds the rules, and this document adds only the steps and the rules t
 Before writing, decide where the content sits in the tree.
 When adding to an existing document, place only the added content.
 Change the structure around it only where the addition requires it, as [growing and shrinking](#growing-and-shrinking) describes.
-When a task creates several documents, place them from the entry document down, so that each has its parent before its content is written.
+When a task creates several documents, choose their entries first and place the other documents from each entry down.
 The placement takes these steps:
 
 1. State in one or two sentences what the content is and what it covers.
    This statement starts both the overview and the parent's summary.
    If it does not fit in two or three sentences, the content probably holds several topics or kinds.
-1. Find the parent document that will introduce it, and plan the summary and link that the parent will carry.
+1. For a document that needs a parent, find that parent and plan the summary and link it will carry.
    The parent carries the planned summary until the child settles, and then the summary is rewritten as [rules for new writing](#rules-for-new-writing) describe.
+   For a new entry, identify how readers will find it, such as through a tool or a collection overview.
 1. Decide whether the content is a part of an existing topic, a new topic in an existing file, or a file of its own.
    Short topics that the same reader needs for the same task stay together in one file, as parts or as topic H2s.
    A topic gets its own file when it serves another reader or task, outgrows its siblings, or needs more than two heading levels.

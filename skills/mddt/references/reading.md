@@ -1,11 +1,16 @@
 # Reading a document tree
 
 This procedure uses the guarantees of the [document model](model.md) to find and verify information in a set of Markdown documents.
-It covers choosing files, reading them, handling documents that do not follow the model, and which reading strategy each guarantee supports.
+It covers selecting an entry, choosing files, reading them, handling documents outside the model, and the reading strategies each guarantee supports.
 
 ## Choosing files
 
-Explore before reading, starting from the entry document rather than scanning every folder:
+Start with the entry identified by the task or tool.
+A collection overview may instead lead to the relevant entry, such as a repository README introducing a skill.
+If the entry is unknown, locate it from folder names and tool-defined file names.
+Downward links guarantee discovery only within the selected tree.
+
+Once the entry is selected, explore before reading:
 
 1. Read the entry document, such as the README, and follow its downward links toward the subject.
 1. Use the folder tree and file names to place each candidate.
@@ -34,9 +39,9 @@ These properties of the model support reading strategies:
 
 | Property | Reading strategy |
 | --- | --- |
-| Documents are reachable through downward links | Start from the entry document instead of scanning folders |
+| Documents within a tree are reachable from its entry | Select the relevant entry, then follow downward links within that tree |
 | Lateral links state why they are there | Follow one when its stated relation, such as evidence or the canonical location, matters to the question |
-| The folder tree is the document tree | Find a document's parent and children from where its file sits |
+| Folders determine parents of non-entry documents | Find a non-entry document's parent from where its file sits |
 | The H1 and its overview identify a file | Decide from the title and first paragraph whether to read the file, then read it whole |
 | Parent summaries condense child overviews | Use summaries to choose a path, and verify facts in the child |
 | A topic H2 has H3 children and an overview | Use topic overviews as summaries, and topic boundaries for dividing large files |

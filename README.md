@@ -1,7 +1,7 @@
 # MDDT &mdash; Markdown Document Tree
 
 `mddt` is an agent skill for writing and reading Markdown documents whose hierarchy holds up.
-It covers how documents link into a tree, how far sections nest, and how lists carry structure in their nesting.
+It covers how documents link into trees, how far sections nest, and how lists carry structure in their nesting.
 The skill gives an agent procedures for writing, restructuring, and reading such documents.
 A checker decides the rules a parser can see, while the writer judges the rest by following those procedures.
 The repository follows the model it presents, as [self-conformance](CONTRIBUTING.md#self-conformance) describes.
@@ -10,14 +10,15 @@ To make mddt part of a repository's writing conventions, start from [adopting md
 
 ## Install and use
 
-The skill is the folder `skills/mddt/`, and it works with agents that read `SKILL.md` skills.
+The [mddt skill](skills/mddt/SKILL.md) introduces its document model and its procedures for writing, restructuring, reading, and checking.
+Its folder is `skills/mddt/`, and it works with agents that read `SKILL.md` skills.
 Link or copy the whole folder into your agent's skill directory, keeping `SKILL.md`, `references/`, and `scripts/` together.
 
 Once installed, the agent follows the skill's procedures, which say how to write and read documents that meet the [document model](skills/mddt/references/model.md).
 Some requirements live only in the procedures, such as placing content before writing it, rewriting summaries once content settles, and rereading changed topics whole.
 
 - **[Writing and restructuring](skills/mddt/references/writing.md)**: Places content, chooses forms, restructures trees as content changes, and checks the result by rereading and running the checker.
-- **[Reading](skills/mddt/references/reading.md)**: Chooses files from the tree, reads them whole, and relies on the model's guarantees.
+- **[Reading](skills/mddt/references/reading.md)**: Selects an entry and files, reads them whole, and relies on the model's guarantees.
 
 A repository that adopts mddt for its documents therefore points its contributors to the skill and its procedures, not to the model alone.
 
@@ -26,7 +27,7 @@ The skill covers structure, so other skills and tools often govern the same docu
 
 ## Document model
 
-The skill's [document model](skills/mddt/references/model.md) describes the properties that a conforming Markdown document has.
+The skill's [document model](skills/mddt/references/model.md) describes conforming documents and the trees they form.
 It covers files, headings, sentences, links between documents, sections versus lists and tables, siblings, and lists.
 
 The document model draws on these works and style guides:

@@ -1,13 +1,14 @@
 # Adopting mddt in a repository
 
 This guide is for maintainers and agents who make mddt part of a repository's writing conventions.
-It covers choosing the documents that follow the model, what the contributor guidance states, the first restructuring, and an optional CI check.
+It covers choosing documents and their entries, what the contributor guidance states, the first restructuring, and an optional CI check.
 Take the steps in this order, because each one relies on the one before it.
 
 ## Documents in scope
 
 Decide which Markdown files follow the model before changing any of them.
 Documentation that people or agents read follows it, including README, contributor guidance, guides, and agent instructions and skills.
+Identify the entry of each independent tree in scope, and introduce those entries from the repository README with summaries.
 
 Leave out documents that are not meant to follow it, such as user-provided originals, generated material, templates, and fixtures.
 List them in a `.mddtignore`, as the [ignore file](ignore-file.md) describes, so that every check skips them.

@@ -14,13 +14,14 @@ license: CC-BY-4.0 for the instructions and references; MIT for the scripts; cop
 
 # mddt
 
-mddt treats a set of Markdown documents as one tree.
+mddt organizes Markdown documents into trees, each with an entry document.
+A collection can hold several independently entered trees.
 Files link downward to the files they introduce, headings divide each file into topics and parts, and lists nest only where nesting carries meaning.
 This file is the entry point, and the rules and procedures live in the reference documents that its parts introduce.
 
 ## Document model
 
-The [document model](references/model.md) states the properties a conforming document has.
+The [document model](references/model.md) states the properties of conforming documents and their trees.
 Writers treat each property as a condition to satisfy, and readers treat it as a guarantee to rely on.
 It covers files, headings, sentences, links between documents, sections versus lists and tables, siblings, and lists.
 [Examples](references/examples.md) show its judgment rules as before-and-after pairs, and they help when a rule's application is unclear.
@@ -42,7 +43,7 @@ It covers the documents in scope, what contributor guidance requires, the first 
 ## Reading
 
 Before exploring a set of Markdown documents to answer a question or verify a fact, read [reading a document tree](references/reading.md).
-It explains how to choose files from the tree, why to read them whole, and how to treat documents outside the model.
+It explains how to select an entry, choose files, read them whole, and handle documents outside the model.
 It also shows which reading strategy each guarantee of the model supports.
 
 ## Checking
