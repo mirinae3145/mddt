@@ -132,7 +132,12 @@ Check the result as follows:
    After adding child documents, add `--review` to see links that lack summaries.
    Information findings rest on approximate detection, so judge each one before acting on it.
 1. Fix structural findings before sentence-level ones, because structural fixes move sentences.
-1. Run the checker once more after fixing, and stop there.
+   Before applying a fix, judge the structure it will produce against the model, including the rules whose warnings it may raise.
+   After fixing, reread each fixed part or topic whole.
+1. Run the checker once more after fixing, fix only errors that the fixes introduced, and stop there.
+   Judge a fix by the structure it produces, not by the number of findings.
+   Keep a fix that serves the reader better even when it raises another warning, and judge that warning like any other.
+   Do not undo a fix only because it raised a warning, or choose one only because it raises none.
    A warning that remains after judgment is a valid outcome, and the goal is not zero warnings.
 1. Run the repository's Markdown linter separately, if it has one, for formatting rules.
 

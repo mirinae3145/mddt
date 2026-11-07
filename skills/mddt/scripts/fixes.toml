@@ -52,6 +52,7 @@ Avoid moving the first H3's opening text up as a stand-in.
 name-nesting = """
 Fix in one of these ways:
 1. Promote the outer name to a heading so that the named children become its content.
+   Judge the added heading against the limit on sibling sections, since it can raise section-count.
 2. Remove the names from the inner items.
 3. Remove the outer name and turn it into an introductory sentence.
 Avoid:
@@ -68,6 +69,7 @@ list-depth-4 = """
 Fix, in order of preference:
 1. Fold the deepest level into its parent item's sentence.
 2. Promote an upper level to a heading.
+   Judge the added headings against the limit on sibling sections, since they can raise section-count.
 3. Split the list into separate lists, each with its own introduction.
 Avoid cramming several items into one long sentence.
 """
@@ -134,6 +136,7 @@ list-depth-3 = """
 Reconsider whether the third level is needed; keeping it is a valid outcome.
 1. Fold the deepest level into its parent item's sentence.
 2. Promote an upper level to a heading.
+   Judge the added headings against the limit on sibling sections, since they can raise section-count.
 3. Split the list.
 4. Keep it when all three levels carry meaning.
 Avoid cramming items into one long sentence to silence the warning.
@@ -142,7 +145,8 @@ Avoid cramming items into one long sentence to silence the warning.
 list-length = """
 Long lists are hard to scan unless their order is mechanical; keeping the list is a valid outcome.
 The checker recognizes order by name, by number, or by a date written year first in digits, such as 2026-11-03, anywhere in each item.
-1. Group items by role into sublists, noting that this adds a nesting level.
+1. Group items by role into sublists.
+   Judge the added nesting level against the limit on list depth, since it can raise list-depth-3.
 2. Turn the list into a table if the items share attributes.
 3. Promote groups to headings.
 4. Sort the items alphabetically or numerically when readers look them up by name.
@@ -191,7 +195,7 @@ Independent clauses connected by a semicolon, colon, or dash count as separate s
 1. Turn parallel points into a list, or points with shared attributes into a table.
 2. Split the paragraph where its subject shifts.
 3. Keep it when it is one line of argument.
-Avoid splitting only to clear the warning, which leaves parallel points in prose and can start a run of paragraphs.
+Avoid splitting only to clear the warning, which leaves parallel points in prose.
 """
 
 paragraph-run = """
