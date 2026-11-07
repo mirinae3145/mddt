@@ -99,6 +99,13 @@ class FileAndHeadingRules(CheckerCase):
         self.assertCodes('## Only part\n\nText.\n', ['h1-missing'])
         self.assertCodes('# A\n\nOverview.\n\n# B\n\nOverview.\n', ['h1-multiple'])
 
+    def test_byte_order_mark_is_not_content(self):
+        bom = '﻿'
+        self.assertCodes(f'{bom}# Title\n\nOverview.\n', [])
+        self.assertCodes(f'{bom}## Only part\n\nText.\n', ['h1-missing'])
+        # Front matter after the mark is still front matter, not a list.
+        self.assertCodes(f'{bom}---\ntags:\n  - a\n---\n# Title\n\nOverview.\n', [])
+
     def test_h1_overview_ignores_badges_and_comments(self):
         badge = '[![b](x.svg)](https://example.com/y)'
         self.assertCodes(f'# T\n\n{badge}\n\n<!-- note -->\n\nOverview.\n', [])
@@ -118,6 +125,12 @@ class FileAndHeadingRules(CheckerCase):
         self.assertCodes('# T\n\nOverview.\n\n## 1. Start\n\nA.\n\n## 2. Next\n\nB.\n', ['heading-number'])
         self.assertCodes('# T\n\nOverview.\n\n## A. Start\n\nA.\n\n## B. Next\n\nB.\n', ['heading-number'])
         self.assertCodes('# T\n\nOverview.\n\n## III. Start\n\nA.\n\n## IV. Next\n\nB.\n', ['heading-number'])
+        # A single letter that is also a Roman numeral is read both ways.
+        for first, second in [('I.', 'II.'), ('V.', 'VI.'), ('X.', 'XI.'), ('H.', 'I.'), ('C)', 'D)')]:
+            self.assertCodes(f'# T\n\nOverview.\n\n## {first} Start\n\nA.\n\n## {second} Next\n\nB.\n',
+                             ['heading-number'])
+        for first, second in [('I.', 'K.'), ('V.', 'I.'), ('X.', 'IX.')]:
+            self.assertCodes(f'# T\n\nOverview.\n\n## {first} Start\n\nA.\n\n## {second} Next\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 2.0 migration\n\nA.\n\n## 3.0 migration\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 2026-10-30 review\n\nA.\n\n## 2026-10-31 review\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 3 things to know\n\nA.\n\n## Other\n\nB.\n', [])
@@ -272,6 +285,19 @@ class ListRules(CheckerCase):
         self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\n**Pseudo heading**\n\nText.\n',
                          ['list-intro', 'bold-heading'])
 
+    def test_lists_and_tables_before_the_first_heading_need_introductions(self):
+        table = '| a | b |\n| - | - |\n| 1 | 2 |\n'
+        heading = '\n# T\n\nOverview.\n'
+        self.assertEqual(self.codes(f'- x\n- y\n{heading}'), [('list-intro', 1)])
+        self.assertEqual(self.codes(f'<!-- note -->\n\n{table}{heading}'), [('table-intro', 3)])
+        self.assertCodes(f'```\ncode\n```\n\n- x\n- y\n{heading}', ['list-intro'])
+        self.assertCodes('- x\n- y\n', ['h1-missing', 'list-intro'])
+        self.assertCodes(f'The values:\n\n{table}\nThe items:\n\n- x\n- y\n{heading}', [])
+        self.assertCodes('Intro:\n\n- x\n- y\n', ['h1-missing'])
+        # Changelog lists need no introduction, but tables still do.
+        self.assertEqual(self.codes(f'- x\n- y\n\n{table}\n# Changelog\n', 'CHANGELOG.md'),
+                         [('table-intro', 4)])
+
     def test_list_right_after_h1_is_an_overview_problem_only(self):
         self.assertCodes('# T\n\n- x\n- y\n', ['h1-overview'])
 
@@ -333,6 +359,17 @@ class ListRules(CheckerCase):
         self.assertEqual(self.review(labeled), ['item-name'])
         self.assertCodes('# T\n\nOverview.\n\nScope:\n\n- In: x\n- Out: y\n\n'
                          'Steps:\n\n1. **Settings** 메뉴를 연다.\n1. **Save**를 누른다.\n', [])
+
+    def test_numbered_steps_take_no_part_in_name_nesting(self):
+        # Neither a step's leading bold nor bold in steps below a named item is a name.
+        self.assertCodes('# T\n\nOverview.\n\nSteps:\n\n1. **Settings** opens the panel.\n'
+                         '   - **Theme**: choose one.\n   - **Font**: choose one.\n1. Close it.\n', [])
+        self.assertCodes('# T\n\nOverview.\n\nTasks:\n\n- **Setup**: in steps.\n'
+                         '  1. **Open** the panel.\n  1. **Save** it.\n- **Use**: run it.\n', [])
+        # Named items below the steps still count for the named item above them.
+        self.assertCodes('# T\n\nOverview.\n\nTasks:\n\n- **Setup**: in steps.\n'
+                         '  1. Open the panel.\n     - **Theme**: choose one.\n     - plain\n'
+                         '  1. Save it.\n- **Use**: run it.\n', ['name-nesting', 'list-depth-3'])
 
     def test_name_forms_are_compared_per_topic(self):
         text = ('# T\n\nOverview.\n\n## Topic A\n\nOverview.\n\n### One\n\nList:\n\n- **a**: x\n- **b**: y\n\n'
@@ -433,6 +470,24 @@ class ProseRules(CheckerCase):
         self.assertCodes('# T\n\n보관함을 스캔한다. `tool scan PATH`\n', [])
         self.assertCodes('# T\n\nAsk the U.S. Office and call foo. bar handles it.\n', [])
 
+    def test_comments_spanning_lines_are_not_prose(self):
+        self.assertCodes('# T\n\nOverview sentence. <!-- note on the\nnext line. Then Another note -->\n', [])
+        self.assertCodes('# T\n\nOverview sentence. <!-- note on the -->\nnext line. Then Another note.\n',
+                         ['line-sentences'])
+        words = ' '.join(['word'] * 20)
+        self.assertCodes(f'# T\n\nShort text <!-- {words}\n{words} --> ends here.\n', [])
+        self.assertCodes(f'# T\n\nShort text <!-- {words} -->\n{words} ends here.\n', [])
+        self.assertCodes(f'# T\n\nShort text {words}\n{words} ends here.\n', ['sentence-length'])
+
+    def test_lines_are_counted_as_markdown_counts_them(self):
+        # U+2028 and similar characters do not end a line, so later findings keep their lines.
+        for separator in (' ', '\u0085', '\x0c', '\x1c'):
+            with self.subTest(separator=repr(separator)):
+                self.assertEqual(self.codes(f'# T\n\nOverview{separator}here.\n\nOne line. Two Lines.\n'),
+                                 [('line-sentences', 5)])
+        self.assertEqual(self.codes('# T\r\n\r\nOverview.\r\n\r\nOne line. Two Lines.\r\n'),
+                         [('line-sentences', 5)])
+
 
 class SentenceUnits(CheckerCase):
     LEFT = 'The worker reads every input file from the local folder before it starts the scheduled validation process'
@@ -486,6 +541,13 @@ class SentenceUnits(CheckerCase):
         for result in self.findings(texts):
             self.assertEqual([d['code'] for d in result], ['sentence-length'])
 
+    def test_a_side_read_as_several_sentences_is_not_one_clause(self):
+        # A lowercase word after "!" starts no sentence unit, so the parser
+        # receives a side that it reads as two sentences.
+        left = 'The worker reads every input file from the local folder{} then starts the scheduled validation process'
+        found = self.findings([f'{left.format("! it")}; {self.RIGHT}.', f'{left.format(" and")}; {self.RIGHT}.'])
+        self.assertEqual([[d['code'] for d in ds] for ds in found], [['sentence-length'], []])
+
     def test_inserted_phrases_and_bracketed_clauses_stay_with_the_sentence(self):
         texts = [
             'The worker—a small Python module maintained by our team—reads every input file '
@@ -507,7 +569,8 @@ class SentenceUnits(CheckerCase):
         right = f'{self.RIGHT} and keeps every previous result in a separate directory for later review'
         texts = [f'The build failed; {right}.', f'The build failed;\n{right}.',
                  f'The build failed:\n{right}.', f'The build failed &mdash;\n  {right}.']
-        for result, line in zip(self.findings(texts), (3, 4, 4, 4)):
+        texts.append(f'The build failed;  \n{right}.')
+        for result, line in zip(self.findings(texts), (3, 4, 4, 4, 4)):
             self.assertEqual([(d['code'], d['line']) for d in result], [('sentence-length', line)])
             self.assertIn('sentence unit has 27 words', result[0]['message'])
 
@@ -742,6 +805,22 @@ class TreeRules(CheckerCase):
         # The web links place CONTRIBUTING.md and docs/ in the tree, so neither is unlinked.
         self.assertEqual([f for f in found if f[1] in ('link-broken', 'anchor-missing', 'doc-unlinked')],
                          [('README.md', 'anchor-missing'), ('README.md', 'link-broken')])
+
+    def test_git_output_is_read_whatever_the_locale(self):
+        # Git prints UTF-8 ref names and paths as stored, while Python here
+        # decodes the locale's encoding as ASCII, like a Windows code page.
+        self.github_repo('git@github.com:owner/pkg.git')
+        subprocess.run(['git', '-C', str(self.dir), 'update-ref', 'refs/remotes/origin/문서', 'HEAD'], check=True)
+        ascii_locale = {**os.environ, 'LC_ALL': 'C', 'PYTHONCOERCECLOCALE': '0', 'PYTHONUTF8': '0'}
+        self.write('README.md', '# R\n\nSee [the notes](https://github.com/owner/pkg/blob/문서/notes.md), '
+                                'which list decisions.\n')
+        self.write('notes.md', '# Notes\n\nOverview.\n')
+        self.write('메모.md', '# Memo\n\nOverview.\n')
+        result = run('--format', 'json', str(self.dir), env=ascii_locale)
+        self.assertIn(result.returncode, (0, 1), result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(sorted(Path(f).name for f in data['files']), ['README.md', 'notes.md', '메모.md'])
+        self.assertNotIn(('notes.md', 'doc-unlinked'), [(Path(d['file']).name, d['code']) for d in data['diagnostics']])
 
     def test_github_links_without_a_github_origin_are_left_alone(self):
         for origin in (None, 'https://gitlab.com/owner/pkg.git'):
@@ -1046,10 +1125,24 @@ class Interface(CheckerCase):
                                  capture_output=True, text=True).stdout
             self.assertIn(f'  rule: {folder / "references/model.md"}#', out, script)
 
+    def test_output_is_utf8_whatever_the_locale(self):
+        doc = self.write('doc.md', '# 한국어 제목 →\n\nOverview.\n')
+        cp1252 = {**os.environ, 'PYTHONIOENCODING': 'cp1252'}
+        for options in (('--outline',), ('--outline', '--format', 'json')):
+            with self.subTest(options=options):
+                result = run(*options, str(doc), env=cp1252)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('H1 한국어 제목 →', result.stdout)
+
     def test_outline_is_automatic_only_with_structural_findings(self):
         ok = self.write('ok.md', '# T\n\nOverview.\n\n## Part\n\nText.\n')
         self.assertNotIn('outline', run(str(ok)).stdout)
         outline = run('--outline', str(ok)).stdout
+        self.assertIn('H1 T  [7 lines; overview]', outline)
+        self.assertIn('H2 Part  [3 lines; part]', outline)
+        # A last line without a line break still counts once.
+        unterminated = self.write('end.md', '# T\n\nOverview.\n\n## Part\n\nText.')
+        outline = run('--outline', str(unterminated)).stdout
         self.assertIn('H1 T  [7 lines; overview]', outline)
         self.assertIn('H2 Part  [3 lines; part]', outline)
         bad = self.write('bad.md', '# T\n')

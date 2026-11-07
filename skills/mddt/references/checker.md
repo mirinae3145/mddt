@@ -67,6 +67,8 @@ JSON output is an object whose keys `files` and `skipped` list the checked and s
 Its key `diagnostics` lists the findings without fix guidance, each with the fields `file`, `line`, `endLine`, `code`, `severity`, and `message`.
 The message joins the code's summary and the finding's detail, and the key `outlines` appears only with `--outline` or `--review`.
 
+Both formats are written in UTF-8 regardless of the locale, so headings and file names in any language keep their characters.
+
 ## Options
 
 The command accepts these options:

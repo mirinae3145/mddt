@@ -417,10 +417,12 @@ def independent_clause(text: str) -> bool:
     one punctuation-linked clause to another as evidence of subordination.
     Subjects may be omitted in imperative instructions, but not in fragments
     such as "runs locally". A subordinate clause alone is not independent.
+    A span that the parser reads as several sentences, such as one holding
+    "files! it", is not one clause either.
     """
     doc = english_parser()(re.sub(r'[*_~]', ' ', text).strip())
     roots = [t for t in doc if t.dep_ == 'ROOT']
-    if len(roots) != 1:  # pragma: no cover - parser output; which inputs give several roots depends on the model
+    if len(roots) != 1:
         return False
     root = roots[0]
     children = list(root.children)
@@ -465,34 +467,40 @@ def clause_breaks(text: str) -> list[int]:
     return breaks
 
 
-def section_number(text: str, parent: str | None = None) -> tuple[str, int] | None:
-    """Return the numbering style and last number of a heading's section number.
+def section_number(text: str, parent: str | None = None) -> list[tuple[str, int]]:
+    """Return the possible numbering styles and last numbers of a heading's section number.
 
     Only forms that cannot be subject numbers count: numbers followed by a
     period or parenthesis, such as "2." and "2.1.", and dotted numbers that
     extend such a number in the parent heading, such as "2.1" under "2. Scope".
     A bare number such as a year, a count, or a version stays with the subject,
     and so does a dotted number under it, such as "1.4.1" under "1.4".
+    A single letter that is also a Roman numeral, such as "I." or "V.", has
+    both readings, so it continues "H." as well as it precedes "II.".
     """
     m = SECTION_NUMBER.match(text)
     if not m:
-        return None
+        return []
     if m['arabic']:
         head, _, last = m['arabic'].rpartition('.')
         parent_match = SECTION_NUMBER.match(parent or '')
         extends_parent = (bool(head) and parent_match is not None
                           and parent_match['arabic'] == head and parent_match['punct'] is not None)
         if not (m['punct'] or extends_parent):
-            return None
-        return f'arabic{m["arabic"].count(".")}', int(last)
+            return []
+        return [(f'arabic{m["arabic"].count(".")}', int(last))]
+    found = []
     if m['alpha']:
-        return 'alpha', ord(m['alpha']) - ord('A') + 1
-    total, last = 0, 0
-    for ch in reversed(m['roman']):
-        value = ROMAN[ch]
-        total += -value if value < last else value
-        last = max(last, value)
-    return 'roman', total
+        found.append(('alpha', ord(m['alpha']) - ord('A') + 1))
+    numeral = m['alpha'] if m['alpha'] in ROMAN else m['roman']
+    if numeral:
+        total, last = 0, 0
+        for ch in reversed(numeral):
+            value = ROMAN[ch]
+            total += -value if value < last else value
+            last = max(last, value)
+        found.append(('roman', total))
+    return found
 
 
 def github_slug(text: str) -> str:
@@ -511,8 +519,14 @@ class FileCheck:
     def __init__(self, path: str, text: str):
         self.path = path
         self.is_changelog = bool(CHANGELOG_NAME.fullmatch(Path(path).name))
+        # A byte order mark is not content, and GitHub renders the file without it.
+        text = text.removeprefix('﻿')
         self.text = text
-        self.lines = text.splitlines()
+        # Lines end only where markdown-it ends them, so that node.map indexes them;
+        # str.splitlines() would also split at characters such as U+2028.
+        self.lines = re.sub(r'\r\n?', '\n', text).split('\n')
+        if self.lines[-1] == '':
+            self.lines.pop()
         self._links: list[tuple[str, int, bool]] | None = None
         self.line_count = len(self.lines)
         self.root = SyntaxTreeNode(parser().parse(text))
@@ -610,12 +624,23 @@ class FileCheck:
         """
         numbers = [section_number(h.text, parent.text if parent else None) for h in siblings]
         for (a, b) in zip(numbers, numbers[1:]):
-            if a and b and a[0] == b[0] and b[1] == a[1] + 1:
+            if any(x[0] == y[0] and y[1] == x[1] + 1 for x in a for y in b):
                 first = next(h for h, n in zip(siblings, numbers) if n)
                 count = sum(1 for n in numbers if n)
                 self.report('heading-number', first.node,
                             f'"{first.text}" and {count - 1} more sibling heading(s) carry section numbers')
                 return
+
+    def paragraph_lines(self, paragraph: SyntaxTreeNode) -> dict[int, str]:
+        """Return a paragraph's source lines by index, with comments that span lines blanked.
+
+        clean_prose removes comments line by line, so a comment that continues
+        on later lines would otherwise count as prose there.
+        """
+        first, last = paragraph.map
+        text = '\n'.join(self.lines[first:last])
+        text = re.sub(r'<!--.*?-->', lambda m: re.sub(r'[^\n]', ' ', m.group()), text, flags=re.S)
+        return dict(enumerate(text.split('\n'), first))
 
     def sentences(self, paragraph: SyntaxTreeNode, *, units: bool = False) -> list[tuple[int, int]]:
         """Return (first line, word count) for each sentence of a paragraph.
@@ -635,7 +660,7 @@ class FileCheck:
                 piece = text[a:b]
                 words = count_words(piece.replace(' X ', ' '))
                 if words:
-                    leading = next(i for i, line in enumerate(piece.splitlines())
+                    leading = next(i for i, line in enumerate(piece.split('\n'))
                                    if count_words(line.replace(' X ', ' ')))
                     line = pending[0][0] + text[:a].count('\n') + leading
                     found.append((line, words))
@@ -644,8 +669,7 @@ class FileCheck:
         first, last = paragraph.map
         item = paragraph.parent
         named = name_of(item) if (units and item.type == 'list_item' and item.children[0] is paragraph) else None
-        for no in range(first, last):
-            raw = self.lines[no]
+        for no, raw in self.paragraph_lines(paragraph).items():
             raw = CONTAINER_PREFIX.sub('', raw) if no == first else re.sub(r'^\s*(?:>\s?)*', '', raw)
             text = clean_prose(raw, placeholder='X', units=units)
             if no == first and named:
@@ -672,9 +696,8 @@ class FileCheck:
         for node in self.root.walk():
             if node.type != 'paragraph' or not node.map or is_badge_paragraph(node):
                 continue
-            first, last = node.map
-            for no in range(first, last):
-                text = clean_prose(CONTAINER_PREFIX.sub('', self.lines[no]), placeholder='X')
+            for no, line in self.paragraph_lines(node).items():
+                text = clean_prose(CONTAINER_PREFIX.sub('', line), placeholder='X')
                 if sentence_breaks(text):
                     self.report('line-sentences', no + 1, 'line holds more than one sentence')
             found = self.sentences(node, units=True)
@@ -831,13 +854,16 @@ class FileCheck:
         for block in self.blocks:
             if is_heading_like_emphasis(block):
                 self.report('bold-heading', block, f'"{block_text(block)}"')
+        # Blocks before the first heading have no heading that could introduce them.
+        lead = self.blocks[:self.headings[0].index] if self.headings else self.blocks
+        self.check_list_intros(None, meaningful(lead))
         for h in self.headings:
-            self.check_list_intros(h)
+            self.check_list_intros(h, meaningful(h.region))
 
-    def check_list_intros(self, h: Heading) -> None:
+    def check_list_intros(self, h: Heading | None, blocks: list[SyntaxTreeNode]) -> None:
         """Check that lists and tables start with an introductory paragraph."""
-        blocks = meaningful(h.region)
-        needs_overview = not self.is_changelog and (h.level == 1 or (h.level == 2 and h.is_topic))
+        needs_overview = (h is not None and not self.is_changelog
+                          and (h.level == 1 or (h.level == 2 and h.is_topic)))
         for pos, block in enumerate(blocks):
             if block.type in LIST_TYPES:
                 if self.is_changelog:
@@ -852,6 +878,9 @@ class FileCheck:
                 continue
             if previous is None and needs_overview:
                 continue  # The missing overview is reported for the heading.
+            if previous is None and h is None:
+                self.report(code, start_line(block), f'{what} starts the file without an introductory paragraph')
+                continue
             if previous is None:
                 # Changelogs waive overviews, but a table still needs an
                 # introduction unless a leaf section below H1 introduces it.
@@ -1016,18 +1045,20 @@ def github_repository(root: Path) -> tuple[str, str, set[str]] | None:
     """Owner, name, and branch names of a repository whose origin is on GitHub."""
     if root not in REPOSITORIES:
         REPOSITORIES[root] = None
+        # Git config values and ref names are UTF-8 whatever the locale.
+        git = {'capture_output': True, 'encoding': 'utf-8', 'errors': 'replace'}
         try:
-            url = subprocess.run(['git', '-C', str(root), 'config', '--get', 'remote.origin.url'],
-                                 capture_output=True, text=True)
+            url = subprocess.run(['git', '-C', str(root), 'config', '--get', 'remote.origin.url'], **git)
             refs = subprocess.run(['git', '-C', str(root), 'for-each-ref', '--format=%(refname)',
-                                   'refs/heads', 'refs/remotes/origin'], capture_output=True, text=True)
+                                   'refs/heads', 'refs/remotes/origin'], **git)
         except FileNotFoundError:
             return None
         match = GITHUB_REMOTE.match(url.stdout.strip())
         if match:
+            owner, name = match.group(1).lower(), match.group(2).lower()
             branches = {ref.split('/', 3)[3] if ref.startswith('refs/remotes/') else ref.split('/', 2)[2]
                         for ref in refs.stdout.split()} - {'HEAD'}
-            REPOSITORIES[root] = (match.group(1).lower(), match.group(2).lower(), branches)
+            REPOSITORIES[root] = (owner, name, branches)
     return REPOSITORIES[root]
 
 
@@ -1188,6 +1219,7 @@ def relative(target: Path, source: Path) -> str:
 
 
 def first_named_descendant(item: SyntaxTreeNode) -> tuple[int, str] | None:
+    """Return (line, name) of the first named item nested in an item, skipping numbered steps."""
     for child in item.children:
         if child.type not in LIST_TYPES:
             continue
@@ -1406,14 +1438,15 @@ def markdown_files(folder: Path) -> list[Path]:
     if find_root(folder / '_') is not None:
         try:
             result = subprocess.run(['git', '-C', str(folder), 'ls-files', '--cached', '--others',
-                                     '--exclude-standard', '-z', '--', '.'],
-                                    capture_output=True, text=True)
+                                     '--exclude-standard', '-z', '--', '.'], capture_output=True)
         except FileNotFoundError:
             print(f'mddt: git not found, so .gitignore is not applied in {display(folder)}',
                   file=sys.stderr)
         else:
             if result.returncode == 0:
-                listed = {folder / rel for rel in result.stdout.split('\0') if rel}
+                # Git prints paths as stored, so they decode as os.walk names them, whatever the locale.
+                listed = {folder / os.fsdecode(rel) for rel in result.stdout.split(b'\0') if rel}
+
     def unreadable(error: OSError) -> None:
         raise error
 
@@ -1525,6 +1558,10 @@ def render_json(registry: dict, diagnostics: list[Diagnostic], outlines: dict[st
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Headings and paths can hold any character, so output is UTF-8 whatever the
+    # locale; file names that the locale could not decode keep their original bytes.
+    for stream in (sys.stdout, sys.stderr):
+        stream.reconfigure(encoding='utf-8', errors='surrogateescape')
     ap = argparse.ArgumentParser(
         prog='mddt',
         description='Check Markdown files against the mddt document-tree model.',
