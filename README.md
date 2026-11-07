@@ -54,6 +54,7 @@ Its numeric thresholds were reviewed against documents written to the model, as 
 
 The [checker reference](skills/mddt/references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
 The checker does not cover formatting, which a repository's own Markdown linter can check.
+GitHub branch URLs need local branch refs, including in CI; the [checker reference](skills/mddt/references/checker.md#links-checked) describes that prerequisite.
 
 ## Limits
 
