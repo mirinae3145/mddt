@@ -508,12 +508,12 @@ class SentenceUnits(CheckerCase):
 
 
 class TreeRules(CheckerCase):
-    def tree(self, files, *options):
+    def tree(self, files, *options, env=None):
         for name, text in files.items():
             path = self.dir / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding='utf-8')
-        result = run('--format', 'json', *options, str(self.dir))
+        result = run('--format', 'json', *options, str(self.dir), env=env)
         data = json.loads(result.stdout)
         return sorted((Path(d['file']).relative_to(self.dir).as_posix(), d['code'])
                       for d in data['diagnostics'])
@@ -645,6 +645,42 @@ class TreeRules(CheckerCase):
         # The web links place CONTRIBUTING.md and docs/ in the tree, so neither is unlinked.
         self.assertEqual([f for f in found if f[1] in ('link-broken', 'anchor-missing', 'doc-unlinked')],
                          [('README.md', 'anchor-missing'), ('README.md', 'link-broken')])
+
+    def test_github_links_to_pull_request_branches_resolve_without_local_refs(self):
+        # A pull request checkout in GitHub Actions has a detached HEAD and no branch refs.
+        self.github_repo('https://github.com/owner/pkg.git')
+        git = ['git', '-C', str(self.dir)]
+        subprocess.run([*git, 'checkout', '--quiet', '--detach'], check=True)
+        subprocess.run([*git, 'branch', '--quiet', '-D', 'main'], check=True)
+        files = {
+            'README.md': '# R\n\nSee [the guide](https://github.com/owner/pkg/blob/main/CONTRIBUTING.md), '
+                         'which covers setup.\n',
+            'CONTRIBUTING.md': '# Contributing\n\nOverview.\n',
+        }
+        plain = {k: v for k, v in os.environ.items() if not k.startswith('GITHUB_')}
+        actions = {**plain, 'GITHUB_REPOSITORY': 'Owner/Pkg', 'GITHUB_BASE_REF': 'main', 'GITHUB_HEAD_REF': ''}
+        for env, expected in [(actions, []),
+                              ({**actions, 'GITHUB_BASE_REF': 'feature', 'GITHUB_HEAD_REF': 'main'}, []),
+                              ({**actions, 'GITHUB_REPOSITORY': 'owner/other'}, [('CONTRIBUTING.md', 'doc-unlinked')]),
+                              (plain, [('CONTRIBUTING.md', 'doc-unlinked')])]:
+            with self.subTest(env={k: v for k, v in env.items() if k.startswith('GITHUB_')}):
+                self.assertEqual(self.tree(files, env=env), expected)
+
+    def test_git_output_is_read_whatever_the_locale(self):
+        # Git prints UTF-8 ref names and paths as stored, while Python here
+        # decodes the locale's encoding as ASCII, like a Windows code page.
+        self.github_repo('git@github.com:owner/pkg.git')
+        subprocess.run(['git', '-C', str(self.dir), 'update-ref', 'refs/remotes/origin/문서', 'HEAD'], check=True)
+        ascii_locale = {**os.environ, 'LC_ALL': 'C', 'PYTHONCOERCECLOCALE': '0', 'PYTHONUTF8': '0'}
+        self.write('README.md', '# R\n\nSee [the notes](https://github.com/owner/pkg/blob/문서/notes.md), '
+                                'which list decisions.\n')
+        self.write('notes.md', '# Notes\n\nOverview.\n')
+        self.write('메모.md', '# Memo\n\nOverview.\n')
+        result = run('--format', 'json', str(self.dir), env=ascii_locale)
+        self.assertIn(result.returncode, (0, 1), result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(sorted(Path(f).name for f in data['files']), ['README.md', 'notes.md', '메모.md'])
+        self.assertNotIn(('notes.md', 'doc-unlinked'), [(Path(d['file']).name, d['code']) for d in data['diagnostics']])
 
     def test_github_links_without_a_github_origin_are_left_alone(self):
         for origin in (None, 'https://gitlab.com/owner/pkg.git'):
@@ -912,6 +948,15 @@ class Interface(CheckerCase):
             out = subprocess.run(['uv', 'run', '--quiet', str(script), str(doc)],
                                  capture_output=True, text=True).stdout
             self.assertIn(f'  rule: {folder / "references/model.md"}#', out, script)
+
+    def test_output_is_utf8_whatever_the_locale(self):
+        doc = self.write('doc.md', '# 한국어 제목 →\n\nOverview.\n')
+        cp1252 = {**os.environ, 'PYTHONIOENCODING': 'cp1252'}
+        for options in (('--outline',), ('--outline', '--format', 'json')):
+            with self.subTest(options=options):
+                result = run(*options, str(doc), env=cp1252)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('H1 한국어 제목 →', result.stdout)
 
     def test_outline_is_automatic_only_with_structural_findings(self):
         ok = self.write('ok.md', '# T\n\nOverview.\n\n## Part\n\nText.\n')

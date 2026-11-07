@@ -67,6 +67,8 @@ JSON output is an object whose keys `files` and `skipped` list the checked and s
 Its key `diagnostics` lists the findings without fix guidance, each with the fields `file`, `line`, `endLine`, `code`, `severity`, and `message`.
 The message joins the code's summary and the finding's detail, and the key `outlines` appears only with `--outline` or `--review`.
 
+Both formats are written in UTF-8 regardless of the locale, so headings and file names in any language keep their characters.
+
 ## Options
 
 The command accepts these options:
@@ -128,6 +130,7 @@ Links in the checked files are resolved as follows, while images and links writt
 - **Own repository on GitHub**: A link into a branch of the linking file's own repository is resolved in the working tree.
   An example is `https://github.com/owner/name/blob/main/CONTRIBUTING.md`.
   The repository is the one whose `origin` remote is on GitHub, and links to commits or tags are left alone.
+  Its branches are those with local or `origin` refs, plus a pull request's base and head branches in a GitHub Actions run.
   This lets a README use full URLs, as packages often need, and still place its children in the tree.
 - **Not resolved**: Other URLs with a scheme and absolute paths are left alone, since their base depends on where the documents are served.
   Anchors are also left alone when the link has a query, such as `?plain=1`, or its target is not a Markdown file.

@@ -992,21 +992,30 @@ REPOSITORIES: dict[Path, tuple[str, str, set[str]] | None] = {}
 
 
 def github_repository(root: Path) -> tuple[str, str, set[str]] | None:
-    """Owner, name, and branch names of a repository whose origin is on GitHub."""
+    """Owner, name, and branch names of a repository whose origin is on GitHub.
+
+    The branches are the local and origin branches. A pull request checkout
+    in GitHub Actions has neither, so there the base and head branches of the
+    pull request, which the workflow environment names, count as well.
+    """
     if root not in REPOSITORIES:
         REPOSITORIES[root] = None
+        # Git config values and ref names are UTF-8 whatever the locale.
+        git = {'capture_output': True, 'encoding': 'utf-8', 'errors': 'replace'}
         try:
-            url = subprocess.run(['git', '-C', str(root), 'config', '--get', 'remote.origin.url'],
-                                 capture_output=True, text=True)
+            url = subprocess.run(['git', '-C', str(root), 'config', '--get', 'remote.origin.url'], **git)
             refs = subprocess.run(['git', '-C', str(root), 'for-each-ref', '--format=%(refname)',
-                                   'refs/heads', 'refs/remotes/origin'], capture_output=True, text=True)
+                                   'refs/heads', 'refs/remotes/origin'], **git)
         except FileNotFoundError:
             return None
         match = GITHUB_REMOTE.match(url.stdout.strip())
         if match:
+            owner, name = match.group(1).lower(), match.group(2).lower()
             branches = {ref.split('/', 3)[3] if ref.startswith('refs/remotes/') else ref.split('/', 2)[2]
                         for ref in refs.stdout.split()} - {'HEAD'}
-            REPOSITORIES[root] = (match.group(1).lower(), match.group(2).lower(), branches)
+            if os.environ.get('GITHUB_REPOSITORY', '').lower() == f'{owner}/{name}':
+                branches |= {os.environ[v] for v in ('GITHUB_BASE_REF', 'GITHUB_HEAD_REF') if os.environ.get(v)}
+            REPOSITORIES[root] = (owner, name, branches)
     return REPOSITORIES[root]
 
 
@@ -1385,14 +1394,14 @@ def markdown_files(folder: Path) -> list[Path]:
     if find_root(folder / '_') is not None:
         try:
             result = subprocess.run(['git', '-C', str(folder), 'ls-files', '--cached', '--others',
-                                     '--exclude-standard', '-z', '--', '.'],
-                                    capture_output=True, text=True)
+                                     '--exclude-standard', '-z', '--', '.'], capture_output=True)
         except FileNotFoundError:
             print(f'mddt: git not found, so .gitignore is not applied in {display(folder)}',
                   file=sys.stderr)
         else:
             if result.returncode == 0:
-                listed = {folder / rel for rel in result.stdout.split('\0') if rel}
+                # Git prints paths as stored, so they decode as os.walk names them, whatever the locale.
+                listed = {folder / os.fsdecode(rel) for rel in result.stdout.split(b'\0') if rel}
     found = []
     for current, dirs, names in os.walk(folder):
         dirs[:] = sorted(d for d in dirs if d not in ('.git', 'node_modules')
@@ -1497,6 +1506,10 @@ def render_json(registry: dict, diagnostics: list[Diagnostic], outlines: dict[st
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Headings and paths can hold any character, so output is UTF-8 whatever the
+    # locale; file names that the locale could not decode keep their original bytes.
+    for stream in (sys.stdout, sys.stderr):
+        stream.reconfigure(encoding='utf-8', errors='surrogateescape')
     ap = argparse.ArgumentParser(
         prog='mddt',
         description='Check Markdown files against the mddt document-tree model.',
