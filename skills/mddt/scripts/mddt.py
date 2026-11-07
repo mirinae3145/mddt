@@ -97,6 +97,10 @@ FILE_MAX_LINES = 300
 MAX_SENTENCES = 5
 MAX_PARAGRAPH_RUN = 3
 MAX_WORDS = 25
+# Headings deeper than this level, and lists nested deeper than this depth, are
+# errors; a list at exactly this depth is a warning.
+MAX_HEADING_LEVEL = 3
+MAX_LIST_DEPTH = 3
 # Prose keeps one sentence per line, so a sentence ends where a line ends with
 # sentence punctuation; a colon ends the sentence that introduces a list.
 SENTENCE_END = re.compile(r'[.!?。！？:：][\'"”’)\]*_]*$')
@@ -778,7 +782,7 @@ class FileCheck:
             if len(run) > 2 and is_mechanically_ordered([self.headings[k].text for k in run], names=False):
                 ordered.update(self.headings[k].index for k in run)
         for h in self.headings:
-            if h.level >= 4:
+            if h.level > MAX_HEADING_LEVEL:
                 self.report('heading-depth', h.node, f'H{h.level} "{h.text}"')
             if h.level == 1 or (h.level == 2 and h.is_topic):
                 self.report_late_parts(late_parts, seen_topic, ordered)
@@ -859,10 +863,10 @@ class FileCheck:
             deepest: dict[int, SyntaxTreeNode] = {}
             self.walk_list(block, 1, deepest, forms.setdefault(self.scope_of(index), {}))
             depth = max(deepest)
-            if depth >= 4:
+            if depth > MAX_LIST_DEPTH:
                 self.report('list-depth-4', deepest[depth], f'list reaches depth {depth}')
-            elif depth == 3:
-                self.report('list-depth-3', deepest[3], 'list reaches depth 3')
+            elif depth == MAX_LIST_DEPTH:
+                self.report('list-depth-3', deepest[depth], f'list reaches depth {depth}')
         for scope, by_form in forms.items():
             if len(by_form) < 2:
                 continue
