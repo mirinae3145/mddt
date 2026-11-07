@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Taeha Shin
 # SPDX-License-Identifier: MIT
 """Behavioral checks through the checker's command-line interface."""
+import atexit
+import functools
 import json
 import os
 from pathlib import Path
@@ -18,20 +20,44 @@ SCRIPT = SCRIPTS / 'mddt.py'
 COVERAGE = 'coverage==7.17.2'
 
 
+@functools.cache
+def coverage_python():
+    """Build one environment for the coverage run and return its interpreter.
+
+    The environment holds the script's dependencies from its inline metadata
+    and the pinned coverage, so the network is used once per test run rather
+    than once per checker run.
+    """
+    folder = Path(tempfile.mkdtemp(prefix='mddt-coverage-'))
+    atexit.register(shutil.rmtree, folder, ignore_errors=True)
+    python = folder / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+    for command in (['uv', 'venv', '--quiet', str(folder)],
+                    ['uv', 'pip', 'install', '--quiet', '--python', str(python),
+                     '--requirements', str(SCRIPT), COVERAGE]):
+        result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode:
+            raise RuntimeError(f'cannot build the coverage environment:\n{result.stderr}')
+    return python
+
+
 def run(*args, cwd=None, env=None, uv='uv'):
     """Run the checker as a user would, optionally under coverage measurement.
 
     With MDDT_COVERAGE set, each run appends branch coverage data to
     .coverage.* files at the repository root, which `coverage combine` merges.
-    The dependencies still come from the script's inline metadata.
+    The runs share the environment that coverage_python() builds.
     """
     if os.environ.get('MDDT_COVERAGE'):
-        command = [uv, 'run', '--quiet', '--with', COVERAGE, '--with-requirements', str(SCRIPT),
-                   'python', '-m', 'coverage', 'run', '--branch', '--parallel-mode',
+        command = [str(coverage_python()), '-m', 'coverage', 'run', '--branch', '--parallel-mode',
                    f'--data-file={ROOT / ".coverage"}', f'--include={SCRIPT}', str(SCRIPT)]
     else:
         command = [uv, 'run', '--quiet', str(SCRIPT)]
-    return subprocess.run([*command, *args], capture_output=True, text=True, cwd=cwd, env=env)
+    result = subprocess.run([*command, *args], capture_output=True, text=True, cwd=cwd, env=env)
+    # The checker prints its findings before it exits with 1, so a run without
+    # output failed before the checker finished, such as a failed download.
+    if result.returncode == 1 and not result.stdout:
+        raise AssertionError(f'the checker run failed without output:\n{result.stderr}')
+    return result
 
 
 class CheckerCase(unittest.TestCase):
