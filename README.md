@@ -21,6 +21,9 @@ Some requirements live only in the procedures, such as placing content before wr
 
 A repository that adopts mddt for its documents therefore points its contributors to the skill and its procedures, not to the model alone.
 
+The skill covers structure, so other skills and tools often govern the same documents.
+[Combining mddt with other guidance](skills/mddt/references/combining.md) says which of them complement it and how to resolve their conflicts with it.
+
 ## Document model
 
 The skill's [document model](skills/mddt/references/model.md) describes the properties that a conforming Markdown document has.
@@ -50,7 +53,7 @@ Its length checks use a local English parsing model to count independent clauses
 Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes.
 
 The [checker reference](skills/mddt/references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
-The checker does not cover formatting, so run your repository's own Markdown linter for formatting rules.
+The checker does not cover formatting, which a repository's own Markdown linter can check.
 
 ## Limits
 

@@ -70,7 +70,10 @@ A `.mddtignore` file leaves them out of the check, as the [ignore file](referenc
 
 ## Scope
 
-This skill covers hierarchy, not formatting or prose quality.
-Run the repository's own Markdown linter for formatting rules.
-For the quality of explanations and tutorials, use this skill together with a technical writing skill or guideline, if one is available.
+This skill covers the structure of Markdown documents, together with the paragraph and sentence rules that support it.
+It leaves formatting, prose quality, and whether content is correct about its subject to other guidance.
+Summaries in parent documents still have to stay accurate to the documents they condense.
 Academic papers follow their own conventions and are out of scope.
+
+When another skill, guideline, or tool also governs the documents a task writes or reads, read [combining mddt with other guidance](references/combining.md).
+It covers which guidance complements mddt, which requirements can conflict with it, and how to resolve a conflict.

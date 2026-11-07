@@ -139,7 +139,6 @@ Check the result as follows:
    Keep a fix that serves the reader better even when it raises another warning, and judge that warning like any other.
    Do not undo a fix only because it raised a warning, or choose one only because it raises none.
    A warning that remains after judgment is a valid outcome, and the goal is not zero warnings.
-1. Run the repository's Markdown linter separately, if it has one, for formatting rules.
 
 Findings apply to what the current task created or made worse.
 For example, adding items that push a list past seven makes that warning part of the task.
