@@ -340,6 +340,34 @@ class ListRules(CheckerCase):
                 '## Topic B\n\nOverview.\n\n### Three\n\nList:\n\n- e: x\n- f: y\n\n### Four\n\nText.\n')
         self.assertEqual(self.codes(text), [('name-form-mix', 20)])
 
+    def test_numbered_ui_steps_can_hold_named_bullets(self):
+        text = ('# Setup\n\nConfigure the application.\n\nSteps:\n\n'
+                '1. **Settings** opens the preferences.\n'
+                '   - **Cache**: Set the folder.\n'
+                '   - **Proxy**: Set the server.\n'
+                '1. Close the dialog.\n')
+        self.assertCodes(text, [])
+        path = self.write('doc.md', text)
+        data = json.loads(run('--format', 'json', '--outline', str(path)).stdout)
+        self.assertIn('names bold 2', '\n'.join(data['outlines'][str(path)]))
+
+    def test_numbered_ui_steps_do_not_name_descendants(self):
+        self.assertCodes('# T\n\nOverview.\n\nOptions:\n\n'
+                         '- **Cache**: Configure it using these steps.\n'
+                         '  1. **Settings** opens the preferences.\n'
+                         '  1. **Save** applies the change.\n'
+                         '- **Proxy**: Uses the system settings.\n', [])
+
+    def test_numbered_steps_do_not_hide_named_bullet_descendants(self):
+        self.assertCodes('# T\n\nOverview.\n\nOptions:\n\n'
+                         '- **Cache**: Configure it using these steps.\n'
+                         '  1. **Settings** opens the preferences.\n'
+                         '     - **Path**: Set the folder.\n'
+                         '     - Choose a size.\n'
+                         '  1. Save the change.\n'
+                         '- **Proxy**: Uses the system settings.\n',
+                         ['name-nesting', 'list-depth-3'])
+
     def test_step_ending_in_colon_is_not_a_name(self):
         self.assertCodes(
             '# T\n\nOverview.\n\nList:\n\n- **A**: x\n- Install the tool with pipx:\n\n  ```sh\n  pipx install t\n  ```\n- **B**: y\n', [])
@@ -655,6 +683,48 @@ class TreeRules(CheckerCase):
             subprocess.run([*git, 'remote', 'add', 'origin', origin], check=True)
             subprocess.run([*git, 'update-ref', 'refs/remotes/origin/fix/x', 'HEAD'], check=True)
 
+    def test_heading_anchors_avoid_literal_suffix_collisions(self):
+        for titles, ids in (
+                (['Foo', 'Foo-1', 'Foo'], ['foo', 'foo-1', 'foo-2']),
+                (['Foo', 'Foo', 'Foo-1', 'Foo', 'Foo-1'],
+                 ['foo', 'foo-1', 'foo-1-1', 'foo-2', 'foo-1-2'])):
+            with self.subTest(titles=titles):
+                headings = ''.join(f'## {title}\n\nContent.\n\n' for title in titles)
+                links = ' '.join(f'[section](#{anchor})' for anchor in ids)
+                self.assertEqual(self.link_findings({'README.md': f'# R\n\nOverview.\n\n{headings}{links}\n'}), [])
+
+    def test_anchor_collisions_preserve_the_target_role(self):
+        self.assertEqual(self.tree({
+            'README.md': '# R\n\nSee [part](a.md#foo-1) and [topic](a.md#foo-1-1).\n',
+            'a.md': '# A\n\nOverview.\n\n## Foo\n\nFirst.\n\n## Foo\n\nSecond.\n\n'
+                    '## Foo-1\n\nTopic overview.\n\n### One\n\nText.\n\n### Two\n\nText.\n',
+        }, '--review'), [('README.md', 'anchor-to-part')])
+
+    def test_html_elements_expose_all_anchor_attributes(self):
+        self.assertCodes('# T\n\nOverview.\n\n'
+                         '<a class="jump" id="current" name="legacy"></a>\n'
+                         '<a NAME=old ID=new />\n\n'
+                         'See [current](#current), [legacy](#legacy), [old](#old), and [new](#new).\n', [])
+
+    def test_html_comments_and_valueless_attributes_create_no_anchors(self):
+        self.assertCodes('# T\n\nOverview.\n\n'
+                         '<!-- <a id="hidden"></a> -->\n'
+                         '<a class="jump" id name></a>\n\n'
+                         'See [missing](#hidden) and [title](#t).\n', ['anchor-missing'])
+
+    def test_github_branch_links_resolve_in_a_detached_checkout_with_fetched_refs(self):
+        self.github_repo('https://github.com/owner/pkg.git')
+        git = ['git', '-C', str(self.dir)]
+        subprocess.run([*git, 'update-ref', 'refs/remotes/origin/main', 'HEAD'], check=True)
+        subprocess.run([*git, 'checkout', '--quiet', '--detach'], check=True)
+        subprocess.run([*git, 'branch', '-D', 'main'], check=True, capture_output=True)
+        # Remote-tracking refs remain available after a CI checkout detaches HEAD.
+        self.assertEqual(self.tree({
+            'README.md': '# R\n\nSee [child](https://github.com/owner/pkg/blob/main/child.md) '
+                         'and [missing](https://github.com/owner/pkg/blob/main/missing.md).\n',
+            'child.md': '# Child\n\nOverview.\n',
+        }), [('README.md', 'link-broken')])
+
     def test_github_links_to_the_own_repository_resolve(self):
         self.github_repo('git@github.com:Owner/Pkg.git')
         web = 'https://github.com/owner/pkg'
@@ -917,6 +987,42 @@ class Interface(CheckerCase):
         self.assertEqual(out.count('  fix:'), 1)
         self.assertIn(f'{a}:1', out)
         self.assertIn(f'{b}:1', out)
+
+    def check_unreadable_directory(self, nested, ignored=False):
+        if os.name == 'nt':
+            self.skipTest('POSIX directory permissions are unavailable')
+        if ignored:
+            if shutil.which('git') is None:
+                self.skipTest('git is not installed')
+            subprocess.run(['git', 'init', '--quiet', str(self.dir)], check=True)
+            self.write('.gitignore', 'blocked/\n')
+        blocked = self.dir / 'blocked'
+        blocked.mkdir()
+        (blocked / 'doc.md').write_text('# Hidden\n\nOverview.\n', encoding='utf-8')
+        blocked.chmod(0)
+        try:
+            if os.access(blocked, os.R_OK | os.X_OK):
+                self.skipTest('directory permissions do not deny this user access')
+            target = self.dir if nested else blocked
+            result = run('--format', 'json', str(target))
+            self.assertEqual(result.returncode, 0 if ignored else 2, result.stderr)
+            if ignored:
+                self.assertEqual(json.loads(result.stdout)['files'], [])
+            else:
+                self.assertEqual(result.stdout, '')
+                self.assertIn('mddt: cannot read input:', result.stderr)
+            self.assertNotIn('Traceback', result.stderr)
+        finally:
+            blocked.chmod(0o700)
+
+    def test_unreadable_directory_is_a_usage_error(self):
+        self.check_unreadable_directory(nested=False)
+
+    def test_unreadable_subdirectory_is_not_silently_skipped(self):
+        self.check_unreadable_directory(nested=True)
+
+    def test_git_ignored_unreadable_directory_is_not_entered(self):
+        self.check_unreadable_directory(nested=True, ignored=True)
 
     def test_text_output_counts_info_and_long_skip_lists(self):
         mixed = self.write('mixed.md', '# T\n\n- First sentence.\n  Second sentence.\n- short\n')

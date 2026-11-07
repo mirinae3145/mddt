@@ -83,6 +83,7 @@ The command accepts these options:
 A file argument is checked as given, and a directory argument expands as follows:
 
 - **In a Git repository**: The `.md` files that Git sees, which are tracked files and untracked files that are not ignored.
+  Subfolders without listed Markdown files are not entered.
   Without the `git` command, files are found as outside a repository, and the checker reports that `.gitignore` was not applied.
 - **Outside a repository**: Every `.md` file, except in folders whose own `.gitignore` holds only `*`.
   Tools such as pytest and uv mark their caches and virtual environments this way.
@@ -93,6 +94,7 @@ Files matching `--exclude` and files a `.mddtignore` ignores are skipped even wh
 A skipped file is listed as skipped and is not judged, but it stays in the tree.
 Links to it still resolve, and it still serves as a parent that must link its children.
 The [ignore file](ignore-file.md) describes `.mddtignore`, which lists the files of a folder to skip.
+An unreadable input file or traversed folder ends the run with status 2 and no findings.
 
 Changelogs are checked with the exceptions in [repository documentation](uses.md#repository-documentation).
 The checker recognizes names matching `CHANGELOG` or `CHANGELOG.*`, without regard to case, including `CHANGELOG.md` and `changelog.en.md`.
@@ -123,12 +125,18 @@ Links in the checked files are resolved as follows, while images and links writt
   A link to a folder stands for the folder's index file when it has one.
 - **Anchors**: An anchor in a link to a Markdown file, or a bare `#anchor`, must match a heading ID or an HTML `id` or `name` in its target.
   A heading ID is the heading text in lowercase, without punctuation, with spaces as hyphens, and with `-1`, `-2`, and so on for repeats.
+  Generated IDs also reserve their names, so a suffix is increased until it conflicts with no earlier ID.
+  An HTML element can provide both `id` and `name` anchors; comments and attributes without values provide none.
 - **Anchor IDs**: This rule only approximates GitHub's, so a missing anchor is a warning.
   For example, GitHub keeps the variation selector that follows some emoji, while the checker drops it, so anchors to such headings are reported falsely.
 - **Own repository on GitHub**: A link into a branch of the linking file's own repository is resolved in the working tree.
   An example is `https://github.com/owner/name/blob/main/CONTRIBUTING.md`.
   The repository is the one whose `origin` remote is on GitHub, and links to commits or tags are left alone.
   This lets a README use full URLs, as packages often need, and still place its children in the tree.
+
+  Branch names must exist in local or `origin` remote-tracking refs, including when HEAD is detached.
+  Fetch the branches used by document links before checking; with `actions/checkout`, set `fetch-depth: 0` to fetch all branches.
+  Links whose refs are unavailable locally are left alone.
 - **Not resolved**: Other URLs with a scheme and absolute paths are left alone, since their base depends on where the documents are served.
   Anchors are also left alone when the link has a query, such as `?plain=1`, or its target is not a Markdown file.
 - **Linked trees**: A target reached through a symbolic link, such as a linked repository, is checked only for existence.

@@ -90,7 +90,7 @@ Documents form a tree through links that follow these rules.
 - **Landing pages**: A document that introduces other documents reads as an overview, not as a bare list of links.
   It may introduce each of its other children in the part where the reader's task needs it.
 - **Links resolve**: A relative link points to a file or folder that exists, and its anchor matches a heading or an HTML `id` in the target. <!-- code: link-broken, anchor-missing -->
-  A GitHub link to a branch of the same repository counts as such a link, so a README can use full URLs.
+  A GitHub link to a locally known branch of the same repository counts as such a link, so a README can use full URLs.
   Moving or renaming a file or heading therefore includes updating the links to it, even in files the change does not otherwise touch.
 - **Anchor targets**: A link to an anchor in another file that expects its target to be read alone points to a topic. <!-- code: anchor-to-part -->
   An anchor to a part only locates content inside a file that the reader reads whole.
@@ -176,6 +176,8 @@ An item whose children need names is promoted as described in [headings and prom
 
 An unnumbered item of several sentences is a block of its own and carries a name where the name-nesting rule allows one. <!-- code: item-name, nested-block -->
 Where the rule forbids it, a block sits inside another block, which suggests promoting the enclosing item.
+
 A numbered step is labeled by its position and needs no name.
+Leading bold text in a numbered step, such as a UI label, is not an item name.
 Names within one topic use one form, not counting link text, whose wording follows its target. <!-- code: name-form-mix -->
 In a file with topic H2s, each topic H2 is one scope, and the parent's own parts together form another.

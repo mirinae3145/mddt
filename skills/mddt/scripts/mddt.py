@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 import fnmatch
 from functools import cache, lru_cache
 from html import unescape
+from html.parser import HTMLParser
 import json
 import os
 from pathlib import Path
@@ -85,8 +86,6 @@ GITHUB_REMOTE = re.compile(r'^(?:[a-z+]+://)?(?:[^@/]+@)?github\.com[:/]([^/]+)/
                            re.IGNORECASE)
 # A GitHub page of a file or folder at a ref, such as https://github.com/owner/name/blob/main/docs/a.md.
 GITHUB_LINK = re.compile(r'^https://(?:www\.)?github\.com/([^/]+)/([^/]+)/(?:blob|tree)/([^?#]+)', re.IGNORECASE)
-# HTML elements that a link anchor can name besides headings, such as <a id="x">.
-HTML_ANCHOR = re.compile(r'''<[a-z][^>]*?\s(?:id|name)\s*=\s*["']?([^"'\s>]+)''', re.IGNORECASE)
 
 # Provisional thresholds for review information, to be calibrated against
 # documents written to the model.
@@ -144,6 +143,19 @@ class Heading:
     is_topic: bool = False
     h3_count: int = 0
     has_children: bool = False
+
+
+class HTMLAnchors(HTMLParser):
+    """Collect every id and name attribute on actual HTML elements."""
+
+    def __init__(self):
+        super().__init__()
+        self.anchors: set[str] = set()
+
+    def handle_starttag(self, tag, attrs):
+        for name, value in attrs:
+            if name in ('id', 'name') and value is not None:
+                self.anchors.add(value)
 
 
 def load_registry() -> dict[str, dict]:
@@ -715,16 +727,22 @@ class FileCheck:
         found: dict[str, Heading] = {}
         counts: dict[str, int] = {}
         for h in self.headings:
-            slug = github_slug(h.text)
-            n = counts.get(slug, 0)
-            counts[slug] = n + 1
-            found[f'{slug}-{n}' if n else slug] = h
+            base = slug = github_slug(h.text)
+            # A generated suffix can collide with a literal title or an earlier suffix.
+            while slug in found:
+                counts[base] = counts.get(base, 0) + 1
+                slug = f'{base}-{counts[base]}'
+            found[slug] = h
         return found
 
     def html_anchors(self) -> set[str]:
         """Return the id and name attributes of HTML elements, which links can also target."""
-        return {m.group(1) for node in self.root.walk() if node.type in ('html_block', 'html_inline')
-                for m in HTML_ANCHOR.finditer(node.content)}
+        parsed = HTMLAnchors()
+        for node in self.root.walk():
+            if node.type in ('html_block', 'html_inline'):
+                parsed.feed(node.content)
+        parsed.close()
+        return parsed.anchors
 
     def readme_closing_sections(self) -> set[int]:
         """Indexes of the final consecutive H2 group with recognized closing titles.
@@ -887,13 +905,12 @@ class FileCheck:
                 self.report('list-length', node, f'{len(items)} items without mechanical order')
         numbered = node.type == 'ordered_list'
         for item in items:
-            named = name_of(item)
+            # A numbered step's leading UI text is not an item name.
+            named = None if numbered else name_of(item)
             descendant = first_named_descendant(item)
             if named:
-                # Link text follows its target's title, so it is not a form choice,
-                # and a numbered step is labeled by its position, so leading bold
-                # text in it, such as a UI label, is not one either.
-                if named[0] != 'link' and not numbered:
+                # Link text follows its target's title, so it is not a form choice.
+                if named[0] != 'link':
                     forms.setdefault(named[0], []).append(start_line(item))
                 if descendant:
                     self.report('name-nesting', item,
@@ -904,7 +921,7 @@ class FileCheck:
             for child in item.children:
                 if child.type in LIST_TYPES:
                     self.walk_list(child, depth + 1, deepest, forms,
-                                   named[1] if named and not numbered else named_ancestor)
+                                   named[1] if named else named_ancestor)
 
     def check_item_block(self, item: SyntaxTreeNode, named, descendant, ancestor: str | None) -> None:
         """Treat an unnumbered list item of several sentences as a block that deserves a name.
@@ -1175,7 +1192,7 @@ def first_named_descendant(item: SyntaxTreeNode) -> tuple[int, str] | None:
         if child.type not in LIST_TYPES:
             continue
         for sub in child.children:
-            named = name_of(sub)
+            named = None if child.type == 'ordered_list' else name_of(sub)
             if named:
                 return start_line(sub), named[1]
             found = first_named_descendant(sub)
@@ -1192,7 +1209,7 @@ def region_list_stats(region: list[SyntaxTreeNode]) -> str:
         nonlocal depth
         depth = max(depth, d)
         for item in node.children:
-            named = name_of(item)
+            named = None if node.type == 'ordered_list' else name_of(item)
             if named:
                 forms[named[0]] = forms.get(named[0], 0) + 1
             for child in item.children:
@@ -1397,10 +1414,17 @@ def markdown_files(folder: Path) -> list[Path]:
         else:
             if result.returncode == 0:
                 listed = {folder / rel for rel in result.stdout.split('\0') if rel}
+    def unreadable(error: OSError) -> None:
+        raise error
+
     found = []
-    for current, dirs, names in os.walk(folder):
+    listed_dirs = None if listed is None else {
+        parent for path in listed if path.suffix.lower() == '.md' for parent in path.parents
+    }
+    for current, dirs, names in os.walk(folder, onerror=unreadable):
         dirs[:] = sorted(d for d in dirs if d not in ('.git', 'node_modules')
                          and not os.path.islink(os.path.join(current, d))
+                         and (listed_dirs is None or Path(current) / d in listed_dirs)
                          and not (listed is None and ignores_itself(Path(current) / d)))
         for name in sorted(names):
             path = Path(current) / name
@@ -1528,6 +1552,9 @@ def main(argv: list[str] | None = None) -> int:
         files, skipped = collect(args.paths, args.exclude, fixed_root)
     except FileNotFoundError as missing:
         print(f'mddt: no such file or directory: {missing}', file=sys.stderr)
+        return 2
+    except OSError as exc:
+        print(f'mddt: cannot read input: {exc}', file=sys.stderr)
         return 2
     except IgnoreError as exc:
         print(f'mddt: {exc}', file=sys.stderr)
