@@ -3,6 +3,7 @@
 """Behavioral checks through the checker's command-line interface."""
 import atexit
 import functools
+import ast
 import json
 import os
 from pathlib import Path
@@ -1192,31 +1193,57 @@ def skill_docs():
     return [SKILL / 'SKILL.md', *sorted((SKILL / 'references').glob('*.md'))]
 
 
+def rule_markers():
+    """Return (code, document name, enclosing heading anchors) for each code marker.
+
+    Markers inside fenced code are examples, not rule markers, so they are left out.
+    """
+    found = []
+    for doc in skill_docs():
+        stack, in_fence = [], False
+        for line in doc.read_text(encoding='utf-8').splitlines():
+            if line.startswith('```'):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            if m := re.match(r'(#{1,6}) ', line):
+                level = len(m.group(1))
+                stack = [s for s in stack if s[0] < level] + [(level, slug(line.lstrip('#')))]
+            for group in CODE_COMMENT.findall(line):
+                found.extend((code.strip(), doc.name, {s[1] for s in stack}) for code in group.split(','))
+    return found
+
+
+def checker_constant(name):
+    """Evaluate a literal assigned at the top level of the checker."""
+    source = (SCRIPTS / 'mddt.py').read_text(encoding='utf-8')
+    return ast.literal_eval(re.search(rf'^{name} = (.+)$', source, re.M).group(1))
+
+
 class Registry(unittest.TestCase):
-    def test_rule_documents_mark_every_registered_code(self):
+    def test_registry_entries_hold_valid_metadata(self):
         with (SCRIPTS / 'rules.toml').open('rb') as f:
-            codes = set(tomllib.load(f))
-        marked = set()
-        for doc in skill_docs():
-            for group in CODE_COMMENT.findall(doc.read_text(encoding='utf-8')):
-                marked.update(code.strip() for code in group.split(','))
-        self.assertEqual(codes, marked)
+            registry = tomllib.load(f)
+        severities, groups = set(checker_constant('SEVERITY_ORDER')), set(checker_constant('GROUP_ORDER'))
+        for code, entry in registry.items():
+            with self.subTest(code=code):
+                self.assertEqual(set(entry), {'severity', 'group', 'summary', 'rule'})
+                self.assertIn(entry['severity'], severities)
+                self.assertIn(entry['group'], groups)
+                for key in ('summary', 'rule'):
+                    self.assertIsInstance(entry[key], str)
+                    self.assertTrue(entry[key].strip())
+
+    def test_rule_documents_mark_every_registered_code_once(self):
+        with (SCRIPTS / 'rules.toml').open('rb') as f:
+            codes = sorted(tomllib.load(f))
+        self.assertEqual(sorted(code for code, _, _ in rule_markers()), codes)
 
     def test_registry_rule_locations_hold_their_markers(self):
         with (SCRIPTS / 'rules.toml').open('rb') as f:
             registry = tomllib.load(f)
-        enclosing = {}
-        for doc in skill_docs():
-            stack, in_fence = [], False
-            for line in doc.read_text(encoding='utf-8').splitlines():
-                if line.startswith('```'):
-                    in_fence = not in_fence
-                elif not in_fence and (m := re.match(r'(#{1,6}) ', line)):
-                    level = len(m.group(1))
-                    stack = [s for s in stack if s[0] < level] + [(level, slug(line.lstrip('#')))]
-                for group in CODE_COMMENT.findall(line):
-                    for code in group.split(','):
-                        enclosing[code.strip()] = (doc.name, {s[1] for s in stack})
+        enclosing = {code: (name, anchors) for code, name, anchors in rule_markers()}
         for code, entry in registry.items():
             name, _, anchor = entry['rule'].partition('#')
             self.assertEqual(enclosing[code][0], name, code)
@@ -1229,8 +1256,10 @@ class Registry(unittest.TestCase):
         with (SCRIPTS / 'rules.toml').open('rb') as f:
             summary = {code: entry['summary'] for code, entry in tomllib.load(f).items()}
         word = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+        ordinal = ['zeroth', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh']
         sentences, run_after = word[limit['MAX_SENTENCES']], word[limit['MAX_PARAGRAPH_RUN'] + 1]
         items, words = word[limit['MAX_LIST_ITEMS']], limit['MAX_WORDS']
+        heading, depth = limit['MAX_HEADING_LEVEL'], limit['MAX_LIST_DEPTH']
         for text, phrase in [
             (model, f'at most {sentences} sentence units'),
             (summary['paragraph-length'], f'more than {sentences} sentence units'),
@@ -1241,6 +1270,13 @@ class Registry(unittest.TestCase):
             (model, f'about {items} items'),
             (summary['list-length'], f'more than {items} items'),
             (summary['section-count'], f'more than {items} sibling sections'),
+            (model, f'about {items} unless in mechanical order'),
+            (model, f'headings stop at H{heading}.'),
+            (summary['heading-depth'], f'deeper than H{heading}'),
+            (model, f'Lists nest at most {word[depth]} levels'),
+            (model, f'A {ordinal[depth + 1]} level is not allowed, and a {ordinal[depth]} level is allowed'),
+            (summary['list-depth-4'], f'nested {word[depth + 1]} or more levels deep'),
+            (summary['list-depth-3'], f'nested {word[depth]} levels deep'),
         ]:
             self.assertIn(phrase, text)
 
