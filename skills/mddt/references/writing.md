@@ -134,14 +134,16 @@ Check the result as follows:
      Such changes include one-sentence line splits and link target updates after a move, but not a blank line, which splits a paragraph.
    - **Requested content changes**: A part or topic that received a content change the task requested is reread, even when the task otherwise only restructures.
 1. Run the checker on the files you created or changed.
-   When the task moved or renamed files or headings, run it on the whole tree.
-   Links to the old names can sit in files that the task did not change.
+   When files or headings are added, removed, moved, or renamed, run it on the whole tree.
+   Also check the whole tree when adding or removing an index or companion parent changes document ownership.
    After adding child documents, add `--review` to see links that lack summaries.
    Information findings rest on approximate detection, so judge each one before acting on it.
 1. Fix structural findings before sentence-level ones, because structural fixes move sentences.
    Before applying a fix, judge the structure it will produce against the model, including the rules whose warnings it may raise.
    After fixing, reread each fixed part or topic whole.
-1. Run the checker once more after fixing, fix only errors that the fixes introduced, and stop there.
+1. Run the checker once more after fixing, and fix only errors that the fixes introduced.
+   If those corrections change files, check them again before stopping.
+
    Judge a fix by the structure it produces, not by the number of findings.
    Keep a fix that serves the reader better even when it raises another warning, and judge that warning like any other.
    Do not undo a fix only because it raised a warning, or choose one only because it raises none.
