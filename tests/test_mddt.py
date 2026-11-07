@@ -98,6 +98,12 @@ class FileAndHeadingRules(CheckerCase):
         self.assertCodes('# T\n\nOverview.\n\n## 1. Start\n\nA.\n\n## 2. Next\n\nB.\n', ['heading-number'])
         self.assertCodes('# T\n\nOverview.\n\n## A. Start\n\nA.\n\n## B. Next\n\nB.\n', ['heading-number'])
         self.assertCodes('# T\n\nOverview.\n\n## III. Start\n\nA.\n\n## IV. Next\n\nB.\n', ['heading-number'])
+        # A single letter that is also a Roman numeral is read both ways.
+        for first, second in [('I.', 'II.'), ('V.', 'VI.'), ('X.', 'XI.'), ('H.', 'I.'), ('C)', 'D)')]:
+            self.assertCodes(f'# T\n\nOverview.\n\n## {first} Start\n\nA.\n\n## {second} Next\n\nB.\n',
+                             ['heading-number'])
+        for first, second in [('I.', 'K.'), ('V.', 'I.'), ('X.', 'IX.')]:
+            self.assertCodes(f'# T\n\nOverview.\n\n## {first} Start\n\nA.\n\n## {second} Next\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 2.0 migration\n\nA.\n\n## 3.0 migration\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 2026-10-30 review\n\nA.\n\n## 2026-10-31 review\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 3 things to know\n\nA.\n\n## Other\n\nB.\n', [])
@@ -252,6 +258,19 @@ class ListRules(CheckerCase):
         self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\n**Pseudo heading**\n\nText.\n',
                          ['list-intro', 'bold-heading'])
 
+    def test_lists_and_tables_before_the_first_heading_need_introductions(self):
+        table = '| a | b |\n| - | - |\n| 1 | 2 |\n'
+        heading = '\n# T\n\nOverview.\n'
+        self.assertEqual(self.codes(f'- x\n- y\n{heading}'), [('list-intro', 1)])
+        self.assertEqual(self.codes(f'<!-- note -->\n\n{table}{heading}'), [('table-intro', 3)])
+        self.assertCodes(f'```\ncode\n```\n\n- x\n- y\n{heading}', ['list-intro'])
+        self.assertCodes('- x\n- y\n', ['h1-missing', 'list-intro'])
+        self.assertCodes(f'The values:\n\n{table}\nThe items:\n\n- x\n- y\n{heading}', [])
+        self.assertCodes('Intro:\n\n- x\n- y\n', ['h1-missing'])
+        # Changelog lists need no introduction, but tables still do.
+        self.assertEqual(self.codes(f'- x\n- y\n\n{table}\n# Changelog\n', 'CHANGELOG.md'),
+                         [('table-intro', 4)])
+
     def test_list_right_after_h1_is_an_overview_problem_only(self):
         self.assertCodes('# T\n\n- x\n- y\n', ['h1-overview'])
 
@@ -313,6 +332,17 @@ class ListRules(CheckerCase):
         self.assertEqual(self.review(labeled), ['item-name'])
         self.assertCodes('# T\n\nOverview.\n\nScope:\n\n- In: x\n- Out: y\n\n'
                          'Steps:\n\n1. **Settings** 메뉴를 연다.\n1. **Save**를 누른다.\n', [])
+
+    def test_numbered_steps_take_no_part_in_name_nesting(self):
+        # Neither a step's leading bold nor bold in steps below a named item is a name.
+        self.assertCodes('# T\n\nOverview.\n\nSteps:\n\n1. **Settings** opens the panel.\n'
+                         '   - **Theme**: choose one.\n   - **Font**: choose one.\n1. Close it.\n', [])
+        self.assertCodes('# T\n\nOverview.\n\nTasks:\n\n- **Setup**: in steps.\n'
+                         '  1. **Open** the panel.\n  1. **Save** it.\n- **Use**: run it.\n', [])
+        # Named items below the steps still count for the named item above them.
+        self.assertCodes('# T\n\nOverview.\n\nTasks:\n\n- **Setup**: in steps.\n'
+                         '  1. Open the panel.\n     - **Theme**: choose one.\n     - plain\n'
+                         '  1. Save it.\n- **Use**: run it.\n', ['name-nesting', 'list-depth-3'])
 
     def test_name_forms_are_compared_per_topic(self):
         text = ('# T\n\nOverview.\n\n## Topic A\n\nOverview.\n\n### One\n\nList:\n\n- **a**: x\n- **b**: y\n\n'

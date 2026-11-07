@@ -449,34 +449,40 @@ def clause_breaks(text: str) -> list[int]:
     return breaks
 
 
-def section_number(text: str, parent: str | None = None) -> tuple[str, int] | None:
-    """Return the numbering style and last number of a heading's section number.
+def section_number(text: str, parent: str | None = None) -> list[tuple[str, int]]:
+    """Return the possible numbering styles and last numbers of a heading's section number.
 
     Only forms that cannot be subject numbers count: numbers followed by a
     period or parenthesis, such as "2." and "2.1.", and dotted numbers that
     extend such a number in the parent heading, such as "2.1" under "2. Scope".
     A bare number such as a year, a count, or a version stays with the subject,
     and so does a dotted number under it, such as "1.4.1" under "1.4".
+    A single letter that is also a Roman numeral, such as "I." or "V.", has
+    both readings, so it continues "H." as well as it precedes "II.".
     """
     m = SECTION_NUMBER.match(text)
     if not m:
-        return None
+        return []
     if m['arabic']:
         head, _, last = m['arabic'].rpartition('.')
         parent_match = SECTION_NUMBER.match(parent or '')
         extends_parent = (bool(head) and parent_match is not None
                           and parent_match['arabic'] == head and parent_match['punct'] is not None)
         if not (m['punct'] or extends_parent):
-            return None
-        return f'arabic{m["arabic"].count(".")}', int(last)
+            return []
+        return [(f'arabic{m["arabic"].count(".")}', int(last))]
+    found = []
     if m['alpha']:
-        return 'alpha', ord(m['alpha']) - ord('A') + 1
-    total, last = 0, 0
-    for ch in reversed(m['roman']):
-        value = ROMAN[ch]
-        total += -value if value < last else value
-        last = max(last, value)
-    return 'roman', total
+        found.append(('alpha', ord(m['alpha']) - ord('A') + 1))
+    numeral = m['alpha'] if m['alpha'] in ROMAN else m['roman']
+    if numeral:
+        total, last = 0, 0
+        for ch in reversed(numeral):
+            value = ROMAN[ch]
+            total += -value if value < last else value
+            last = max(last, value)
+        found.append(('roman', total))
+    return found
 
 
 def github_slug(text: str) -> str:
@@ -600,7 +606,7 @@ class FileCheck:
         """
         numbers = [section_number(h.text, parent.text if parent else None) for h in siblings]
         for (a, b) in zip(numbers, numbers[1:]):
-            if a and b and a[0] == b[0] and b[1] == a[1] + 1:
+            if any(x[0] == y[0] and y[1] == x[1] + 1 for x in a for y in b):
                 first = next(h for h, n in zip(siblings, numbers) if n)
                 count = sum(1 for n in numbers if n)
                 self.report('heading-number', first.node,
@@ -824,13 +830,16 @@ class FileCheck:
         for block in self.blocks:
             if is_heading_like_emphasis(block):
                 self.report('bold-heading', block, f'"{block_text(block)}"')
+        # Blocks before the first heading have no heading that could introduce them.
+        lead = self.blocks[:self.headings[0].index] if self.headings else self.blocks
+        self.check_list_intros(None, meaningful(lead))
         for h in self.headings:
-            self.check_list_intros(h)
+            self.check_list_intros(h, meaningful(h.region))
 
-    def check_list_intros(self, h: Heading) -> None:
+    def check_list_intros(self, h: Heading | None, blocks: list[SyntaxTreeNode]) -> None:
         """Check that lists and tables start with an introductory paragraph."""
-        blocks = meaningful(h.region)
-        needs_overview = not self.is_changelog and (h.level == 1 or (h.level == 2 and h.is_topic))
+        needs_overview = (h is not None and not self.is_changelog
+                          and (h.level == 1 or (h.level == 2 and h.is_topic)))
         for pos, block in enumerate(blocks):
             if block.type in LIST_TYPES:
                 if self.is_changelog:
@@ -845,6 +854,9 @@ class FileCheck:
                 continue
             if previous is None and needs_overview:
                 continue  # The missing overview is reported for the heading.
+            if previous is None and h is None:
+                self.report(code, start_line(block), f'{what} starts the file without an introductory paragraph')
+                continue
             if previous is None:
                 # Changelogs waive overviews, but a table still needs an
                 # introduction unless a leaf section below H1 introduces it.
@@ -898,13 +910,13 @@ class FileCheck:
                 self.report('list-length', node, f'{len(items)} items without mechanical order')
         numbered = node.type == 'ordered_list'
         for item in items:
-            named = name_of(item)
+            # A numbered step is labeled by its position, so its leading text,
+            # such as a bold UI label, is not a name.
+            named = None if numbered else name_of(item)
             descendant = first_named_descendant(item)
             if named:
-                # Link text follows its target's title, so it is not a form choice,
-                # and a numbered step is labeled by its position, so leading bold
-                # text in it, such as a UI label, is not one either.
-                if named[0] != 'link' and not numbered:
+                # Link text follows its target's title, so it is not a form choice.
+                if named[0] != 'link':
                     forms.setdefault(named[0], []).append(start_line(item))
                 if descendant:
                     self.report('name-nesting', item,
@@ -914,8 +926,7 @@ class FileCheck:
                 self.check_item_block(item, named, descendant, named_ancestor)
             for child in item.children:
                 if child.type in LIST_TYPES:
-                    self.walk_list(child, depth + 1, deepest, forms,
-                                   named[1] if named and not numbered else named_ancestor)
+                    self.walk_list(child, depth + 1, deepest, forms, named[1] if named else named_ancestor)
 
     def check_item_block(self, item: SyntaxTreeNode, named, descendant, ancestor: str | None) -> None:
         """Treat an unnumbered list item of several sentences as a block that deserves a name.
@@ -1191,11 +1202,12 @@ def relative(target: Path, source: Path) -> str:
 
 
 def first_named_descendant(item: SyntaxTreeNode) -> tuple[int, str] | None:
+    """Return (line, name) of the first named item nested in an item, skipping numbered steps."""
     for child in item.children:
         if child.type not in LIST_TYPES:
             continue
         for sub in child.children:
-            named = name_of(sub)
+            named = name_of(sub) if child.type == 'bullet_list' else None
             if named:
                 return start_line(sub), named[1]
             found = first_named_descendant(sub)
