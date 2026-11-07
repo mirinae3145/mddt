@@ -72,6 +72,13 @@ class FileAndHeadingRules(CheckerCase):
         self.assertCodes('## Only part\n\nText.\n', ['h1-missing'])
         self.assertCodes('# A\n\nOverview.\n\n# B\n\nOverview.\n', ['h1-multiple'])
 
+    def test_byte_order_mark_is_not_content(self):
+        bom = '﻿'
+        self.assertCodes(f'{bom}# Title\n\nOverview.\n', [])
+        self.assertCodes(f'{bom}## Only part\n\nText.\n', ['h1-missing'])
+        # Front matter after the mark is still front matter, not a list.
+        self.assertCodes(f'{bom}---\ntags:\n  - a\n---\n# Title\n\nOverview.\n', [])
+
     def test_h1_overview_ignores_badges_and_comments(self):
         badge = '[![b](x.svg)](https://example.com/y)'
         self.assertCodes(f'# T\n\n{badge}\n\n<!-- note -->\n\nOverview.\n', [])
@@ -378,6 +385,24 @@ class ProseRules(CheckerCase):
         self.assertCodes('# T\n\n보관함을 스캔한다. `tool scan PATH`\n', [])
         self.assertCodes('# T\n\nAsk the U.S. Office and call foo. bar handles it.\n', [])
 
+    def test_comments_spanning_lines_are_not_prose(self):
+        self.assertCodes('# T\n\nOverview sentence. <!-- note on the\nnext line. Then Another note -->\n', [])
+        self.assertCodes('# T\n\nOverview sentence. <!-- note on the -->\nnext line. Then Another note.\n',
+                         ['line-sentences'])
+        words = ' '.join(['word'] * 20)
+        self.assertCodes(f'# T\n\nShort text <!-- {words}\n{words} --> ends here.\n', [])
+        self.assertCodes(f'# T\n\nShort text <!-- {words} -->\n{words} ends here.\n', [])
+        self.assertCodes(f'# T\n\nShort text {words}\n{words} ends here.\n', ['sentence-length'])
+
+    def test_lines_are_counted_as_markdown_counts_them(self):
+        # U+2028 and similar characters do not end a line, so later findings keep their lines.
+        for separator in (' ', '\u0085', '\x0c', '\x1c'):
+            with self.subTest(separator=repr(separator)):
+                self.assertEqual(self.codes(f'# T\n\nOverview{separator}here.\n\nOne line. Two Lines.\n'),
+                                 [('line-sentences', 5)])
+        self.assertEqual(self.codes('# T\r\n\r\nOverview.\r\n\r\nOne line. Two Lines.\r\n'),
+                         [('line-sentences', 5)])
+
 
 class SentenceUnits(CheckerCase):
     LEFT = 'The worker reads every input file from the local folder before it starts the scheduled validation process'
@@ -452,7 +477,8 @@ class SentenceUnits(CheckerCase):
         right = f'{self.RIGHT} and keeps every previous result in a separate directory for later review'
         texts = [f'The build failed; {right}.', f'The build failed;\n{right}.',
                  f'The build failed:\n{right}.', f'The build failed &mdash;\n  {right}.']
-        for result, line in zip(self.findings(texts), (3, 4, 4, 4)):
+        texts.append(f'The build failed;  \n{right}.')
+        for result, line in zip(self.findings(texts), (3, 4, 4, 4, 4)):
             self.assertEqual([(d['code'], d['line']) for d in result], [('sentence-length', line)])
             self.assertIn('sentence unit has 27 words', result[0]['message'])
 
@@ -962,6 +988,11 @@ class Interface(CheckerCase):
         ok = self.write('ok.md', '# T\n\nOverview.\n\n## Part\n\nText.\n')
         self.assertNotIn('outline', run(str(ok)).stdout)
         outline = run('--outline', str(ok)).stdout
+        self.assertIn('H1 T  [7 lines; overview]', outline)
+        self.assertIn('H2 Part  [3 lines; part]', outline)
+        # A last line without a line break still counts once.
+        unterminated = self.write('end.md', '# T\n\nOverview.\n\n## Part\n\nText.')
+        outline = run('--outline', str(unterminated)).stdout
         self.assertIn('H1 T  [7 lines; overview]', outline)
         self.assertIn('H2 Part  [3 lines; part]', outline)
         bad = self.write('bad.md', '# T\n')

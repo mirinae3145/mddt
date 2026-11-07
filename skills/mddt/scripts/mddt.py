@@ -495,8 +495,14 @@ class FileCheck:
     def __init__(self, path: str, text: str):
         self.path = path
         self.is_changelog = bool(CHANGELOG_NAME.fullmatch(Path(path).name))
+        # A byte order mark is not content, and GitHub renders the file without it.
+        text = text.removeprefix('﻿')
         self.text = text
-        self.lines = text.splitlines()
+        # Lines end only where markdown-it ends them, so that node.map indexes them;
+        # str.splitlines() would also split at characters such as U+2028.
+        self.lines = re.sub(r'\r\n?', '\n', text).split('\n')
+        if self.lines[-1] == '':
+            self.lines.pop()
         self._links: list[tuple[str, int, bool]] | None = None
         self.line_count = len(self.lines)
         self.root = SyntaxTreeNode(parser().parse(text))
@@ -601,6 +607,17 @@ class FileCheck:
                             f'"{first.text}" and {count - 1} more sibling heading(s) carry section numbers')
                 return
 
+    def paragraph_lines(self, paragraph: SyntaxTreeNode) -> dict[int, str]:
+        """Return a paragraph's source lines by index, with comments that span lines blanked.
+
+        clean_prose removes comments line by line, so a comment that continues
+        on later lines would otherwise count as prose there.
+        """
+        first, last = paragraph.map
+        text = '\n'.join(self.lines[first:last])
+        text = re.sub(r'<!--.*?-->', lambda m: re.sub(r'[^\n]', ' ', m.group()), text, flags=re.S)
+        return dict(enumerate(text.split('\n'), first))
+
     def sentences(self, paragraph: SyntaxTreeNode, *, units: bool = False) -> list[tuple[int, int]]:
         """Return (first line, word count) for each sentence of a paragraph.
 
@@ -619,7 +636,7 @@ class FileCheck:
                 piece = text[a:b]
                 words = count_words(piece.replace(' X ', ' '))
                 if words:
-                    leading = next(i for i, line in enumerate(piece.splitlines())
+                    leading = next(i for i, line in enumerate(piece.split('\n'))
                                    if count_words(line.replace(' X ', ' ')))
                     line = pending[0][0] + text[:a].count('\n') + leading
                     found.append((line, words))
@@ -628,8 +645,7 @@ class FileCheck:
         first, last = paragraph.map
         item = paragraph.parent
         named = name_of(item) if (units and item.type == 'list_item' and item.children[0] is paragraph) else None
-        for no in range(first, last):
-            raw = self.lines[no]
+        for no, raw in self.paragraph_lines(paragraph).items():
             raw = CONTAINER_PREFIX.sub('', raw) if no == first else re.sub(r'^\s*(?:>\s?)*', '', raw)
             text = clean_prose(raw, placeholder='X', units=units)
             if no == first and named:
@@ -656,9 +672,8 @@ class FileCheck:
         for node in self.root.walk():
             if node.type != 'paragraph' or not node.map or is_badge_paragraph(node):
                 continue
-            first, last = node.map
-            for no in range(first, last):
-                text = clean_prose(CONTAINER_PREFIX.sub('', self.lines[no]), placeholder='X')
+            for no, line in self.paragraph_lines(node).items():
+                text = clean_prose(CONTAINER_PREFIX.sub('', line), placeholder='X')
                 if sentence_breaks(text):
                     self.report('line-sentences', no + 1, 'line holds more than one sentence')
             found = self.sentences(node, units=True)
