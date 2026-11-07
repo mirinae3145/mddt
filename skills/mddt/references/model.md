@@ -121,6 +121,7 @@ The following criteria adjust that default.
   A default rule with nested exceptions and a set of independent rules stay lists.
   Put the condition columns on the left in the order they are decided, and the result column on the right.
   Mark a condition that no longer matters with a dash, cover every combination exactly once, and give each row one result.
+  If the source leaves an outcome unresolved, mark it as unspecified instead of supplying a policy during restructuring.
 
 ## Siblings
 

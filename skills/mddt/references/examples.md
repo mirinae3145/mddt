@@ -326,15 +326,17 @@ After:
 ```markdown
 The tool decides what to do with each file as follows:
 
-| Target exists | Target is newer | `--keep` set | Action |
+| Target exists | Age compared with source | `--keep` set | Action |
 | --- | --- | --- | --- |
-| No | — | — | Copy |
-| Yes | Yes | — | Skip |
-| Yes | No | No | Overwrite |
-| Yes | No | Yes | Rename the old file, then copy |
+| No | &mdash; | &mdash; | Copy |
+| Yes | Newer | &mdash; | Skip |
+| Yes | Equal | &mdash; | Unspecified in source |
+| Yes | Older | No | Overwrite |
+| Yes | Older | Yes | Rename the old file, then copy |
 ```
 
 The condition columns follow the order of the decision, a dash marks a condition that no longer matters, and each row has one result.
+The equal-timestamp row records a missing decision, so the table does not claim that the policy is complete.
 
 ## Links between documents
 

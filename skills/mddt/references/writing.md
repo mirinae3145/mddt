@@ -3,6 +3,7 @@
 This procedure applies the [document model](model.md) when creating a document, adding, moving, or removing content in one, or restructuring a tree.
 It covers placing a document in the tree, choosing forms, and rules for new writing.
 It also covers growing and shrinking structure, restructuring an existing tree, and checking the result.
+This includes preserving link targets and exposing gaps in source material before changing its form.
 The model holds the rules, and this document adds only the steps and the rules that apply only when writing.
 
 ## Placing a document
@@ -31,6 +32,10 @@ The placement takes these steps:
 Start from each block's information type and its [default form](kinds.md#default-forms).
 Then adjust with the criteria in [sections, lists, and tables](model.md#sections-lists-and-tables).
 When a choice stays unclear, compare with the [examples](examples.md).
+
+For existing content, compare the facts and conditions before and after changing its form.
+A decision table must expose every case, including cases the source leaves unresolved.
+Do not turn a missing case into a policy; ask for the missing decision or mark its outcome as unspecified.
 
 The same content can be a topic with sections or a list with names.
 A short set of parallel options reads best as a list:
