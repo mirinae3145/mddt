@@ -486,6 +486,13 @@ class SentenceUnits(CheckerCase):
         for result in self.findings(texts):
             self.assertEqual([d['code'] for d in result], ['sentence-length'])
 
+    def test_a_side_read_as_several_sentences_is_not_one_clause(self):
+        # A lowercase word after "!" starts no sentence unit, so the parser
+        # receives a side that it reads as two sentences.
+        left = 'The worker reads every input file from the local folder{} then starts the scheduled validation process'
+        found = self.findings([f'{left.format("! it")}; {self.RIGHT}.', f'{left.format(" and")}; {self.RIGHT}.'])
+        self.assertEqual([[d['code'] for d in ds] for ds in found], [['sentence-length'], []])
+
     def test_inserted_phrases_and_bracketed_clauses_stay_with_the_sentence(self):
         texts = [
             'The worker—a small Python module maintained by our team—reads every input file '

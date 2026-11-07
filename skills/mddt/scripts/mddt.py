@@ -401,10 +401,12 @@ def independent_clause(text: str) -> bool:
     one punctuation-linked clause to another as evidence of subordination.
     Subjects may be omitted in imperative instructions, but not in fragments
     such as "runs locally". A subordinate clause alone is not independent.
+    A span that the parser reads as several sentences, such as one holding
+    "files! it", is not one clause either.
     """
     doc = english_parser()(re.sub(r'[*_~]', ' ', text).strip())
     roots = [t for t in doc if t.dep_ == 'ROOT']
-    if len(roots) != 1:  # pragma: no cover - parser output; which inputs give several roots depends on the model
+    if len(roots) != 1:
         return False
     root = roots[0]
     children = list(root.children)
