@@ -133,10 +133,6 @@ Links in the checked files are resolved as follows, while images and links writt
   An example is `https://github.com/owner/name/blob/main/CONTRIBUTING.md`.
   The repository is the one whose `origin` remote is on GitHub, and links to commits or tags are left alone.
   This lets a README use full URLs, as packages often need, and still place its children in the tree.
-
-  Branch names must exist in local or `origin` remote-tracking refs, including when HEAD is detached.
-  Fetch the branches used by document links before checking; with `actions/checkout`, set `fetch-depth: 0` to fetch all branches.
-  Links whose refs are unavailable locally are left alone.
 - **Not resolved**: Other URLs with a scheme and absolute paths are left alone, since their base depends on where the documents are served.
   Anchors are also left alone when the link has a query, such as `?plain=1`, or its target is not a Markdown file.
 - **Linked trees**: A target reached through a symbolic link, such as a linked repository, is checked only for existence.
