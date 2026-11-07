@@ -40,6 +40,7 @@ The following rules cover the two roles, the form of headings, and the movement 
 
 - **Topics and parts**: An H2 with H3 children is a topic; an H2 without them is a part of the file's topic.
   The H3 sections of a topic are that topic's parts.
+  A file with at least one topic H2 is a topic set, even when it keeps parts of its own.
   A topic H2 has its own overview paragraph before its first H3. <!-- code: topic-overview -->
 - **Parts come first**: A parent topic's own parts come before its subtopics, unless sections from the first subtopic on follow a date or number [order](#length-and-order). <!-- code: part-after-topic -->
   Readers find such sections by their keys, such as the dates of a history, so parts may follow subtopics there.
@@ -72,7 +73,7 @@ Prose follows these rules about lines, paragraphs, and sentences.
   Four or more paragraphs in a row without a list, table, heading, or code block suggest structure that has not been made visible.
 - **Sentence length**: A sentence unit usually has at most 25 words, counted as whitespace-separated tokens that contain a letter or digit. <!-- code: sentence-length -->
   A long unit can usually be split, or holds content that belongs in separate sections.
-  Languages written without spaces between words are not measured.
+  Languages written without spaces between words are not measured meaningfully.
 - **Condition placement**: A condition that decides whether an instruction applies comes before the instruction, so readers it does not concern can skip it.
   An exception to a rule that almost always applies comes after the rule.
 
