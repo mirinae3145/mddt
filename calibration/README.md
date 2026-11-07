@@ -34,7 +34,8 @@ The outputs are AI-generated test material, not documentation of mddt, and the c
 
 ## Results
 
-[`measure.py`](measure.py) computes each measure's distribution with the checker's own parsing:
+[`measure.py`](measure.py) computes each measure's distribution with the checker's own parsing.
+It counts whole sentences, as the checker did at the time, not the sentence units that the length checks now use:
 
 ```bash
 uv run calibration/measure.py calibration/outputs

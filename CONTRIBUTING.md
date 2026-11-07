@@ -8,10 +8,10 @@ The skill is meant for any agent and repository, so keep it independent of perso
 
 What to read before a change depends on which files it touches:
 
-- **Skill and tests**: A change inside `skills/mddt/` or `tests/` needs the whole repository.
-  The rule text, checker, registry, fix guidance, tests, and summaries depend on one another.
+- **Skill and code**: A change inside `skills/mddt/` or `tests/`, or to `calibration/measure.py`, needs the whole repository.
+  The rule text, checker, registry, fix guidance, tests, summaries, and measurement script depend on one another.
   Reading only the touched files can leave them out of step.
-  The license texts and the material in `calibration/` beyond its [README](calibration/README.md) can be skipped, since that material records one past round.
+  The license texts and the calibration inputs and outputs can be skipped, since they record one past round.
 - **Repository documents**: A change to another document, such as README or this guide, needs the skill's reference documents.
   The repository's documents follow the model, as [self-conformance](#self-conformance) describes, and the checker covers only part of it.
   The change also needs the documents that the changed text summarizes or that summarize it.
@@ -38,16 +38,18 @@ Choices that depend on meaning, such as whether content belongs in a section, li
 
 ## Changing a rule
 
-Each rule is stated once for writers and once for the checker, and a few documents point to those statements.
+Each rule is stated once for writers and once for the checker, and other documents point to those statements or restate them.
 A change to a rule updates these together:
 
 - **Rule text**: the rule in the skill's reference documents, with its code marker, and its entry in `references/terms.md` when the rule defines a term.
 - **Checker**: the detection and constants in `mddt.py`, and the code's entries in `rules.toml` and `fixes.toml`.
 - **Summaries**: the overview of `model.md`, which `SKILL.md` and README condense, when what the model covers changes.
 - **Checker reference**: `references/checker.md`, which README, `SKILL.md`, and `--help` point to, when options, file selection, output, or exit statuses change.
+- **Restatements**: passages that repeat the rule in other words, such as the examples in `references/examples.md`, the guarantees table in `references/reading.md`, and the limit of seven in `references/writing.md`.
 
 Tests also check that the numbers in `model.md` and in `rules.toml` summaries match the checker's constants, and that the checker reference lists every option.
-The calibration material records one past round, so it is not updated when a rule changes.
+The calibration inputs and outputs record one past round, so they are not updated when a rule changes.
+`calibration/measure.py` imports the checker's internals, so a change to the names it uses updates it as well.
 
 ## Self-conformance
 

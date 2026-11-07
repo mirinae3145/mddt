@@ -10,7 +10,9 @@ Usage: uv run calibration/measure.py calibration/outputs
 
 Each subfolder of the given folder is one document set; the report gives
 percentiles per set and per language suffix (-en, -ko), using the checker's
-own parsing so that the numbers match what its codes measure.
+own parsing. Sentences are counted whole, as the checker counted them at the
+time of the round, not split into the sentence units that the length checks
+now use, so the numbers stay comparable with the published results.
 """
 import json, sys
 from collections import defaultdict

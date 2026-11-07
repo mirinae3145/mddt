@@ -50,7 +50,7 @@ A run without findings therefore does not show that a document conforms to the m
 
 Changelogs are checked with exceptions that preserve their release structure, as [common uses](skills/mddt/references/uses.md#repository-documentation) describes.
 Its length checks use a local English parsing model to count independent clauses joined by semicolons, colons, or dashes separately.
-Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes.
+Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes, before the length checks counted such clauses separately.
 
 The [checker reference](skills/mddt/references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
 The checker does not cover formatting, which a repository's own Markdown linter can check.
@@ -69,14 +69,14 @@ They are also where the judgment rules are applied, so skipping them leaves only
 
 The checker counts words as whitespace-separated tokens that contain a letter or digit.
 Its [sentence units](skills/mddt/references/model.md#paragraphs-and-sentences) differ from grammatical sentences, and their boundaries depend partly on the English parsing model.
-Its length thresholds were calibrated with English documents written to the model.
+Its length thresholds were calibrated on whole sentences in English documents written to the model, so their fit to sentence units remains open.
 Sentence boundaries inside a line are recognized after Korean sentence endings and full-width stops and before capital letters, so other languages may get incomplete `line-sentences` findings.
 Languages written without spaces between words, such as Chinese, Japanese, and Thai, are not measured meaningfully.
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for what to read before a change, how the checker is organized, and what to update when a rule changes.
-It also says how the repository applies the skill to itself, how files are licensed, and how to run the tests.
+It also says how the repository applies the skill to itself, how files are licensed, and how to verify changes.
 
 ## License
 
