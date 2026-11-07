@@ -92,7 +92,7 @@ uvx coverage@7.17.2 combine
 uvx coverage@7.17.2 report -m --fail-under=100
 ```
 
-The coverage run starts the checker with `python -m coverage` in an environment built from the script's dependencies.
+The coverage run builds one environment from the script's dependencies and starts each checker run in it with `python -m coverage`.
 It skips uv's script mode and the script's Python requirement, so the plain run remains the check that the documented command works.
 
 Code that the tests do not reach is handled as follows:
