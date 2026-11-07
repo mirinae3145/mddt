@@ -195,10 +195,10 @@ rule = "model.md#files-and-topics"
 severity = "info"
 group = "structure"
 summary = "list item of several sentences has no name"
-rule = "model.md#names"
+rule = "model.md#lists"
 
 [nested-block]
 severity = "info"
 group = "structure"
 summary = "list item of several sentences is nested with named items"
-rule = "model.md#names"
+rule = "model.md#lists"
