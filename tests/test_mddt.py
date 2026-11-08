@@ -1,6 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Taeha Shin
 # SPDX-License-Identifier: MIT
 """Behavioral checks through the checker's command-line interface."""
+import atexit
+import functools
+import ast
 import json
 import os
 from pathlib import Path
@@ -18,20 +21,44 @@ SCRIPT = SCRIPTS / 'mddt.py'
 COVERAGE = 'coverage==7.17.2'
 
 
+@functools.cache
+def coverage_python():
+    """Build one environment for the coverage run and return its interpreter.
+
+    The environment holds the script's dependencies from its inline metadata
+    and the pinned coverage, so the network is used once per test run rather
+    than once per checker run.
+    """
+    folder = Path(tempfile.mkdtemp(prefix='mddt-coverage-'))
+    atexit.register(shutil.rmtree, folder, ignore_errors=True)
+    python = folder / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+    for command in (['uv', 'venv', '--quiet', str(folder)],
+                    ['uv', 'pip', 'install', '--quiet', '--python', str(python),
+                     '--requirements', str(SCRIPT), COVERAGE]):
+        result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode:
+            raise RuntimeError(f'cannot build the coverage environment:\n{result.stderr}')
+    return python
+
+
 def run(*args, cwd=None, env=None, uv='uv'):
     """Run the checker as a user would, optionally under coverage measurement.
 
     With MDDT_COVERAGE set, each run appends branch coverage data to
     .coverage.* files at the repository root, which `coverage combine` merges.
-    The dependencies still come from the script's inline metadata.
+    The runs share the environment that coverage_python() builds.
     """
     if os.environ.get('MDDT_COVERAGE'):
-        command = [uv, 'run', '--quiet', '--with', COVERAGE, '--with-requirements', str(SCRIPT),
-                   'python', '-m', 'coverage', 'run', '--branch', '--parallel-mode',
+        command = [str(coverage_python()), '-m', 'coverage', 'run', '--branch', '--parallel-mode',
                    f'--data-file={ROOT / ".coverage"}', f'--include={SCRIPT}', str(SCRIPT)]
     else:
         command = [uv, 'run', '--quiet', str(SCRIPT)]
-    return subprocess.run([*command, *args], capture_output=True, text=True, cwd=cwd, env=env)
+    result = subprocess.run([*command, *args], capture_output=True, text=True, cwd=cwd, env=env)
+    # The checker prints its findings before it exits with 1, so a run without
+    # output failed before the checker finished, such as a failed download.
+    if result.returncode == 1 and not result.stdout:
+        raise AssertionError(f'the checker run failed without output:\n{result.stderr}')
+    return result
 
 
 class CheckerCase(unittest.TestCase):
@@ -72,6 +99,13 @@ class FileAndHeadingRules(CheckerCase):
         self.assertCodes('## Only part\n\nText.\n', ['h1-missing'])
         self.assertCodes('# A\n\nOverview.\n\n# B\n\nOverview.\n', ['h1-multiple'])
 
+    def test_byte_order_mark_is_not_content(self):
+        bom = '﻿'
+        self.assertCodes(f'{bom}# Title\n\nOverview.\n', [])
+        self.assertCodes(f'{bom}## Only part\n\nText.\n', ['h1-missing'])
+        # Front matter after the mark is still front matter, not a list.
+        self.assertCodes(f'{bom}---\ntags:\n  - a\n---\n# Title\n\nOverview.\n', [])
+
     def test_h1_overview_ignores_badges_and_comments(self):
         badge = '[![b](x.svg)](https://example.com/y)'
         self.assertCodes(f'# T\n\n{badge}\n\n<!-- note -->\n\nOverview.\n', [])
@@ -91,6 +125,12 @@ class FileAndHeadingRules(CheckerCase):
         self.assertCodes('# T\n\nOverview.\n\n## 1. Start\n\nA.\n\n## 2. Next\n\nB.\n', ['heading-number'])
         self.assertCodes('# T\n\nOverview.\n\n## A. Start\n\nA.\n\n## B. Next\n\nB.\n', ['heading-number'])
         self.assertCodes('# T\n\nOverview.\n\n## III. Start\n\nA.\n\n## IV. Next\n\nB.\n', ['heading-number'])
+        # A single letter that is also a Roman numeral is read both ways.
+        for first, second in [('I.', 'II.'), ('V.', 'VI.'), ('X.', 'XI.'), ('H.', 'I.'), ('C)', 'D)')]:
+            self.assertCodes(f'# T\n\nOverview.\n\n## {first} Start\n\nA.\n\n## {second} Next\n\nB.\n',
+                             ['heading-number'])
+        for first, second in [('I.', 'K.'), ('V.', 'I.'), ('X.', 'IX.')]:
+            self.assertCodes(f'# T\n\nOverview.\n\n## {first} Start\n\nA.\n\n## {second} Next\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 2.0 migration\n\nA.\n\n## 3.0 migration\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 2026-10-30 review\n\nA.\n\n## 2026-10-31 review\n\nB.\n', [])
         self.assertCodes('# T\n\nOverview.\n\n## 3 things to know\n\nA.\n\n## Other\n\nB.\n', [])
@@ -245,6 +285,19 @@ class ListRules(CheckerCase):
         self.assertCodes('# T\n\nOverview.\n\n## Items\n\n- x\n- y\n\n**Pseudo heading**\n\nText.\n',
                          ['list-intro', 'bold-heading'])
 
+    def test_lists_and_tables_before_the_first_heading_need_introductions(self):
+        table = '| a | b |\n| - | - |\n| 1 | 2 |\n'
+        heading = '\n# T\n\nOverview.\n'
+        self.assertEqual(self.codes(f'- x\n- y\n{heading}'), [('list-intro', 1)])
+        self.assertEqual(self.codes(f'<!-- note -->\n\n{table}{heading}'), [('table-intro', 3)])
+        self.assertCodes(f'```\ncode\n```\n\n- x\n- y\n{heading}', ['list-intro'])
+        self.assertCodes('- x\n- y\n', ['h1-missing', 'list-intro'])
+        self.assertCodes(f'The values:\n\n{table}\nThe items:\n\n- x\n- y\n{heading}', [])
+        self.assertCodes('Intro:\n\n- x\n- y\n', ['h1-missing'])
+        # Changelog lists need no introduction, but tables still do.
+        self.assertEqual(self.codes(f'- x\n- y\n\n{table}\n# Changelog\n', 'CHANGELOG.md'),
+                         [('table-intro', 4)])
+
     def test_list_right_after_h1_is_an_overview_problem_only(self):
         self.assertCodes('# T\n\n- x\n- y\n', ['h1-overview'])
 
@@ -307,11 +360,50 @@ class ListRules(CheckerCase):
         self.assertCodes('# T\n\nOverview.\n\nScope:\n\n- In: x\n- Out: y\n\n'
                          'Steps:\n\n1. **Settings** 메뉴를 연다.\n1. **Save**를 누른다.\n', [])
 
+    def test_numbered_steps_take_no_part_in_name_nesting(self):
+        # Neither a step's leading bold nor bold in steps below a named item is a name.
+        self.assertCodes('# T\n\nOverview.\n\nSteps:\n\n1. **Settings** opens the panel.\n'
+                         '   - **Theme**: choose one.\n   - **Font**: choose one.\n1. Close it.\n', [])
+        self.assertCodes('# T\n\nOverview.\n\nTasks:\n\n- **Setup**: in steps.\n'
+                         '  1. **Open** the panel.\n  1. **Save** it.\n- **Use**: run it.\n', [])
+        # Named items below the steps still count for the named item above them.
+        self.assertCodes('# T\n\nOverview.\n\nTasks:\n\n- **Setup**: in steps.\n'
+                         '  1. Open the panel.\n     - **Theme**: choose one.\n     - plain\n'
+                         '  1. Save it.\n- **Use**: run it.\n', ['name-nesting', 'list-depth-3'])
+
     def test_name_forms_are_compared_per_topic(self):
         text = ('# T\n\nOverview.\n\n## Topic A\n\nOverview.\n\n### One\n\nList:\n\n- **a**: x\n- **b**: y\n\n'
                 '### Two\n\nList:\n\n- c: x\n- d: y\n\n'
                 '## Topic B\n\nOverview.\n\n### Three\n\nList:\n\n- e: x\n- f: y\n\n### Four\n\nText.\n')
         self.assertEqual(self.codes(text), [('name-form-mix', 20)])
+
+    def test_numbered_ui_steps_can_hold_named_bullets(self):
+        text = ('# Setup\n\nConfigure the application.\n\nSteps:\n\n'
+                '1. **Settings** opens the preferences.\n'
+                '   - **Cache**: Set the folder.\n'
+                '   - **Proxy**: Set the server.\n'
+                '1. Close the dialog.\n')
+        self.assertCodes(text, [])
+        path = self.write('doc.md', text)
+        data = json.loads(run('--format', 'json', '--outline', str(path)).stdout)
+        self.assertIn('names bold 2', '\n'.join(data['outlines'][str(path)]))
+
+    def test_numbered_ui_steps_do_not_name_descendants(self):
+        self.assertCodes('# T\n\nOverview.\n\nOptions:\n\n'
+                         '- **Cache**: Configure it using these steps.\n'
+                         '  1. **Settings** opens the preferences.\n'
+                         '  1. **Save** applies the change.\n'
+                         '- **Proxy**: Uses the system settings.\n', [])
+
+    def test_numbered_steps_do_not_hide_named_bullet_descendants(self):
+        self.assertCodes('# T\n\nOverview.\n\nOptions:\n\n'
+                         '- **Cache**: Configure it using these steps.\n'
+                         '  1. **Settings** opens the preferences.\n'
+                         '     - **Path**: Set the folder.\n'
+                         '     - Choose a size.\n'
+                         '  1. Save the change.\n'
+                         '- **Proxy**: Uses the system settings.\n',
+                         ['name-nesting', 'list-depth-3'])
 
     def test_step_ending_in_colon_is_not_a_name(self):
         self.assertCodes(
@@ -378,6 +470,64 @@ class ProseRules(CheckerCase):
         self.assertCodes('# T\n\n보관함을 스캔한다. `tool scan PATH`\n', [])
         self.assertCodes('# T\n\nAsk the U.S. Office and call foo. bar handles it.\n', [])
 
+    def test_comments_spanning_lines_are_not_prose(self):
+        self.assertCodes('# T\n\nOverview sentence. <!-- note on the\nnext line. Then Another note -->\n', [])
+        self.assertCodes('# T\n\nOverview sentence. <!-- note on the -->\nnext line. Then Another note.\n',
+                         ['line-sentences'])
+        words = ' '.join(['word'] * 20)
+        self.assertCodes(f'# T\n\nShort text <!-- {words}\n{words} --> ends here.\n', [])
+        self.assertCodes(f'# T\n\nShort text <!-- {words} -->\n{words} ends here.\n', [])
+        self.assertCodes(f'# T\n\nShort text {words}\n{words} ends here.\n', ['sentence-length'])
+
+    def test_comment_delimiters_in_code_leave_prose_checked(self):
+        for marker in ('`', '``'):
+            with self.subTest(marker=marker):
+                start = f'Start a comment with {marker}<!--{marker}.'
+                end = f'Close the comment with {marker}-->{marker}.'
+                self.assertEqual(self.codes(f'# T\n\n{start}\nWrite one sentence. Then add another.\n{end}\n'),
+                                 [('line-sentences', 4)])
+                self.assertEqual(self.codes(f'# T\n\n{start} Write another sentence. {end}\n'),
+                                 [('line-sentences', 3)])
+
+    def test_literal_comment_delimiters_keep_length_and_item_checks(self):
+        words = ' '.join(['word'] * 26)
+        self.assertEqual(self.codes(f'# T\n\nStart with `<!--`.\n{words}.\nClose with `-->`.\n'),
+                         [('sentence-length', 4)])
+        self.assertEqual(self.review('# T\n\nOverview.\n\nInstructions:\n\n'
+                                     '- Start with `<!--`.\n  Write the note.\n  Close with `-->`.\n'
+                                     '- Keep the result.\n'), ['item-name'])
+
+    def test_comments_follow_inline_markdown_context(self):
+        self.assertEqual(self.codes('# T\n\nStart with \\<!--.\n'
+                                    'Write one sentence. Then add another.\nClose with -->.\n'),
+                         [('line-sentences', 4)])
+        self.assertCodes('# T\n\nUse `<!-- hidden -->` before <!-- hidden --> the text.\n', [])
+        self.assertCodes('# T\n\nSee [the <!-- First sentence.\nSecond sentence. --> guide]'
+                         '(https://example.com).\n', [])
+        self.assertCodes('# T\n\nExample `<!--\nFirst sentence. Second sentence.\n-->` ends here.\n', [])
+        self.assertCodes('# T\n\nA real comment <!-- `First sentence.\nSecond sentence.` --> ends here.\n', [])
+        self.assertEqual(self.codes('# T\n\nA stray ` remains.\nFirst sentence. Second sentence.\n'),
+                         [('line-sentences', 4)])
+
+    def test_comments_preserve_source_lines_in_lists_and_quotes(self):
+        self.assertEqual(self.codes('# T\n\nOverview.\n\nItems:\n\n'
+                                    '- Text <!-- hidden\n  First sentence. Second sentence. --> remains.\n'
+                                    '  Next sentence. Two sentences.\n- Another item.\n'),
+                         [('line-sentences', 9)])
+        self.assertEqual(self.codes('# T\n\nOverview.\n\n'
+                                    '> Text <!-- hidden\n> First sentence. Second sentence. --> remains.\n'
+                                    '> Next sentence. Two sentences.\n'),
+                         [('line-sentences', 7)])
+
+    def test_lines_are_counted_as_markdown_counts_them(self):
+        # U+2028 and similar characters do not end a line, so later findings keep their lines.
+        for separator in (' ', '\u0085', '\x0c', '\x1c'):
+            with self.subTest(separator=repr(separator)):
+                self.assertEqual(self.codes(f'# T\n\nOverview{separator}here.\n\nOne line. Two Lines.\n'),
+                                 [('line-sentences', 5)])
+        self.assertEqual(self.codes('# T\r\n\r\nOverview.\r\n\r\nOne line. Two Lines.\r\n'),
+                         [('line-sentences', 5)])
+
 
 class SentenceUnits(CheckerCase):
     LEFT = 'The worker reads every input file from the local folder before it starts the scheduled validation process'
@@ -431,6 +581,13 @@ class SentenceUnits(CheckerCase):
         for result in self.findings(texts):
             self.assertEqual([d['code'] for d in result], ['sentence-length'])
 
+    def test_a_side_read_as_several_sentences_is_not_one_clause(self):
+        # A lowercase word after "!" starts no sentence unit, so the parser
+        # receives a side that it reads as two sentences.
+        left = 'The worker reads every input file from the local folder{} then starts the scheduled validation process'
+        found = self.findings([f'{left.format("! it")}; {self.RIGHT}.', f'{left.format(" and")}; {self.RIGHT}.'])
+        self.assertEqual([[d['code'] for d in ds] for ds in found], [['sentence-length'], []])
+
     def test_inserted_phrases_and_bracketed_clauses_stay_with_the_sentence(self):
         texts = [
             'The worker—a small Python module maintained by our team—reads every input file '
@@ -452,7 +609,8 @@ class SentenceUnits(CheckerCase):
         right = f'{self.RIGHT} and keeps every previous result in a separate directory for later review'
         texts = [f'The build failed; {right}.', f'The build failed;\n{right}.',
                  f'The build failed:\n{right}.', f'The build failed &mdash;\n  {right}.']
-        for result, line in zip(self.findings(texts), (3, 4, 4, 4)):
+        texts.append(f'The build failed;  \n{right}.')
+        for result, line in zip(self.findings(texts), (3, 4, 4, 4, 4)):
             self.assertEqual([(d['code'], d['line']) for d in result], [('sentence-length', line)])
             self.assertIn('sentence unit has 27 words', result[0]['message'])
 
@@ -628,6 +786,48 @@ class TreeRules(CheckerCase):
             subprocess.run([*git, 'remote', 'add', 'origin', origin], check=True)
             subprocess.run([*git, 'update-ref', 'refs/remotes/origin/fix/x', 'HEAD'], check=True)
 
+    def test_heading_anchors_avoid_literal_suffix_collisions(self):
+        for titles, ids in (
+                (['Foo', 'Foo-1', 'Foo'], ['foo', 'foo-1', 'foo-2']),
+                (['Foo', 'Foo', 'Foo-1', 'Foo', 'Foo-1'],
+                 ['foo', 'foo-1', 'foo-1-1', 'foo-2', 'foo-1-2'])):
+            with self.subTest(titles=titles):
+                headings = ''.join(f'## {title}\n\nContent.\n\n' for title in titles)
+                links = ' '.join(f'[section](#{anchor})' for anchor in ids)
+                self.assertEqual(self.link_findings({'README.md': f'# R\n\nOverview.\n\n{headings}{links}\n'}), [])
+
+    def test_anchor_collisions_preserve_the_target_role(self):
+        self.assertEqual(self.tree({
+            'README.md': '# R\n\nSee [part](a.md#foo-1) and [topic](a.md#foo-1-1).\n',
+            'a.md': '# A\n\nOverview.\n\n## Foo\n\nFirst.\n\n## Foo\n\nSecond.\n\n'
+                    '## Foo-1\n\nTopic overview.\n\n### One\n\nText.\n\n### Two\n\nText.\n',
+        }, '--review'), [('README.md', 'anchor-to-part')])
+
+    def test_html_elements_expose_all_anchor_attributes(self):
+        self.assertCodes('# T\n\nOverview.\n\n'
+                         '<a class="jump" id="current" name="legacy"></a>\n'
+                         '<a NAME=old ID=new />\n\n'
+                         'See [current](#current), [legacy](#legacy), [old](#old), and [new](#new).\n', [])
+
+    def test_html_comments_and_valueless_attributes_create_no_anchors(self):
+        self.assertCodes('# T\n\nOverview.\n\n'
+                         '<!-- <a id="hidden"></a> -->\n'
+                         '<a class="jump" id name></a>\n\n'
+                         'See [missing](#hidden) and [title](#t).\n', ['anchor-missing'])
+
+    def test_github_branch_links_resolve_in_a_detached_checkout_with_fetched_refs(self):
+        self.github_repo('https://github.com/owner/pkg.git')
+        git = ['git', '-C', str(self.dir)]
+        subprocess.run([*git, 'update-ref', 'refs/remotes/origin/main', 'HEAD'], check=True)
+        subprocess.run([*git, 'checkout', '--quiet', '--detach'], check=True)
+        subprocess.run([*git, 'branch', '-D', 'main'], check=True, capture_output=True)
+        # Remote-tracking refs remain available after a CI checkout detaches HEAD.
+        self.assertEqual(self.tree({
+            'README.md': '# R\n\nSee [child](https://github.com/owner/pkg/blob/main/child.md) '
+                         'and [missing](https://github.com/owner/pkg/blob/main/missing.md).\n',
+            'child.md': '# Child\n\nOverview.\n',
+        }), [('README.md', 'link-broken')])
+
     def test_github_links_to_the_own_repository_resolve(self):
         self.github_repo('git@github.com:Owner/Pkg.git')
         web = 'https://github.com/owner/pkg'
@@ -645,6 +845,22 @@ class TreeRules(CheckerCase):
         # The web links place CONTRIBUTING.md and docs/ in the tree, so neither is unlinked.
         self.assertEqual([f for f in found if f[1] in ('link-broken', 'anchor-missing', 'doc-unlinked')],
                          [('README.md', 'anchor-missing'), ('README.md', 'link-broken')])
+
+    def test_git_output_is_read_whatever_the_locale(self):
+        # Git prints UTF-8 ref names and paths as stored, while Python here
+        # decodes the locale's encoding as ASCII, like a Windows code page.
+        self.github_repo('git@github.com:owner/pkg.git')
+        subprocess.run(['git', '-C', str(self.dir), 'update-ref', 'refs/remotes/origin/문서', 'HEAD'], check=True)
+        ascii_locale = {**os.environ, 'LC_ALL': 'C', 'PYTHONCOERCECLOCALE': '0', 'PYTHONUTF8': '0'}
+        self.write('README.md', '# R\n\nSee [the notes](https://github.com/owner/pkg/blob/문서/notes.md), '
+                                'which list decisions.\n')
+        self.write('notes.md', '# Notes\n\nOverview.\n')
+        self.write('메모.md', '# Memo\n\nOverview.\n')
+        result = run('--format', 'json', str(self.dir), env=ascii_locale)
+        self.assertIn(result.returncode, (0, 1), result.stderr)
+        data = json.loads(result.stdout)
+        self.assertEqual(sorted(Path(f).name for f in data['files']), ['README.md', 'notes.md', '메모.md'])
+        self.assertNotIn(('notes.md', 'doc-unlinked'), [(Path(d['file']).name, d['code']) for d in data['diagnostics']])
 
     def test_github_links_without_a_github_origin_are_left_alone(self):
         for origin in (None, 'https://gitlab.com/owner/pkg.git'):
@@ -891,6 +1107,42 @@ class Interface(CheckerCase):
         self.assertIn(f'{a}:1', out)
         self.assertIn(f'{b}:1', out)
 
+    def check_unreadable_directory(self, nested, ignored=False):
+        if os.name == 'nt':
+            self.skipTest('POSIX directory permissions are unavailable')
+        if ignored:
+            if shutil.which('git') is None:
+                self.skipTest('git is not installed')
+            subprocess.run(['git', 'init', '--quiet', str(self.dir)], check=True)
+            self.write('.gitignore', 'blocked/\n')
+        blocked = self.dir / 'blocked'
+        blocked.mkdir()
+        (blocked / 'doc.md').write_text('# Hidden\n\nOverview.\n', encoding='utf-8')
+        blocked.chmod(0)
+        try:
+            if os.access(blocked, os.R_OK | os.X_OK):
+                self.skipTest('directory permissions do not deny this user access')
+            target = self.dir if nested else blocked
+            result = run('--format', 'json', str(target))
+            self.assertEqual(result.returncode, 0 if ignored else 2, result.stderr)
+            if ignored:
+                self.assertEqual(json.loads(result.stdout)['files'], [])
+            else:
+                self.assertEqual(result.stdout, '')
+                self.assertIn('mddt: cannot read input:', result.stderr)
+            self.assertNotIn('Traceback', result.stderr)
+        finally:
+            blocked.chmod(0o700)
+
+    def test_unreadable_directory_is_a_usage_error(self):
+        self.check_unreadable_directory(nested=False)
+
+    def test_unreadable_subdirectory_is_not_silently_skipped(self):
+        self.check_unreadable_directory(nested=True)
+
+    def test_git_ignored_unreadable_directory_is_not_entered(self):
+        self.check_unreadable_directory(nested=True, ignored=True)
+
     def test_text_output_counts_info_and_long_skip_lists(self):
         mixed = self.write('mixed.md', '# T\n\n- First sentence.\n  Second sentence.\n- short\n')
         out = run('--review', str(mixed)).stdout
@@ -913,10 +1165,24 @@ class Interface(CheckerCase):
                                  capture_output=True, text=True).stdout
             self.assertIn(f'  rule: {folder / "references/model.md"}#', out, script)
 
+    def test_output_is_utf8_whatever_the_locale(self):
+        doc = self.write('doc.md', '# 한국어 제목 →\n\nOverview.\n')
+        cp1252 = {**os.environ, 'PYTHONIOENCODING': 'cp1252'}
+        for options in (('--outline',), ('--outline', '--format', 'json')):
+            with self.subTest(options=options):
+                result = run(*options, str(doc), env=cp1252)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('H1 한국어 제목 →', result.stdout)
+
     def test_outline_is_automatic_only_with_structural_findings(self):
         ok = self.write('ok.md', '# T\n\nOverview.\n\n## Part\n\nText.\n')
         self.assertNotIn('outline', run(str(ok)).stdout)
         outline = run('--outline', str(ok)).stdout
+        self.assertIn('H1 T  [7 lines; overview]', outline)
+        self.assertIn('H2 Part  [3 lines; part]', outline)
+        # A last line without a line break still counts once.
+        unterminated = self.write('end.md', '# T\n\nOverview.\n\n## Part\n\nText.')
+        outline = run('--outline', str(unterminated)).stdout
         self.assertIn('H1 T  [7 lines; overview]', outline)
         self.assertIn('H2 Part  [3 lines; part]', outline)
         bad = self.write('bad.md', '# T\n')
@@ -1166,31 +1432,57 @@ def skill_docs():
     return [SKILL / 'SKILL.md', *sorted((SKILL / 'references').glob('*.md'))]
 
 
+def rule_markers():
+    """Return (code, document name, enclosing heading anchors) for each code marker.
+
+    Markers inside fenced code are examples, not rule markers, so they are left out.
+    """
+    found = []
+    for doc in skill_docs():
+        stack, in_fence = [], False
+        for line in doc.read_text(encoding='utf-8').splitlines():
+            if line.startswith('```'):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            if m := re.match(r'(#{1,6}) ', line):
+                level = len(m.group(1))
+                stack = [s for s in stack if s[0] < level] + [(level, slug(line.lstrip('#')))]
+            for group in CODE_COMMENT.findall(line):
+                found.extend((code.strip(), doc.name, {s[1] for s in stack}) for code in group.split(','))
+    return found
+
+
+def checker_constant(name):
+    """Evaluate a literal assigned at the top level of the checker."""
+    source = (SCRIPTS / 'mddt.py').read_text(encoding='utf-8')
+    return ast.literal_eval(re.search(rf'^{name} = (.+)$', source, re.M).group(1))
+
+
 class Registry(unittest.TestCase):
-    def test_rule_documents_mark_every_registered_code(self):
+    def test_registry_entries_hold_valid_metadata(self):
         with (SCRIPTS / 'rules.toml').open('rb') as f:
-            codes = set(tomllib.load(f))
-        marked = set()
-        for doc in skill_docs():
-            for group in CODE_COMMENT.findall(doc.read_text(encoding='utf-8')):
-                marked.update(code.strip() for code in group.split(','))
-        self.assertEqual(codes, marked)
+            registry = tomllib.load(f)
+        severities, groups = set(checker_constant('SEVERITY_ORDER')), set(checker_constant('GROUP_ORDER'))
+        for code, entry in registry.items():
+            with self.subTest(code=code):
+                self.assertEqual(set(entry), {'severity', 'group', 'summary', 'rule'})
+                self.assertIn(entry['severity'], severities)
+                self.assertIn(entry['group'], groups)
+                for key in ('summary', 'rule'):
+                    self.assertIsInstance(entry[key], str)
+                    self.assertTrue(entry[key].strip())
+
+    def test_rule_documents_mark_every_registered_code_once(self):
+        with (SCRIPTS / 'rules.toml').open('rb') as f:
+            codes = sorted(tomllib.load(f))
+        self.assertEqual(sorted(code for code, _, _ in rule_markers()), codes)
 
     def test_registry_rule_locations_hold_their_markers(self):
         with (SCRIPTS / 'rules.toml').open('rb') as f:
             registry = tomllib.load(f)
-        enclosing = {}
-        for doc in skill_docs():
-            stack, in_fence = [], False
-            for line in doc.read_text(encoding='utf-8').splitlines():
-                if line.startswith('```'):
-                    in_fence = not in_fence
-                elif not in_fence and (m := re.match(r'(#{1,6}) ', line)):
-                    level = len(m.group(1))
-                    stack = [s for s in stack if s[0] < level] + [(level, slug(line.lstrip('#')))]
-                for group in CODE_COMMENT.findall(line):
-                    for code in group.split(','):
-                        enclosing[code.strip()] = (doc.name, {s[1] for s in stack})
+        enclosing = {code: (name, anchors) for code, name, anchors in rule_markers()}
         for code, entry in registry.items():
             name, _, anchor = entry['rule'].partition('#')
             self.assertEqual(enclosing[code][0], name, code)
@@ -1203,8 +1495,10 @@ class Registry(unittest.TestCase):
         with (SCRIPTS / 'rules.toml').open('rb') as f:
             summary = {code: entry['summary'] for code, entry in tomllib.load(f).items()}
         word = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten']
+        ordinal = ['zeroth', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh']
         sentences, run_after = word[limit['MAX_SENTENCES']], word[limit['MAX_PARAGRAPH_RUN'] + 1]
         items, words = word[limit['MAX_LIST_ITEMS']], limit['MAX_WORDS']
+        heading, depth = limit['MAX_HEADING_LEVEL'], limit['MAX_LIST_DEPTH']
         for text, phrase in [
             (model, f'at most {sentences} sentence units'),
             (summary['paragraph-length'], f'more than {sentences} sentence units'),
@@ -1215,6 +1509,13 @@ class Registry(unittest.TestCase):
             (model, f'about {items} items'),
             (summary['list-length'], f'more than {items} items'),
             (summary['section-count'], f'more than {items} sibling sections'),
+            (model, f'about {items} unless in mechanical order'),
+            (model, f'headings stop at H{heading}.'),
+            (summary['heading-depth'], f'deeper than H{heading}'),
+            (model, f'Lists nest at most {word[depth]} levels'),
+            (model, f'A {ordinal[depth + 1]} level is not allowed, and a {ordinal[depth]} level is allowed'),
+            (summary['list-depth-4'], f'nested {word[depth + 1]} or more levels deep'),
+            (summary['list-depth-3'], f'nested {word[depth]} levels deep'),
         ]:
             self.assertIn(phrase, text)
 
