@@ -1,8 +1,31 @@
 # Contributing
 
-This guide covers what to read before a change, how the checker is organized, and what to update when a rule changes.
-It also covers how the repository applies the skill to itself, how files are licensed, and how to verify changes.
+This guide covers design and review priorities, preparation for changes, and maintenance of the skill and checker.
+It also covers self-conformance, licensing, and verification.
 The skill is meant for any agent and repository, so keep it independent of personal instruction sets, machine paths, and particular workflow tools.
+
+## Design and review
+
+mddt succeeds when following its model and procedures produces documents that readers can navigate and understand while preserving their meaning.
+Contributions and reviews are judged first by that purpose.
+The following concerns guide that judgment:
+
+- **Usefulness**: Rules and procedures should solve identifiable writing or reading problems.
+  Weigh their benefit against the complexity, time, and effort they add, including unnecessary fragmentation or repeated reading.
+- **Coherence**: Judge how rules work together and whether the procedures make them practical to apply.
+  Follow their consequences through a document, including cases where satisfying one rule puts pressure on another.
+  The guarantees used by the reading procedure must follow from what the writing procedure and model require.
+- **Checker support**: Detection and fix guidance should faithfully support the rules within the parser's limits.
+  Judge a suggested fix by the meaning and structure it leaves, including requirements that the checker cannot decide.
+  Keep rule text, procedures, examples, implementation, and summaries consistent when their shared meaning changes.
+- **Evidence**: Use concrete documents and counterexamples to support judgments about a rule or procedure.
+  Tests establish implementation behavior; examples, calibration, and self-conformance support only the claims they actually examine.
+  Distinguish demonstrated benefits from assumptions and untested effects, including those recorded in the [README's limits](README.md#limits).
+
+For a change, assess its effect on these concerns through the affected rules and their dependencies.
+For a review of the whole project, assess the model, procedures, checker, and supporting evidence together.
+Prioritize findings by their effect on the project's purpose, and state which concerns the review leaves unresolved.
+Passing checks and finding local implementation defects alone do not establish the quality of the overall design.
 
 ## Before a change
 
