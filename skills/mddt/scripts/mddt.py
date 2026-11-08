@@ -38,6 +38,8 @@ import unicodedata
 from urllib.parse import unquote
 
 from markdown_it import MarkdownIt
+from markdown_it.rules_inline import StateInline, html_inline
+from markdown_it.rules_inline.backticks import backtick
 from markdown_it.tree import SyntaxTreeNode
 from mdit_py_plugins.dollarmath import dollarmath_plugin
 from mdit_py_plugins.front_matter import front_matter_plugin
@@ -105,8 +107,6 @@ MAX_LIST_DEPTH = 3
 SENTENCE_END = re.compile(r'[.!?。！？:：][\'"”’)\]*_]*$')
 UNIT_END = re.compile(r'[.!?。！？][\'"”’)\]*_]*$')
 CLAUSE_SEPARATOR = re.compile(r';|(?<!\d)[:—–]|[:—–](?!\d)')
-CONTAINER_PREFIX = re.compile(r'^\s*(?:>\s?)*(?:[-*+]\s+|\d+[.)]\s+)?')
-COMMENT = re.compile(r'<!--.*?-->')
 BOUNDARY = re.compile(r'([.!?。！？])([\'"”’)\]*_]*)\s+([\'"“‘(*_]*)(\S)')
 ABBREVIATIONS = {'e.g', 'i.e', 'etc', 'vs', 'cf', 'al', 'fig', 'no', 'dr', 'mr', 'mrs', 'ms', 'st', 'approx'}
 
@@ -173,8 +173,24 @@ def load_fixes() -> dict[str, str]:
         return tomllib.load(f)
 
 
+def record_prose_span(rule):
+    """Record source spans for code and comments recognized by an inline parser rule."""
+    def record(state: StateInline, silent: bool) -> bool:
+        start, count = state.pos, len(state.tokens)
+        matched = rule(state, silent)
+        if not silent and len(state.tokens) > count:
+            token = state.tokens[-1]
+            if token.type == 'code_inline' or token.content.startswith('<!--'):
+                token.meta['prose_span'] = (start, state.pos)
+        return matched
+    return record
+
+
 def parser() -> MarkdownIt:
-    return MarkdownIt('commonmark').enable('table').use(front_matter_plugin)
+    md = MarkdownIt('commonmark').enable('table').use(front_matter_plugin)
+    md.inline.ruler.at('html_inline', record_prose_span(html_inline))
+    md.inline.ruler.at('backticks', record_prose_span(backtick))
+    return md
 
 
 def link_parser() -> MarkdownIt:
@@ -340,12 +356,11 @@ def is_heading_like_emphasis(block: SyntaxTreeNode) -> bool:
 
 
 def clean_prose(line: str, placeholder: str = '', *, units: bool = False) -> str:
-    """Remove what does not count as prose: comments, code, link targets, and URLs.
+    """Remove code, link targets, and URLs from lines whose comments are already blanked.
 
     With a placeholder, code spans become a single token and link text loses its
     sentence punctuation, which keeps sentence boundaries around them detectable.
     """
-    line = COMMENT.sub(' ', line)
     # Entities such as &rightarrow; stand for symbols, not words.
     line = re.sub(r'&(?:[A-Za-z][A-Za-z0-9]*|#\d+|#x[0-9A-Fa-f]+);',
                   lambda m: unescape(m.group()) if units and unescape(m.group()) in ';:—–' else ' ', line)
@@ -632,15 +647,23 @@ class FileCheck:
                 return
 
     def paragraph_lines(self, paragraph: SyntaxTreeNode) -> dict[int, str]:
-        """Return a paragraph's source lines by index, with comments that span lines blanked.
+        """Return a paragraph's lines by source index, with code and comments masked.
 
-        clean_prose removes comments line by line, so a comment that continues
-        on later lines would otherwise count as prose there.
+        Inline source keeps line breaks but omits list and quote prefixes.
+        Recorded spans distinguish HTML from literal delimiters in code or
+        escaped text. Code becomes a single placeholder even across lines,
+        so later line-based cleaning cannot mistake it for HTML or prose.
         """
-        first, last = paragraph.map
-        text = '\n'.join(self.lines[first:last])
-        text = re.sub(r'<!--.*?-->', lambda m: re.sub(r'[^\n]', ' ', m.group()), text, flags=re.S)
-        return dict(enumerate(text.split('\n'), first))
+        inline = paragraph.children[0]
+        text = inline.content
+        # Image-alt children have offsets in a separate source string, so use the flat tokens.
+        for token in reversed(inline.token.children):
+            if span := token.meta.get('prose_span'):
+                start, stop = span
+                blank = re.sub(r'[^\n]', ' ', text[start:stop])
+                replacement = '`X`' + blank if token.type == 'code_inline' else blank
+                text = text[:start] + replacement + text[stop:]
+        return dict(enumerate(text.split('\n'), paragraph.map[0]))
 
     def sentences(self, paragraph: SyntaxTreeNode, *, units: bool = False) -> list[tuple[int, int]]:
         """Return (first line, word count) for each sentence of a paragraph.
@@ -670,7 +693,6 @@ class FileCheck:
         item = paragraph.parent
         named = name_of(item) if (units and item.type == 'list_item' and item.children[0] is paragraph) else None
         for no, raw in self.paragraph_lines(paragraph).items():
-            raw = CONTAINER_PREFIX.sub('', raw) if no == first else re.sub(r'^\s*(?:>\s?)*', '', raw)
             text = clean_prose(raw, placeholder='X', units=units)
             if no == first and named:
                 # A label can itself be a complete clause ("Parts come
@@ -688,7 +710,7 @@ class FileCheck:
                     finish()
                 pending.append((no + 1, piece))
             ending = UNIT_END if units else SENTENCE_END
-            if ending.search(COMMENT.sub('', raw).rstrip()) or no == last - 1:
+            if ending.search(raw.rstrip()) or no == last - 1:
                 finish()
         return found
 
@@ -697,7 +719,7 @@ class FileCheck:
             if node.type != 'paragraph' or not node.map or is_badge_paragraph(node):
                 continue
             for no, line in self.paragraph_lines(node).items():
-                text = clean_prose(CONTAINER_PREFIX.sub('', line), placeholder='X')
+                text = clean_prose(line, placeholder='X')
                 if sentence_breaks(text):
                     self.report('line-sentences', no + 1, 'line holds more than one sentence')
             found = self.sentences(node, units=True)

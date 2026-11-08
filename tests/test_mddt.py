@@ -479,6 +479,46 @@ class ProseRules(CheckerCase):
         self.assertCodes(f'# T\n\nShort text <!-- {words} -->\n{words} ends here.\n', [])
         self.assertCodes(f'# T\n\nShort text {words}\n{words} ends here.\n', ['sentence-length'])
 
+    def test_comment_delimiters_in_code_leave_prose_checked(self):
+        for marker in ('`', '``'):
+            with self.subTest(marker=marker):
+                start = f'Start a comment with {marker}<!--{marker}.'
+                end = f'Close the comment with {marker}-->{marker}.'
+                self.assertEqual(self.codes(f'# T\n\n{start}\nWrite one sentence. Then add another.\n{end}\n'),
+                                 [('line-sentences', 4)])
+                self.assertEqual(self.codes(f'# T\n\n{start} Write another sentence. {end}\n'),
+                                 [('line-sentences', 3)])
+
+    def test_literal_comment_delimiters_keep_length_and_item_checks(self):
+        words = ' '.join(['word'] * 26)
+        self.assertEqual(self.codes(f'# T\n\nStart with `<!--`.\n{words}.\nClose with `-->`.\n'),
+                         [('sentence-length', 4)])
+        self.assertEqual(self.review('# T\n\nOverview.\n\nInstructions:\n\n'
+                                     '- Start with `<!--`.\n  Write the note.\n  Close with `-->`.\n'
+                                     '- Keep the result.\n'), ['item-name'])
+
+    def test_comments_follow_inline_markdown_context(self):
+        self.assertEqual(self.codes('# T\n\nStart with \\<!--.\n'
+                                    'Write one sentence. Then add another.\nClose with -->.\n'),
+                         [('line-sentences', 4)])
+        self.assertCodes('# T\n\nUse `<!-- hidden -->` before <!-- hidden --> the text.\n', [])
+        self.assertCodes('# T\n\nSee [the <!-- First sentence.\nSecond sentence. --> guide]'
+                         '(https://example.com).\n', [])
+        self.assertCodes('# T\n\nExample `<!--\nFirst sentence. Second sentence.\n-->` ends here.\n', [])
+        self.assertCodes('# T\n\nA real comment <!-- `First sentence.\nSecond sentence.` --> ends here.\n', [])
+        self.assertEqual(self.codes('# T\n\nA stray ` remains.\nFirst sentence. Second sentence.\n'),
+                         [('line-sentences', 4)])
+
+    def test_comments_preserve_source_lines_in_lists_and_quotes(self):
+        self.assertEqual(self.codes('# T\n\nOverview.\n\nItems:\n\n'
+                                    '- Text <!-- hidden\n  First sentence. Second sentence. --> remains.\n'
+                                    '  Next sentence. Two sentences.\n- Another item.\n'),
+                         [('line-sentences', 9)])
+        self.assertEqual(self.codes('# T\n\nOverview.\n\n'
+                                    '> Text <!-- hidden\n> First sentence. Second sentence. --> remains.\n'
+                                    '> Next sentence. Two sentences.\n'),
+                         [('line-sentences', 7)])
+
     def test_lines_are_counted_as_markdown_counts_them(self):
         # U+2028 and similar characters do not end a line, so later findings keep their lines.
         for separator in (' ', '\u0085', '\x0c', '\x1c'):

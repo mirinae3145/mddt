@@ -118,6 +118,7 @@ Outlines show heading levels and list statistics without topic, part, or overvie
 
 Lists inside block quotes are not checked.
 YAML front matter and HTML blocks, such as comments, are not judged as prose, and they neither introduce nor separate the blocks around them.
+Only comments parsed as HTML are excluded from prose; delimiters written as code leave the surrounding prose checked.
 
 ## Links checked
 
