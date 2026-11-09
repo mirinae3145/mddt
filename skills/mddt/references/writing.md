@@ -98,7 +98,7 @@ A part or topic that receives one may be rewritten as far as that change reaches
 
 GitHub derives a heading's ID from its text and adds `-1`, `-2`, and so on to IDs already used earlier in the file.
 A heading that changes level but keeps its text and position therefore keeps its ID.
-Adding, removing, or reordering a heading whose text repeats another in the file can shift the IDs of the later repeats.
+Adding, removing, or reordering a heading whose ID repeats another's in the file can shift the IDs of the later repeats.
 For example, swapping two sections named `Examples` exchanges which content `#examples` and `#examples-1` identify.
 The checker cannot see this, so after such a change or a rename, compare old and new IDs and repoint links to their former content.
 
@@ -110,7 +110,7 @@ Update links to the old path as [links resolve](model.md#links-between-documents
 A requested restructuring, such as bringing a repository's documents to the model for the first time, places existing content again rather than adding new content.
 It applies the other steps of this procedure in the following order, so that moves, rewrites, and checks do not undo one another:
 
-1. Read the tree from its entry document, as [choosing files](reading.md#choosing-files) describes, and run the checker on the whole collection with `--review`.
+1. Read the tree from its entry document, as [choosing files](reading.md#choosing-files) describes, and run the checker on the whole collection, adding `--review` only for that tree.
    Keep the findings as a baseline to compare the result with, not as a list of work to clear.
 1. Note the question, kind, and reader of each file and topic.
    Also note links into the tree from outside the collection, such as other repositories or instructions, which the checker cannot see.
@@ -138,14 +138,13 @@ Check the result as follows:
      Such changes include one-sentence line splits and link target updates after a move, but not a blank line, which splits a paragraph.
    - **Requested content changes**: A part or topic that received a content change the task requested is reread, even when the task otherwise only restructures.
 1. Run the checker on the files you created or changed.
-   Run it on the whole collection after removing, moving, or renaming a file or heading, or adding a repeated heading.
-   Do the same when adding or removing an entry, index, or companion parent changes which documents a parent owns.
+   Run it on the whole collection after adding, removing, moving, or renaming a file, or removing, moving, or renaming a heading.
    After adding child documents, add `--review` to see links that lack summaries.
    Information findings rest on approximate detection, so judge each one before acting on it.
 1. Fix structural findings before sentence-level ones, because structural fixes move sentences.
    Before applying a fix, judge the structure it will produce against the model, including the rules whose warnings it may raise.
    After fixing, reread each fixed part or topic whole.
-1. Run the checker once more after fixing, fix only errors that the fixes introduced, and report any that remain after one more run.
+1. Run the checker again, fix only errors that the fixes introduced, then run it a last time and report what remains.
    Judge a fix by the structure it produces, not by the number of findings.
    Keep a fix that serves the reader better even when it raises another warning, and judge that warning like any other.
    Do not undo a fix only because it raised a warning, or choose one only because it raises none.

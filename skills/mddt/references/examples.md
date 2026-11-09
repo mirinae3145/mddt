@@ -330,7 +330,8 @@ The tool decides what to do with each file as follows:
 | --- | --- | --- | --- |
 | No | &mdash; | &mdash; | Copy |
 | Yes | Newer | &mdash; | Skip |
-| Yes | Same age | &mdash; | Not specified |
+| Yes | Same age | No | Not specified |
+| Yes | Same age | Yes | Not specified |
 | Yes | Older | No | Overwrite |
 | Yes | Older | Yes | Rename the old file, then copy |
 ```

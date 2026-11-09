@@ -38,4 +38,4 @@ Resolve a conflict for the documents it concerns with these steps:
 
 Settle each conflict once, so that the two sets of guidance do not take turns undoing each other's fixes.
 A document that keeps a required format stays checked, so its links and the parts that the format leaves open are still judged.
-The [ignore file](ignore-file.md) is only for documents that the tree does not write to the model at all.
+The [ignore file](ignore-file.md) is only for documents that the collection does not write to the model at all.

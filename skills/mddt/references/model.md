@@ -13,6 +13,7 @@ What a topic contains and which form each block takes by default are described i
 A topic is a unit of meaning that can be read on its own, and a file is a unit of storage.
 An entry document and its descendants form a document tree.
 A collection, such as a repository, can hold several trees, such as its documentation and an independently entered skill.
+Its top folder is the collection root.
 Files relate to topics, to their names and folders, and to the documents above them as follows.
 
 - **Topics stand alone**: A topic does not assume that the reader has read what comes before or after it.
@@ -31,7 +32,7 @@ Files relate to topics, to their names and folders, and to the documents above t
   It is the first of `SKILL.md`, `README.md`, and `index.md` that the folder holds.
   A file `x.md` is the parent of the documents in a companion folder `x/` beside it, so a document gains children without moving.
   A folder with neither belongs to the parent found the same way one level up.
-- **Entry documents**: The root `README.md` and files that tools read by name, such as `SKILL.md` and `AGENTS.md`, are entry documents.
+- **Entry documents**: The collection root's `README.md` and files that tools read by name, such as `SKILL.md` and `AGENTS.md`, are entry documents.
   So is a `README.md` beside a `SKILL.md`, which introduces the folder to people browsing it.
   Each entry can be read as the root of its own tree and needs no parent.
   Every other document, including community files such as `CONTRIBUTING.md`, has a parent within its tree.

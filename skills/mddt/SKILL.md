@@ -62,11 +62,11 @@ A requested restructuring applies more of them, though not every sentence-level 
 The [checker reference](references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
 Read it in these cases:
 
-- **File selection**: A run takes a directory, excludes files, or sets the tree root.
+- **File selection**: A run takes a directory, excludes files, or sets the collection root.
 - **Scripts**: A script or CI job reads the output or the exit status.
 - **Setup**: uv is not available.
 
-A tree can hold documents that do not follow the model, such as a user's originals or generated material.
+A collection can hold documents that do not follow the model, such as a user's originals or generated material.
 A `.mddtignore` file leaves them out of the check, as the [ignore file](references/ignore-file.md) describes.
 
 ## Scope

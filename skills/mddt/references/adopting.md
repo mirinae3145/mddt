@@ -49,7 +49,7 @@ Add it before the first restructuring, or in the same change, so that reviewers 
 
 ## First restructuring
 
-Existing documents rarely follow the model, so adoption usually starts with a restructuring of the whole tree.
+Existing documents rarely follow the model, so adoption usually starts with a restructuring of the whole collection.
 Carry it out as [restructuring an existing tree](writing.md#restructuring-an-existing-tree) describes, as a change of its own rather than alongside other work.
 Its baseline of findings shows where the documents started, and it is not a target to drive to zero.
 Warnings that remain after judgment are a valid outcome, as [checking](writing.md#checking) describes.
