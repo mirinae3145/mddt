@@ -38,7 +38,7 @@ It also covers growing and shrinking structure, restructuring an existing tree, 
 Read the document model as well, since the writing procedure applies it rather than repeating it.
 
 When making mddt part of a repository's writing conventions, read [adopting mddt in a repository](references/adopting.md).
-It covers the documents in scope, what contributor guidance requires, the first restructuring, and an optional CI check.
+It covers choosing documents and their entries, what contributor guidance requires, the first restructuring, and an optional CI check.
 
 ## Reading
 

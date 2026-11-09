@@ -78,7 +78,8 @@ The command accepts these options:
 - **`--format text|json`**: Choose the output format, which defaults to text.
 - **`--exclude GLOB`**: Skip files whose path relative to the tree root, or whose name, matches GLOB; repeat it for several patterns.
   Without a tree root, the path is taken relative to the current directory.
-- **`--root DIR`**: Set the top of the document tree, which decides each document's parent; it defaults to the Git repository root, then to a directory argument.
+- **`--root DIR`**: Set the tree root, the top of the collection that a run checks; it defaults to the Git repository root, then to a directory argument.
+  The tree root decides each document's parent, and its index file counts as an entry document, like the root `README.md` of a repository.
 
 ## Files checked
 

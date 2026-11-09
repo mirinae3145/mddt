@@ -8,7 +8,7 @@ Take the steps in this order, because each one relies on the one before it.
 
 Decide which Markdown files follow the model before changing any of them.
 Documentation that people or agents read follows it, including README, contributor guidance, guides, and agent instructions and skills.
-Identify the entry of each independent tree in scope, and introduce those entries from the repository README with summaries.
+Identify the entry of each independent tree in scope, and introduce from the repository README those that its readers need, with summaries.
 
 Leave out documents that are not meant to follow it, such as user-provided originals, generated material, templates, and fixtures.
 List them in a `.mddtignore`, as the [ignore file](ignore-file.md) describes, so that every check skips them.
@@ -59,7 +59,7 @@ Warnings that remain after judgment are a valid outcome, as [checking](writing.m
 A CI job can run the checker as an automated minimum check, but it is optional and does not replace review.
 A job that fits the checker's design has these properties:
 
-- **Errors on the whole tree**: Errors fail the job in every file.
+- **Errors on the whole repository**: Errors fail the job in every file.
   A moved or renamed heading can break links in files that a change did not edit.
 - **Warnings on changed files**: Warnings call for a writer's judgment, so the job reports them only in changed files and does not fail on them.
 

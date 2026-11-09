@@ -12,7 +12,7 @@ It is organized as follows.
 - **README**: The root README is the entry document and a landing page.
   It says what the project is, whom it serves, and how to start.
   It links with summaries to CONTRIBUTING, to `docs/README.md`, and to other top-level documents.
-  When a repository hosts other document trees, its README introduces their entries with summaries.
+  When a repository hosts other document trees, its README introduces the entries its readers need with summaries.
 - **Kinds within the README**: README sections may differ in kind: installation is action, configuration options are reference, and design is explanation.
   The kind then divides the sections, while each document below `docs/` keeps one kind.
 - **README closing sections**: Repository notices and credits, such as License, Acknowledgments, Citation, and AI disclosure, may form a closing group after the substantive content.

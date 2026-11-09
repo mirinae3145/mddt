@@ -4,6 +4,7 @@ This list gives the terms that the skill's documents share, in alphabetical orde
 Each entry says briefly what the term means and points to where it is defined, so the definitions themselves stay with their rules.
 
 - **Block**: A unit that carries one information type, as [document kinds and information types](kinds.md) describes.
+- **Collection**: The documents kept together, such as a repository, which can hold several document trees, as [files and topics](model.md#files-and-topics) describes.
 - **Division**: A sibling set that claims to cover a whole, as [siblings](model.md#siblings) describes.
 - **Document set**: Several files that a landing page introduces together, as [document kinds](kinds.md#document-kinds) describes.
 - **Document tree**: An entry document and its descendants, as [files and topics](model.md#files-and-topics) describes.

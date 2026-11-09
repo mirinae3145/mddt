@@ -1601,7 +1601,7 @@ def main(argv: list[str] | None = None) -> int:
                          'such as templates or fixtures, in addition to the files a .mddtignore '
                          'ignores; repeatable')
     ap.add_argument('--root', metavar='DIR',
-                    help='top of the document tree; defaults to the Git repository root, '
+                    help='tree root: top of the collection that decides parents; defaults to the Git repository root, '
                          'then to a directory argument')
     args = ap.parse_args(argv)
 

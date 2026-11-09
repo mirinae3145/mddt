@@ -12,7 +12,7 @@ What a topic contains and which form each block takes by default are described i
 
 A topic is a unit of meaning that can be read on its own, and a file is a unit of storage.
 An entry document and its descendants form a document tree.
-A collection can hold several trees, such as repository documentation and an independently entered skill.
+A collection, such as a repository, can hold several trees, such as its documentation and an independently entered skill.
 Files relate to topics, to their names and folders, and to the documents above them as follows.
 
 - **Topics stand alone**: A topic does not assume that the reader has read what comes before or after it.
@@ -84,6 +84,7 @@ Prose follows these rules about lines, paragraphs, and sentences.
 
 Within each tree, documents follow these link rules.
 A link to another tree's entry connects the trees without making that entry a child.
+A link to another tree's other documents is a lateral link.
 
 - **Downward links**: A parent document links to each of its child documents with a short summary. <!-- code: doc-unlinked, link-without-summary -->
   When a subtopic moves to its own file, its original place keeps that summary and link.
@@ -96,8 +97,8 @@ A link to another tree's entry connects the trees without making that entry a ch
   It may introduce each of its other children in the part where the reader's task needs it.
 - **Links resolve**: A relative link points to a file or folder that exists, and its anchor matches a heading or an HTML `id` in the target. <!-- code: link-broken, anchor-missing -->
   A GitHub link to a locally known branch of the same repository counts as such a link, so a README can use full URLs.
-  Adding, removing, moving, or renaming files or headings can affect links in documents the task does not otherwise touch.
-  Update those links to preserve the content they are meant to identify.
+  Removing, moving, or renaming a file or heading therefore includes updating the links to it, even in files the change does not otherwise touch.
+  An updated link identifies the content it identified before, which [growing and shrinking](writing.md#growing-and-shrinking) covers for repeated headings.
 - **Anchor targets**: A link to an anchor in another file that expects its target to be read alone points to a topic. <!-- code: anchor-to-part -->
   An anchor to a part only locates content inside a file that the reader reads whole.
 - **Lateral links**: A link to a related topic outside the tree path goes in the sentence where the relation matters.
@@ -122,7 +123,7 @@ The following criteria adjust that default.
   A default rule with nested exceptions and a set of independent rules stay lists.
   Put the condition columns on the left in the order they are decided, and the result column on the right.
   Mark a condition that no longer matters with a dash, cover every combination exactly once, and give each row one result.
-  If the source leaves an outcome unresolved, mark it as unspecified instead of supplying a policy during restructuring.
+  An outcome that the source leaves unresolved is marked as unspecified, so the table still covers every combination.
 
 ## Siblings
 
