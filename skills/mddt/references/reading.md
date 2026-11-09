@@ -9,6 +9,7 @@ Start with the entry identified by the task or tool.
 A collection overview may instead lead to the relevant entry, such as a repository README introducing a skill.
 If the entry is unknown, locate it from folder names and tool-defined file names.
 Downward links guarantee discovery only within the selected tree.
+When that tree does not cover the subject, return to the collection overview or look for other entries before concluding it is undocumented.
 
 Once the entry is selected, explore before reading:
 

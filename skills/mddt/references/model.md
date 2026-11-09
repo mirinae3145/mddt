@@ -32,9 +32,10 @@ Files relate to topics, to their names and folders, and to the documents above t
   It is the first of `SKILL.md`, `README.md`, and `index.md` that the folder holds.
   A file `x.md` is the parent of the documents in a companion folder `x/` beside it, so a document gains children without moving.
   A folder with neither belongs to the parent found the same way one level up.
-- **Entry documents**: The collection root's `README.md` and files that tools read by name, such as `SKILL.md` and `AGENTS.md`, are entry documents.
+- **Entry documents**: The collection root's index file, such as a repository's root `README.md`, is an entry document.
+  So are the agent files that tools read by name: `SKILL.md`, `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`.
   So is a `README.md` beside a `SKILL.md`, which introduces the folder to people browsing it.
-  Each entry can be read as the root of its own tree and needs no parent.
+  No other file is an entry, and each entry is the root of its own tree and needs no parent.
   Every other document, including community files such as `CONTRIBUTING.md`, has a parent within its tree.
 
 ## Headings and promotion
@@ -83,8 +84,8 @@ Prose follows these rules about lines, paragraphs, and sentences.
 
 ## Links between documents
 
-Within each tree, documents follow these link rules.
-A link to another tree's entry connects the trees without making that entry a child.
+Documents follow these link rules, and downward links stay within one tree.
+A link to another tree's entry connects the trees with a summary, without making that entry a child.
 A link to another tree's other documents is a lateral link.
 
 - **Downward links**: A parent document links to each of its child documents with a short summary. <!-- code: doc-unlinked, link-without-summary -->
@@ -108,7 +109,7 @@ A link to another tree's other documents is a lateral link.
 - **Tree before lateral links**: Lateral links do not replace the tree.
   Every document within a tree is reachable through downward links from that tree's entry.
   This does not promise discovery of other trees in the collection.
-  A collection overview introduces the other entries its readers need with links and summaries.
+  A collection overview, usually the collection root's index file, introduces the other entries its readers need with links and summaries.
 
 ## Sections, lists, and tables
 
