@@ -14,13 +14,14 @@ license: CC-BY-4.0 for the instructions and references; MIT for the scripts; cop
 
 # mddt
 
-mddt treats a set of Markdown documents as one tree.
+mddt organizes Markdown documents into trees, each with an entry document.
+A collection can hold several independently entered trees.
 Files link downward to the files they introduce, headings divide each file into topics and parts, and lists nest only where nesting carries meaning.
 This file is the entry point, and the rules and procedures live in the reference documents that its parts introduce.
 
 ## Document model
 
-The [document model](references/model.md) states the properties a conforming document has.
+The [document model](references/model.md) states the properties of conforming documents and their trees.
 Writers treat each property as a condition to satisfy, and readers treat it as a guarantee to rely on.
 It covers files, headings, sentences, links between documents, sections versus lists and tables, siblings, and lists.
 [Examples](references/examples.md) show its judgment rules as before-and-after pairs, and they help when a rule's application is unclear.
@@ -37,12 +38,12 @@ It also covers growing and shrinking structure, restructuring an existing tree, 
 Read the document model as well, since the writing procedure applies it rather than repeating it.
 
 When making mddt part of a repository's writing conventions, read [adopting mddt in a repository](references/adopting.md).
-It covers the documents in scope, what contributor guidance requires, the first restructuring, and an optional CI check.
+It covers choosing documents and their entries, what contributor guidance requires, the first restructuring, and an optional CI check.
 
 ## Reading
 
 Before exploring a set of Markdown documents to answer a question or verify a fact, read [reading a document tree](references/reading.md).
-It explains how to choose files from the tree, why to read them whole, and how to treat documents outside the model.
+It explains how to select an entry, choose files, read them whole, and handle documents outside the model.
 It also shows which reading strategy each guarantee of the model supports.
 
 ## Checking
@@ -61,11 +62,11 @@ A requested restructuring applies more of them, though not every sentence-level 
 The [checker reference](references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
 Read it in these cases:
 
-- **File selection**: A run takes a directory, excludes files, or sets the tree root.
+- **File selection**: A run takes a directory, excludes files, or sets the collection root.
 - **Scripts**: A script or CI job reads the output or the exit status.
 - **Setup**: uv is not available.
 
-A tree can hold documents that do not follow the model, such as a user's originals or generated material.
+A collection can hold documents that do not follow the model, such as a user's originals or generated material.
 A `.mddtignore` file leaves them out of the check, as the [ignore file](references/ignore-file.md) describes.
 
 ## Scope

@@ -2,7 +2,7 @@
 
 This document describes the checker that comes with the skill.
 It covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
-Read it when choosing the files or tree root of a run, when a script reads the output or exit status, or without uv.
+Read it when choosing the files or collection root of a run, when a script reads the output or exit status, or without uv.
 
 ## Running
 
@@ -76,9 +76,11 @@ The command accepts these options:
 - **`--outline`**: Print how each file was interpreted, even without structural findings.
 - **`--review`**: Also report information for reviewing structure, and print every outline.
 - **`--format text|json`**: Choose the output format, which defaults to text.
-- **`--exclude GLOB`**: Skip files whose path relative to the tree root, or whose name, matches GLOB; repeat it for several patterns.
-  Without a tree root, the path is taken relative to the current directory.
-- **`--root DIR`**: Set the top of the document tree, which decides each document's parent; it defaults to the Git repository root, then to a directory argument.
+- **`--exclude GLOB`**: Skip files whose path relative to the collection root, or whose name, matches GLOB; repeat it for several patterns.
+  Without a collection root, the path is taken relative to the current directory.
+- **`--root DIR`**: Set the collection root, which decides each document's parent and the paths that `--exclude` matches.
+  It defaults to the Git repository root, then to a directory argument, and the arguments still choose the files checked.
+  The checker treats the collection root's index file as an entry document.
 
 ## Files checked
 
@@ -93,7 +95,7 @@ A file argument is checked as given, and a directory argument expands as follows
   Other hidden folders are checked, so exclude them with `--exclude` when they hold no documents.
 
 Files matching `--exclude` and files a `.mddtignore` ignores are skipped even when named explicitly.
-A skipped file is listed as skipped and is not judged, but it stays in the tree.
+A skipped file is listed as skipped and is not judged, but it stays in the collection.
 Links to it still resolve, and it still serves as a parent that must link its children.
 The [ignore file](ignore-file.md) describes `.mddtignore`, which lists the files of a folder to skip.
 An unreadable input file or traversed folder ends the run with status 2 and no findings.
@@ -139,7 +141,7 @@ Links in the checked files are resolved as follows, while images and links writt
 - **Not resolved**: Other URLs with a scheme and absolute paths are left alone, since their base depends on where the documents are served.
   Anchors are also left alone when the link has a query, such as `?plain=1`, or its target is not a Markdown file.
 - **Linked trees**: A target reached through a symbolic link, such as a linked repository, is checked only for existence.
-  Its headings belong to another tree, which the checker does not enter.
+  Its headings belong to another collection, which the checker does not enter.
 
 Formulas in dollar math are read as math, so brackets and parentheses in them do not form links.
 

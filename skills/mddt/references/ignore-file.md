@@ -1,6 +1,6 @@
 # Ignore file
 
-A `.mddtignore` file lists the documents that a tree holds but does not write to the model, such as a user's originals or generated material.
+A `.mddtignore` file lists the documents that a collection holds but does not write to the model, such as a user's originals or generated material.
 The checker skips them, so it neither judges them nor requires them to link into the tree.
 This document describes where the file goes, its syntax, and how skipped documents take part in the tree.
 Read it when a run should leave out documents that `--exclude` would otherwise have to name each time.
@@ -10,7 +10,7 @@ Read it when a run should leave out documents that `--exclude` would otherwise h
 Put a `.mddtignore` in the folder whose documents it covers.
 The checker opens it directly, so it works whether Git tracks the file, ignores it, or is not used at all.
 A file applies to its folder and below, and a deeper file overrides a shallower one.
-The files read run from the tree root, or the current directory without a tree root, down to the checked file's folder.
+The files read run from the collection root, or the current directory without a collection root, down to the checked file's folder.
 
 ## Syntax
 
@@ -29,5 +29,5 @@ Other gitignore features, such as a global excludes file or case-insensitive mat
 ## Skipped documents
 
 A skipped document is reported as skipped, even when it is named as an argument, and `--exclude` patterns add to the ones in the file.
-It stays on disk, so it remains part of the tree for the documents that are checked.
+It stays on disk, so it remains part of the collection for the documents that are checked.
 Links to it, including their anchors, are still checked, and it still decides whether its children are linked from it.

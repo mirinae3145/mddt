@@ -1411,12 +1411,12 @@ def collect(paths: list[str], excludes: list[str],
 
     Files matching an exclude pattern and files a .mddtignore ignores are
     skipped even when named explicitly. A pattern matches a file's path
-    relative to its tree root, the same root that decides parents, or the
-    file name, so it works however the
-    file argument is spelled. Without a tree root, the path is taken relative
-    to the current directory. The .mddtignore files are read from the tree
-    root, or the current directory without one, down to the file's folder; a
-    file outside that top is judged by the .mddtignore in its own folder.
+    relative to its collection root, the same root that decides parents, or
+    the file name, so it works however the file argument is spelled. Without
+    a collection root, the path is taken relative to the current directory.
+    The .mddtignore files are read from the collection root, or the current
+    directory without one, down to the file's folder; a file outside that top
+    is judged by the .mddtignore in its own folder.
     Skipped files stay on disk, so links to them still resolve.
     """
     files, skipped = [], []
@@ -1597,12 +1597,12 @@ def main(argv: list[str] | None = None) -> int:
                     help='also report information for reviewing structure, and print every outline')
     ap.add_argument('--format', choices=('text', 'json'), default='text', help='output format')
     ap.add_argument('--exclude', action='append', default=[], metavar='GLOB',
-                    help='skip files whose path relative to the tree root, or whose name, matches GLOB, '
+                    help='skip files whose path relative to the collection root, or whose name, matches GLOB, '
                          'such as templates or fixtures, in addition to the files a .mddtignore '
                          'ignores; repeatable')
     ap.add_argument('--root', metavar='DIR',
-                    help='top of the document tree; defaults to the Git repository root, '
-                         'then to a directory argument')
+                    help='collection root, which decides parents and the paths --exclude matches; '
+                         'defaults to the Git repository root, then to a directory argument')
     args = ap.parse_args(argv)
 
     registry = load_registry()

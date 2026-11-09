@@ -1,6 +1,6 @@
 # Document model
 
-This document describes the properties that a conforming Markdown document has.
+This document describes the properties of conforming Markdown documents and the trees they form.
 It covers files, headings, paragraphs and sentences, links between documents, sections versus lists and tables, siblings, and lists.
 Writers treat each property as a condition to satisfy, and readers treat it as a guarantee to rely on.
 
@@ -11,6 +11,9 @@ What a topic contains and which form each block takes by default are described i
 ## Files and topics
 
 A topic is a unit of meaning that can be read on its own, and a file is a unit of storage.
+An entry document and its descendants form a document tree.
+A collection, such as a repository, can hold several trees, such as its documentation and an independently entered skill.
+Its top folder is the collection root.
 Files relate to topics, to their names and folders, and to the documents above them as follows.
 
 - **Topics stand alone**: A topic does not assume that the reader has read what comes before or after it.
@@ -24,14 +27,16 @@ Files relate to topics, to their names and folders, and to the documents above t
   Badges and other image-only paragraphs do not count as an overview.
 - **File names identify, titles explain**: A file name is read together with the folder tree, while a title must make sense on its own.
   File names are link targets, so keep them short and stable, and keep the name and the title about the same subject.
-- **Folders follow the tree**: Where a file sits determines its parent document.
+- **Folders follow the tree**: For documents other than entries, where a file sits determines its parent document.
   A folder's index file is the parent of the other documents in that folder and its subfolders.
   It is the first of `SKILL.md`, `README.md`, and `index.md` that the folder holds.
   A file `x.md` is the parent of the documents in a companion folder `x/` beside it, so a document gains children without moving.
   A folder with neither belongs to the parent found the same way one level up.
-- **Entry documents**: The root `README.md` and files that tools read by name, such as `SKILL.md` and `AGENTS.md`, are entry documents.
+- **Entry documents**: The collection root's index file, such as a repository's root `README.md`, is an entry document.
+  So are the agent files that tools read by name: `SKILL.md`, `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`.
   So is a `README.md` beside a `SKILL.md`, which introduces the folder to people browsing it.
-  They need no parent; every other document, including community files such as `CONTRIBUTING.md`, has one.
+  No other file is an entry, and each entry is the root of its own tree and needs no parent.
+  Every other document, including community files such as `CONTRIBUTING.md`, has a parent within its tree.
 
 ## Headings and promotion
 
@@ -79,7 +84,9 @@ Prose follows these rules about lines, paragraphs, and sentences.
 
 ## Links between documents
 
-Documents form a tree through links that follow these rules.
+Documents follow these link rules, and downward links stay within one tree.
+A link to another tree's entry connects the trees with a summary, without making that entry a child.
+A link to another tree's other documents is a lateral link.
 
 - **Downward links**: A parent document links to each of its child documents with a short summary. <!-- code: doc-unlinked, link-without-summary -->
   When a subtopic moves to its own file, its original place keeps that summary and link.
@@ -92,14 +99,17 @@ Documents form a tree through links that follow these rules.
   It may introduce each of its other children in the part where the reader's task needs it.
 - **Links resolve**: A relative link points to a file or folder that exists, and its anchor matches a heading or an HTML `id` in the target. <!-- code: link-broken, anchor-missing -->
   A GitHub link to a locally known branch of the same repository counts as such a link, so a README can use full URLs.
-  Moving or renaming a file or heading therefore includes updating the links to it, even in files the change does not otherwise touch.
+  Removing, moving, or renaming a file or heading therefore includes updating the links to it, even in files the change does not otherwise touch.
+  An updated link identifies the content it identified before, which [growing and shrinking](writing.md#growing-and-shrinking) covers for repeated headings.
 - **Anchor targets**: A link to an anchor in another file that expects its target to be read alone points to a topic. <!-- code: anchor-to-part -->
   An anchor to a part only locates content inside a file that the reader reads whole.
 - **Lateral links**: A link to a related topic outside the tree path goes in the sentence where the relation matters.
   The sentence shows why the link is there, such as evidence, the canonical location, or further detail.
   A separate list of related documents is optional.
 - **Tree before lateral links**: Lateral links do not replace the tree.
-  Because every document except an entry document is linked from its parent, every document is reachable through downward links alone.
+  Every document within a tree is reachable through downward links from that tree's entry.
+  This does not promise discovery of other trees in the collection.
+  A collection overview, usually the collection root's index file, introduces the other entries its readers need with links and summaries.
 
 ## Sections, lists, and tables
 
@@ -115,6 +125,7 @@ The following criteria adjust that default.
   A default rule with nested exceptions and a set of independent rules stay lists.
   Put the condition columns on the left in the order they are decided, and the result column on the right.
   Mark a condition that no longer matters with a dash, cover every combination exactly once, and give each row one result.
+  An outcome that the source leaves unresolved is marked as unspecified, so the table still covers every combination.
 
 ## Siblings
 

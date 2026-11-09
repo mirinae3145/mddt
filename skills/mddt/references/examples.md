@@ -326,15 +326,18 @@ After:
 ```markdown
 The tool decides what to do with each file as follows:
 
-| Target exists | Target is newer | `--keep` set | Action |
+| Target exists | Target compared with source | `--keep` set | Action |
 | --- | --- | --- | --- |
-| No | — | — | Copy |
-| Yes | Yes | — | Skip |
-| Yes | No | No | Overwrite |
-| Yes | No | Yes | Rename the old file, then copy |
+| No | &mdash; | &mdash; | Copy |
+| Yes | Newer | &mdash; | Skip |
+| Yes | Same age | No | Not specified |
+| Yes | Same age | Yes | Not specified |
+| Yes | Older | No | Overwrite |
+| Yes | Older | Yes | Rename the old file, then copy |
 ```
 
 The condition columns follow the order of the decision, a dash marks a condition that no longer matters, and each row has one result.
+The original text does not decide the same-age case, so the table marks that outcome instead of inventing one.
 
 ## Links between documents
 

@@ -10,14 +10,15 @@ The model holds the rules, and this document adds only the steps and the rules t
 Before writing, decide where the content sits in the tree.
 When adding to an existing document, place only the added content.
 Change the structure around it only where the addition requires it, as [growing and shrinking](#growing-and-shrinking) describes.
-When a task creates several documents, place them from the entry document down, so that each has its parent before its content is written.
+When a task creates several documents, identify the tree each one joins and place them from each entry down.
 The placement takes these steps:
 
 1. State in one or two sentences what the content is and what it covers.
    This statement starts both the overview and the parent's summary.
    If it does not fit in two or three sentences, the content probably holds several topics or kinds.
-1. Find the parent document that will introduce it, and plan the summary and link that the parent will carry.
+1. For a document that needs a parent, find that parent and plan the summary and link it will carry.
    The parent carries the planned summary until the child settles, and then the summary is rewritten as [rules for new writing](#rules-for-new-writing) describe.
+   For a new entry, identify how readers will find it, and introduce it from the collection overview when its readers need it.
 1. Decide whether the content is a part of an existing topic, a new topic in an existing file, or a file of its own.
    Short topics that the same reader needs for the same task stay together in one file, as parts or as topic H2s.
    A topic gets its own file when it serves another reader or task, outgrows its siblings, or needs more than two heading levels.
@@ -30,6 +31,11 @@ The placement takes these steps:
 Start from each block's information type and its [default form](kinds.md#default-forms).
 Then adjust with the criteria in [sections, lists, and tables](model.md#sections-lists-and-tables).
 When a choice stays unclear, compare with the [examples](examples.md).
+
+For existing content, compare the facts and conditions before and after changing its form.
+A decision table must expose every case, including cases the source leaves unresolved.
+Do not turn a missing case into a policy.
+Ask for the missing decision, and mark its outcome as unspecified only when no decision is available.
 
 The same content can be a topic with sections or a list with names.
 A short set of parallel options reads best as a list:
@@ -90,29 +96,35 @@ Restructuring alone rewrites only a part or topic whose question the current tas
 A task can also request content changes, such as adding, removing, correcting, or condensing facts.
 A part or topic that receives one may be rewritten as far as that change reaches.
 
-A heading that changes level within its file but keeps its text keeps its anchor, since GitHub derives the anchor from the text alone.
-Changing the text or moving the heading to another file changes the link target, so links to it are updated as [links resolve](model.md#links-between-documents) describes.
+GitHub derives a heading's ID from its text and adds `-1`, `-2`, and so on to IDs already used earlier in the file.
+A heading that changes level but keeps its text and position therefore keeps its ID.
+Adding, removing, or reordering a heading whose ID repeats another's in the file can shift the IDs of the later repeats.
+For example, swapping two sections named `Examples` exchanges which content `#examples` and `#examples-1` identify.
+The checker cannot see this, so after such a change or a rename, compare old and new IDs and repoint links to their former content.
+
+Moving a heading to another file also changes its path.
+Update links to the old path as [links resolve](model.md#links-between-documents) describes.
 
 ## Restructuring an existing tree
 
 A requested restructuring, such as bringing a repository's documents to the model for the first time, places existing content again rather than adding new content.
 It applies the other steps of this procedure in the following order, so that moves, rewrites, and checks do not undo one another:
 
-1. Read the tree from its entry document, as [choosing files](reading.md#choosing-files) describes, and run the checker on the whole tree with `--review`.
+1. Read the tree from its entry document, as [choosing files](reading.md#choosing-files) describes, and run the checker on the whole collection, adding `--review` only for that tree.
    Keep the findings as a baseline to compare the result with, not as a list of work to clear.
 1. Note the question, kind, and reader of each file and topic.
-   Also note links into the tree from outside it, such as other repositories or instructions, which the checker cannot see.
+   Also note links into the tree from outside the collection, such as other repositories or instructions, which the checker cannot see.
 1. Design the target tree from the entry document down before moving anything, placing each topic as [placing a document](#placing-a-document) describes.
 1. Move files first and headings within files second, updating the links to each moved target.
    Keep the wording of moved content, as [growing and shrinking](#growing-and-shrinking) describes.
 1. Rewrite only the parts and topics whose question the new structure changed.
    Then rewrite overviews and parent summaries from the deepest changed documents up, as [rules for new writing](#rules-for-new-writing) describe.
-1. Check the result as [checking](#checking) describes for a requested restructuring, running the checker on the whole tree.
+1. Check the result as [checking](#checking) describes for a requested restructuring, running the checker on the whole collection.
    Compare the facts in the old and new documents, so that the moves neither dropped nor duplicated content.
 
 Keep moves and rewrites in separate steps that a reviewer can follow, such as separate commits.
 A large tree can be restructured one subtree at a time, from the entry document down.
-Report outside links whose targets changed, since updating them lies outside the tree.
+Report outside links whose targets changed, since updating them lies outside the collection.
 
 ## Checking
 
@@ -126,14 +138,13 @@ Check the result as follows:
      Such changes include one-sentence line splits and link target updates after a move, but not a blank line, which splits a paragraph.
    - **Requested content changes**: A part or topic that received a content change the task requested is reread, even when the task otherwise only restructures.
 1. Run the checker on the files you created or changed.
-   When the task moved or renamed files or headings, run it on the whole tree.
-   Links to the old names can sit in files that the task did not change.
+   Run it on the whole collection after adding, removing, moving, or renaming a file, or removing, moving, or renaming a heading.
    After adding child documents, add `--review` to see links that lack summaries.
    Information findings rest on approximate detection, so judge each one before acting on it.
 1. Fix structural findings before sentence-level ones, because structural fixes move sentences.
    Before applying a fix, judge the structure it will produce against the model, including the rules whose warnings it may raise.
    After fixing, reread each fixed part or topic whole.
-1. Run the checker once more after fixing, fix only errors that the fixes introduced, and stop there.
+1. Run the checker again, fix only errors that the fixes introduced, then run it a last time and report what remains.
    Judge a fix by the structure it produces, not by the number of findings.
    Keep a fix that serves the reader better even when it raises another warning, and judge that warning like any other.
    Do not undo a fix only because it raised a warning, or choose one only because it raises none.
