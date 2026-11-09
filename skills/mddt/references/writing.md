@@ -85,8 +85,7 @@ Structure changes as content grows or shrinks, and the promotion ladder in [head
 - **When a topic shrinks to one subsection**: Remove the subsection heading so that the topic becomes a part.
 - **When one sibling outgrows the others**: Promote it and leave a summary and a link in its place.
   Alternatively, move only the excess detail to a topic at that level.
-- **When a block of another kind or level grows**: Move it to a topic of its own.
-  See [blocks of another kind or level](kinds.md#blocks-of-another-kind-or-level).
+- **When a block of another kind or level grows**: Move it to a topic of its own, as [blocks of another kind or level](kinds.md#blocks-of-another-kind-or-level) describes.
 - **When a change alters what a part or topic answers**: Rewrite that part or topic as a unit from the question it now answers.
   Appending to its end or patching single sentences leaves its old order and form in place.
   Keep its facts, and leave the parts and topics around it as they are.

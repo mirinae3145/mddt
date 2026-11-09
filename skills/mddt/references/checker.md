@@ -67,6 +67,8 @@ JSON output is an object whose keys `files` and `skipped` list the checked and s
 Its key `diagnostics` lists the findings without fix guidance, each with the fields `file`, `line`, `endLine`, `code`, `severity`, and `message`.
 The message joins the code's summary and the finding's detail, and the key `outlines` appears only with `--outline` or `--review`.
 
+Both formats are written in UTF-8 regardless of the locale, so headings and file names in any language keep their characters.
+
 ## Options
 
 The command accepts these options:
@@ -83,6 +85,7 @@ The command accepts these options:
 A file argument is checked as given, and a directory argument expands as follows:
 
 - **In a Git repository**: The `.md` files that Git sees, which are tracked files and untracked files that are not ignored.
+  Subfolders without listed Markdown files are not entered.
   Without the `git` command, files are found as outside a repository, and the checker reports that `.gitignore` was not applied.
 - **Outside a repository**: Every `.md` file, except in folders whose own `.gitignore` holds only `*`.
   Tools such as pytest and uv mark their caches and virtual environments this way.
@@ -93,6 +96,7 @@ Files matching `--exclude` and files a `.mddtignore` ignores are skipped even wh
 A skipped file is listed as skipped and is not judged, but it stays in the tree.
 Links to it still resolve, and it still serves as a parent that must link its children.
 The [ignore file](ignore-file.md) describes `.mddtignore`, which lists the files of a folder to skip.
+An unreadable input file or traversed folder ends the run with status 2 and no findings.
 
 Changelogs are checked with the exceptions in [repository documentation](uses.md#repository-documentation).
 The checker recognizes names matching `CHANGELOG` or `CHANGELOG.*`, without regard to case, including `CHANGELOG.md` and `changelog.en.md`.
@@ -114,6 +118,7 @@ Outlines show heading levels and list statistics without topic, part, or overvie
 
 Lists inside block quotes are not checked.
 YAML front matter and HTML blocks, such as comments, are not judged as prose, and they neither introduce nor separate the blocks around them.
+Only comments parsed as HTML are excluded from prose; delimiters written as code leave the surrounding prose checked.
 
 ## Links checked
 
@@ -123,6 +128,8 @@ Links in the checked files are resolved as follows, while images and links writt
   A link to a folder stands for the folder's index file when it has one.
 - **Anchors**: An anchor in a link to a Markdown file, or a bare `#anchor`, must match a heading ID or an HTML `id` or `name` in its target.
   A heading ID is the heading text in lowercase, without punctuation, with spaces as hyphens, and with `-1`, `-2`, and so on for repeats.
+  Generated IDs also reserve their names, so a suffix is increased until it conflicts with no earlier ID.
+  An HTML element can provide both `id` and `name` anchors; comments and attributes without values provide none.
 - **Anchor IDs**: This rule only approximates GitHub's, so a missing anchor is a warning.
   For example, GitHub keeps the variation selector that follows some emoji, while the checker drops it, so anchors to such headings are reported falsely.
 - **Own repository on GitHub**: A link into a branch of the linking file's own repository is resolved in the working tree.

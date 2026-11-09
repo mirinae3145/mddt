@@ -1,17 +1,40 @@
 # Contributing
 
-This guide covers what to read before a change, how the checker is organized, and what to update when a rule changes.
-It also covers how the repository applies the skill to itself, how files are licensed, and how to verify changes.
+This guide covers design and review priorities, preparation for changes, and maintenance of the skill and checker.
+It also covers self-conformance, licensing, and verification.
 The skill is meant for any agent and repository, so keep it independent of personal instruction sets, machine paths, and particular workflow tools.
+
+## Design and review
+
+mddt succeeds when following its model and procedures produces documents that readers can navigate and understand while preserving their meaning.
+Contributions and reviews are judged first by that purpose.
+The following concerns guide that judgment:
+
+- **Usefulness**: Rules and procedures should solve identifiable writing or reading problems.
+  Weigh their benefit against the complexity, time, and effort they add, including unnecessary fragmentation or repeated reading.
+- **Coherence**: Judge how rules work together and whether the procedures make them practical to apply.
+  Follow their consequences through a document, including cases where satisfying one rule puts pressure on another.
+  The guarantees used by the reading procedure must follow from what the writing procedure and model require.
+- **Checker support**: Detection and fix guidance should faithfully support the rules within the parser's limits.
+  Judge a suggested fix by the meaning and structure it leaves, including requirements that the checker cannot decide.
+  Keep rule text, procedures, examples, implementation, and summaries consistent when their shared meaning changes.
+- **Evidence**: Use concrete documents and counterexamples to support judgments about a rule or procedure.
+  Tests establish implementation behavior; examples, calibration, and self-conformance support only the claims they actually examine.
+  Distinguish demonstrated benefits from assumptions and untested effects, including those recorded in the [README's limits](README.md#limits).
+
+For a change, assess its effect on these concerns through the affected rules and their dependencies.
+For a review of the whole project, assess the model, procedures, checker, and supporting evidence together.
+Prioritize findings by their effect on the project's purpose, and state which concerns the review leaves unresolved.
+Passing checks and finding local implementation defects alone do not establish the quality of the overall design.
 
 ## Before a change
 
 What to read before a change depends on which files it touches:
 
-- **Skill and tests**: A change inside `skills/mddt/` or `tests/` needs the whole repository.
-  The rule text, checker, registry, fix guidance, tests, and summaries depend on one another.
+- **Skill and code**: A change inside `skills/mddt/` or `tests/`, or to `calibration/measure.py`, needs the whole repository.
+  The rule text, checker, registry, fix guidance, tests, summaries, and measurement script depend on one another.
   Reading only the touched files can leave them out of step.
-  The license texts and the material in `calibration/` beyond its [README](calibration/README.md) can be skipped, since that material records one past round.
+  The license texts and the calibration inputs and outputs can be skipped, since they record one past round.
 - **Repository documents**: A change to another document, such as README or this guide, needs the skill's reference documents.
   The repository's documents follow the model, as [self-conformance](#self-conformance) describes, and the checker covers only part of it.
   The change also needs the documents that the changed text summarizes or that summarize it.
@@ -38,16 +61,18 @@ Choices that depend on meaning, such as whether content belongs in a section, li
 
 ## Changing a rule
 
-Each rule is stated once for writers and once for the checker, and a few documents point to those statements.
+Each rule is stated once for writers and once for the checker, and other documents point to those statements or restate them.
 A change to a rule updates these together:
 
 - **Rule text**: the rule in the skill's reference documents, with its code marker, and its entry in `references/terms.md` when the rule defines a term.
 - **Checker**: the detection and constants in `mddt.py`, and the code's entries in `rules.toml` and `fixes.toml`.
 - **Summaries**: the overview of `model.md`, which `SKILL.md` and README condense, when what the model covers changes.
 - **Checker reference**: `references/checker.md`, which README, `SKILL.md`, and `--help` point to, when options, file selection, output, or exit statuses change.
+- **Restatements**: passages that repeat the rule in other words, such as the examples in `references/examples.md`, the guarantees table in `references/reading.md`, and the limit of seven in `references/writing.md`.
 
 Tests also check that the numbers in `model.md` and in `rules.toml` summaries match the checker's constants, and that the checker reference lists every option.
-The calibration material records one past round, so it is not updated when a rule changes.
+The calibration inputs and outputs record one past round, so they are not updated when a rule changes.
+`calibration/measure.py` imports the checker's internals, so a change to the names it uses updates it as well.
 
 ## Self-conformance
 
@@ -92,7 +117,7 @@ uvx coverage@7.17.2 combine
 uvx coverage@7.17.2 report -m --fail-under=100
 ```
 
-The coverage run starts the checker with `python -m coverage` in an environment built from the script's dependencies.
+The coverage run builds one environment from the script's dependencies and starts each checker run in it with `python -m coverage`.
 It skips uv's script mode and the script's Python requirement, so the plain run remains the check that the documented command works.
 
 Code that the tests do not reach is handled as follows:

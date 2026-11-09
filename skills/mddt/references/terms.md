@@ -14,4 +14,4 @@ Each entry says briefly what the term means and points to where it is defined, s
 - **Structure**: How files, headings, links, sections, and lists are arranged.
   The checker groups findings about structure apart from findings about lines, paragraphs, and sentences.
 - **Topic**: A unit of meaning that can be read on its own, as [files and topics](model.md#files-and-topics) describes.
-- **Topic set**: A file whose H2s are topics, as [files and topics](model.md#files-and-topics) describes.
+- **Topic set**: A file with at least one topic H2, as [headings and promotion](model.md#headings-and-promotion) describes.
