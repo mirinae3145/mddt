@@ -59,7 +59,8 @@ A CI job can run the checker as an automated minimum check, but it is optional a
 A job that fits the checker's design has these properties:
 
 - **Errors on the whole tree**: Errors fail the job in every file.
-  A moved or renamed heading can break links in files that a change did not edit.
+  A moved or renamed file can break links in files that a change did not edit.
+  A missing anchor is only a warning, because the checker approximates heading IDs, so this check does not catch renamed headings.
 - **Warnings on changed files**: Warnings call for a writer's judgment, so the job reports them only in changed files and does not fail on them.
 
 The job either pins a revision of the mddt repository or follows its current default branch.
