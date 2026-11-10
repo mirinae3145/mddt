@@ -34,7 +34,8 @@ The guidance states the following:
   A summary that keeps only the checker's part, such as running it and judging its findings, invites skipping the rest.
 - **Role of the checker**: Writers and reviewers judge placement, kinds, and summaries, which the checker does not decide.
   A run without errors is the minimum, not evidence that a document conforms.
-- **Reports**: A change reports the checker revision, the files it checked, and the findings kept after judgment with their reasons.
+- **Reports**: A change that keeps a warning after judgment can say why where reviewers will see it, such as in the change description.
+  Require more, such as the checker revision or the files checked, only when the repository already records validation that way.
 
 The guidance can open with sentences like the following, which name the procedure before the model or the checker:
 
