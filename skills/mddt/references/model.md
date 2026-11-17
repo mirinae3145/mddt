@@ -183,6 +183,7 @@ Nested items under one parent may play different roles, such as details, conditi
 ### Names
 
 A name is any lead-in that says what an item is about: a bold term, a short phrase followed by a colon, or link text.
+A bold term followed by a colon is still a bold term; only an unformatted phrase followed by a colon has the colon form.
 Only an item without named descendants carries a name, at every heading level. <!-- code: name-nesting -->
 An item whose children need names is promoted as described in [headings and promotion](#headings-and-promotion).
 
