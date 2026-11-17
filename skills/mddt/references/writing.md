@@ -92,7 +92,7 @@ Structure changes as content grows or shrinks, and the promotion ladder in [head
 
 Moving content does not rewrite it.
 Keep the wording of moved content unless the move itself requires a change, such as replacing a position word with a link.
-Restructuring alone rewrites only a part or topic whose question the current task changed.
+Restructuring alone rewrites only a part or topic whose question the current task changed, apart from the form changes that [restructuring an existing tree](#restructuring-an-existing-tree) makes.
 A task can also request content changes, such as adding, removing, correcting, or condensing facts.
 A part or topic that receives one may be rewritten as far as that change reaches.
 
@@ -118,6 +118,8 @@ It applies the other steps of this procedure in the following order, so that mov
 1. Move files first and headings within files second, updating the links to each moved target.
    Keep the wording of moved content, as [growing and shrinking](#growing-and-shrinking) describes.
 1. Rewrite only the parts and topics whose question the new structure changed.
+   In other moved content, change each block whose form departs from its [default form](kinds.md#default-forms) without a reason in [sections, lists, and tables](model.md#sections-lists-and-tables).
+   Compare its facts before and after, as [choosing forms](#choosing-forms) describes.
    Then rewrite overviews and parent summaries from the deepest changed documents up, as [rules for new writing](#rules-for-new-writing) describe.
 1. Check the result as [checking](#checking) describes for a requested restructuring, running the checker on the whole collection.
    Compare the facts in the old and new documents, so that the moves neither dropped nor duplicated content.
