@@ -18,7 +18,7 @@ The repository's Markdown linter keeps its formatting rules, which mddt does not
 
 ## Contributor guidance
 
-The repository's contributor guidance makes the skill's procedures a requirement for Markdown changes.
+The repository's contributor guidance makes the skill's procedures a requirement for changing and reading its Markdown.
 A link to the document model alone is not enough.
 Some requirements live only in the procedures, such as placing content first and rereading changed topics whole.
 The guidance states the following:
@@ -26,8 +26,11 @@ The guidance states the following:
 - **Procedures**: Contributors follow the [writing procedure](writing.md) before and after editing Markdown.
   The guidance names both ends of it: placing content before writing, and rereading changed topics whole once the content settles.
   Sentence-only corrections and formatting changes that leave the structure as it was need no placement plan.
+  To find or verify information in the documents, contributors follow the [reading procedure](reading.md).
 - **Getting the skill**: Contributors use an installed copy of the skill or a checkout of the mddt repository.
   Either one gives them the reference documents and the checker.
+- **Entry**: Contributors start from the skill's entry, `SKILL.md`, which says which reference documents each task needs.
+  A link straight to one procedure can stand in for the skill, so that the model and the other procedure go unread.
 - **Repository placement**: The guidance adds only what is specific to the repository.
   Examples are what the README holds, where canonical contracts live, and which index introduces the guides.
   Link to the procedures for their full steps rather than restating them, so that the guidance does not fall behind mddt.
@@ -37,12 +40,13 @@ The guidance states the following:
 - **Reports**: A change that keeps a warning after judgment can say why where reviewers will see it, such as in the change description.
   Require more, such as the checker revision or the files checked, only when the repository already records validation that way.
 
-The guidance can open with sentences like the following, which name the procedure before the model or the checker:
+The guidance can open with sentences like the following, which name the skill's entry and its procedures before the model or the checker:
 
 ```markdown
-For Markdown changes, follow the mddt skill's writing procedure.
+For Markdown changes, start from the mddt skill's entry, `SKILL.md`, and follow its writing procedure.
 Place content in the document tree before writing it, and reread each changed topic whole once it settles.
 The checker then covers only the requirements a parser can decide.
+To find or verify information in these documents, follow the skill's reading procedure.
 ```
 
 Point to this guidance from the contributing guide, where contributors look before a change.
