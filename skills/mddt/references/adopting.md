@@ -35,6 +35,9 @@ The guidance states the following:
   Examples are what the README holds, where canonical contracts live, and which index introduces the guides.
   Link to the procedures for their full steps rather than restating them, so that the guidance does not fall behind mddt.
   A summary that keeps only the checker's part, such as running it and judging its findings, invites skipping the rest.
+- **Requirements, not request handling**: The guidance states what a change must satisfy and where the knowledge it relies on lives.
+  Handling a kind of request, such as one to restructure existing documents, belongs to the skill, which agents read from its entry.
+  Guidance that maps requests to parts of the skill becomes a repository-wide skill rather than contributor guidance.
 - **Role of the checker**: Writers and reviewers judge placement, kinds, and summaries, which the checker does not decide.
   A run without errors is the minimum, not evidence that a document conforms.
 - **Reports**: A change that keeps a warning after judgment can say why where reviewers will see it, such as in the change description.
