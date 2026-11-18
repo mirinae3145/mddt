@@ -31,10 +31,14 @@ Passing checks and finding local implementation defects alone do not establish t
 
 What to read before a change depends on which files it touches:
 
-- **Skill and code**: A change inside `skills/mddt/` or `tests/`, or to `calibration/measure.py`, needs the whole repository.
+- **Checker code**: A change to `skills/mddt/scripts/mddt.py` or `calibration/measure.py` needs the whole repository.
   The rule text, checker, registry, fix guidance, tests, summaries, and measurement script depend on one another.
   Reading only the touched files can leave them out of step.
   The license texts and the calibration inputs and outputs can be skipped, since they record one past round.
+- **Skill documents, checker data, and tests**: Another change inside `skills/mddt/` or `tests/` needs `SKILL.md` and the skill's reference documents.
+  For each code whose rule text, registry entry, fix guidance, or tests it changes, it also needs what [changing a rule](#changing-a-rule) lists for that code.
+  That includes the code's detection in `mddt.py` and its tests, but not the rest of the checker.
+  The tests keep codes, rule locations, numeric limits, and options in step across the checker, so the rest can stay unread.
 - **Repository documents**: A change to another document, such as README or this guide, needs the skill's reference documents.
   The repository's documents follow the model, as [self-conformance](#self-conformance) describes, and the checker covers only part of it.
   The change also needs the documents that the changed text summarizes or that summarize it.
