@@ -73,4 +73,7 @@ They are organized as follows.
   - Optional material that the entry opens only on an explicit request, through an index of its own.
   - A procedure that links each child at the step that uses it.
   - A collection of parallel examples that an index introduces.
+
+  Sometimes siblings would crowd the entry, absorbing would overgrow the documents, and no companion folder case applies.
+  The skill or instruction set then probably covers more than one subject, so check whether part of it could become a separate skill.
 - **Directives**: A default rule comes first and its exceptions after it, as described in [condition placement](model.md#paragraphs-and-sentences).
