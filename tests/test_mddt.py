@@ -521,7 +521,7 @@ class ProseRules(CheckerCase):
 
     def test_lines_are_counted_as_markdown_counts_them(self):
         # U+2028 and similar characters do not end a line, so later findings keep their lines.
-        for separator in (' ', '\u0085', '\x0c', '\x1c'):
+        for separator in ('\u2028', '\u0085', '\x0c', '\x1c'):
             with self.subTest(separator=repr(separator)):
                 self.assertEqual(self.codes(f'# T\n\nOverview{separator}here.\n\nOne line. Two Lines.\n'),
                                  [('line-sentences', 5)])
@@ -609,7 +609,7 @@ class SentenceUnits(CheckerCase):
         right = f'{self.RIGHT} and keeps every previous result in a separate directory for later review'
         texts = [f'The build failed; {right}.', f'The build failed;\n{right}.',
                  f'The build failed:\n{right}.', f'The build failed &mdash;\n  {right}.']
-        texts.append(f'The build failed;  \n{right}.')
+        texts.append(f'The build failed; \u2028\n{right}.')
         for result, line in zip(self.findings(texts), (3, 4, 4, 4, 4)):
             self.assertEqual([(d['code'], d['line']) for d in result], [('sentence-length', line)])
             self.assertIn('sentence unit has 27 words', result[0]['message'])
