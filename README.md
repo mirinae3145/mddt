@@ -63,6 +63,7 @@ What makes a document good to read and write can differ between people and agent
 The model builds on sources that were written with human readers in mind.
 In the maintainer's judgment, the skill is effective at getting agents to write better documents.
 Its effect on agents as readers of those documents has not been tested.
+The depth rule for agent documents rests on vendor skill guidance and a few misses observed in one instruction set, and its effect is untested.
 
 Following the skill can cost more than writing without it.
 An agent reads the reference documents, plans each document's place in the tree, rereads what it changed, and revises the document after running the checker.

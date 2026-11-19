@@ -2,6 +2,7 @@
 
 This document applies the [document model](model.md) to three common uses: repository documentation, project records, and agent instructions and skills.
 Each use decides which vocabulary of document kinds and which entry documents apply, while the model and the [information types](kinds.md#information-types) stay the same.
+Agent instructions and skills also limit how far their documents sit below the entry, which the checker's `agent-depth` warning flags.
 
 ## Repository documentation
 
@@ -66,14 +67,17 @@ They are organized as follows.
 - **Skills**: `SKILL.md` is the entry document and a landing page, and the documents in `references/` are its children.
   The summary next to each link says when to read that document, so an agent loads only what its task needs.
 - **Instruction sets**: An entry file, such as `AGENTS.md`, introduces supplementary documents, and the summary next to each link says when that document applies.
-- **Depth**: A skill's references and an instruction set's supplements stay directly below their entry in the tree. <!-- code: agent-depth -->
-  An agent that reaches a document through another one can preview it instead of reading it whole.
-  A document that outgrows one file splits into siblings that the entry introduces, or absorbs the content, rather than gaining a companion folder.
-  A companion folder still fits when every task that needs its documents reads their parent first, as in these cases:
+- **Depth**: A skill's references and an instruction set's supplements stay one level below their entry in the tree. <!-- code: agent-depth -->
+  That level is the entry's folder, or its companion folder when the entry is not an index file, such as `AGENTS/` beside `AGENTS.md`.
+  Agents read the entry whole but may preview a document reached through another one, such as with `head`, and miss its links to its children.
+  Such readers do not necessarily read each chosen file whole, as [the reading procedure](reading.md#reading-files-whole) asks.
+
+  A document that outgrows one file splits into siblings that the entry introduces, or absorbs the content, rather than gaining its own companion folder.
+  A companion folder still fits when a partial read of its parent cannot skip the parent's link to the child, as in these cases:
   - Optional material that the entry opens only on an explicit request, through an index of its own.
   - A procedure that links each child at the step that uses it.
-  - A collection of parallel examples that an index introduces.
+  - An index that introduces a collection of parallel examples.
 
-  Sometimes siblings would crowd the entry, absorbing would overgrow the documents, and no companion folder case applies.
-  The skill or instruction set then probably covers more than one subject, so check whether part of it could become a separate skill.
+  Sometimes siblings would crowd the entry, absorbing would overgrow the documents, and no companion folder meets that condition.
+  The skill or instruction set then probably covers several subjects, so check whether part of it could become a separate skill or instruction entry.
 - **Directives**: A default rule comes first and its exceptions after it, as described in [condition placement](model.md#paragraphs-and-sentences).
