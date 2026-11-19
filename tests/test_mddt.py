@@ -1560,6 +1560,16 @@ def checker_constant(name):
     return ast.literal_eval(re.search(rf'^{name} = (.+)$', source, re.M).group(1))
 
 
+class Version(unittest.TestCase):
+    def test_changelog_names_the_declared_version_first(self):
+        front = (SKILL / 'SKILL.md').read_text(encoding='utf-8').split('---\n')[1]
+        declared = re.search(r'^metadata:\n  version: "(\d+\.\d+)"$', front, re.M)
+        self.assertIsNotNone(declared, 'SKILL.md declares metadata.version as "MAJOR.MINOR"')
+        changelog = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
+        newest = re.search(r'^## (\S+)', changelog, re.M)
+        self.assertEqual(newest.group(1), declared.group(1))
+
+
 class Registry(unittest.TestCase):
     def test_registry_entries_hold_valid_metadata(self):
         with (SCRIPTS / 'rules.toml').open('rb') as f:

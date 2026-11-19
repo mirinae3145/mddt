@@ -10,6 +10,8 @@ description: >
   edits confined to existing sentences, such as typo fixes, rewording, or
   value updates, or for formatting-only changes that leave structure unchanged.
 license: CC-BY-4.0 for the instructions and references; MIT for the scripts; copyright 2026 Taeha Shin
+metadata:
+  version: "1.0"
 ---
 
 # mddt

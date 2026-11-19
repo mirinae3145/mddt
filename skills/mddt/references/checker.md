@@ -31,6 +31,11 @@ Information findings rest on approximate detection, so judge each one before act
 For example, a summary in a table cell beside a link is not recognized.
 An item counts as a block by its number of sentences alone.
 
+The skill's version, `metadata.version` in the front matter of `SKILL.md`, has two numbers.
+The first number changes whenever the same files and options would get different errors, including through bug fixes.
+Every other change to the skill raises the second number.
+The [changelog](https://github.com/mirinae3145/mddt/blob/main/CHANGELOG.md) lists the changes in each version.
+
 Length checks apply the [sentence unit rule](model.md#paragraphs-and-sentences) as follows:
 
 - **Boundaries**: Semicolons, colons, and em or en dashes between complete English clauses divide units, including imperative instructions without subjects.
@@ -77,6 +82,10 @@ In the tree of a skill or agent instruction file, the output adds context to som
   Otherwise, as without a collection root, it recognizes only the entry document itself, so results can differ by invocation.
 
 Both formats are written in UTF-8 regardless of the locale, so headings and file names in any language keep their characters.
+
+Scripts can rely on the names and meanings of JSON keys and fields, which change only with the first number of the version.
+Keys and fields can be added in any version.
+The text output and the wording of messages can also change in any version, so scripts identify findings by `code` instead of parsing text.
 
 ## Options
 
@@ -163,3 +172,5 @@ The command ends with one of these statuses:
 | 0 | No errors were found |
 | 1 | At least one error was found |
 | 2 | An input cannot be read or the English sentence model cannot be loaded, and no findings are reported |
+
+The meanings of these statuses change only with the first number of the version.

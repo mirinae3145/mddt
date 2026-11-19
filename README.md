@@ -13,6 +13,7 @@ To make mddt part of a repository's writing conventions, start from [adopting md
 The [mddt skill](skills/mddt/SKILL.md) introduces its document model and its procedures for writing, restructuring, reading, and checking.
 Its folder is `skills/mddt/`, and it works with agents that read `SKILL.md` skills.
 Link or copy the whole folder into your agent's skill directory, keeping `SKILL.md`, `references/`, and `scripts/` together.
+The skill's version is in the front matter of `SKILL.md`, and [the changelog](CHANGELOG.md) lists the changes in each version.
 
 Once installed, the agent follows the skill's procedures, which say how to write and read documents that meet the [document model](skills/mddt/references/model.md).
 Some requirements live only in the procedures, such as placing content before writing it, rewriting summaries once content settles, and rereading changed topics whole.
@@ -79,7 +80,7 @@ Languages written without spaces between words, such as Chinese, Japanese, and T
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for design and review priorities, preparation for changes, and maintenance of the skill and checker.
-It also says how the repository applies the skill to itself, how files are licensed, and how to verify changes.
+It also says how versions are raised, how files are licensed, and how to verify changes, including how the repository applies the skill to itself.
 
 ## License
 

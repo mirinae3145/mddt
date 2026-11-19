@@ -41,7 +41,7 @@ The guidance states the following:
 - **Role of the checker**: Writers and reviewers judge placement, kinds, and summaries, which the checker does not decide.
   A run without errors is the minimum, not evidence that a document conforms.
 - **Reports**: A change that keeps a warning after judgment can say why where reviewers will see it, such as in the change description.
-  Require more, such as the checker revision or the files checked, only when the repository already records validation that way.
+  Require more, such as the skill version or the files checked, only when the repository already records validation that way.
 
 The guidance can open with sentences like the following, which name the skill's entry and its procedures before the model or the checker:
 
@@ -72,12 +72,15 @@ A job that fits the checker's design has these properties:
   A missing anchor is only a warning, because the checker approximates heading IDs, so this check does not catch renamed headings.
 - **Warnings on changed files**: Warnings call for a writer's judgment, so the job reports them only in changed files and does not fail on them.
 
-The job either pins a revision of the mddt repository or follows its current default branch.
+The skill's version, `metadata.version` in the front matter of `SKILL.md`, raises its first number whenever the same documents can get different errors, as the [checker reference](checker.md#findings) describes.
+Every change to the skill on the mddt repository's default branch carries a new version, so the version identifies the rules a run used.
+
+The job either pins a version or follows the default branch.
 Both are valid, and each asks for its own upkeep:
 
 | Approach | Findings | Upkeep |
 | --- | --- | --- |
-| Pinned revision | Change only when the pin changes, so a run can be reproduced | Update the pin in a change of its own, since new rules can report errors in untouched documents; contributors whose local skill differs tell the two sets of findings apart |
-| Current branch | Follow the latest rules and fixes without a change to the repository | Print the commit each run used, since a new rule can fail the job without a change to the repository |
+| Pinned version | Change only when the pin changes, so a run can be reproduced | Pin a version tag, such as `v1.0`, and update it in a change of its own, since a new first number can report errors in untouched documents; contributors whose local skill differs tell the two sets of findings apart |
+| Default branch | Follow the latest version without a change to the repository | Print the version each run used, since a new first number can fail the job without a change to the repository |
 
 The [checker reference](checker.md) describes the output formats and exit statuses that a CI script reads.
