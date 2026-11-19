@@ -82,6 +82,10 @@ ROMAN = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100}
 INDEX_NAMES = ('skill.md', 'readme.md', 'index.md')
 # Tools read these files by name, so they need no parent document.
 ENTRY_NAMES = {'skill.md', 'agents.md', 'claude.md', 'gemini.md'}
+# Findings whose fix moves content into a new file. In the tree of an agent
+# file, their detail names the entry and the rule that places such files.
+NEW_FILE_CODES = {'h1-multiple', 'heading-depth', 'section-count', 'sibling-imbalance', 'file-size'}
+AGENT_DEPTH_RULE = 'uses.md#agent-instructions-and-skills'
 URL_SCHEME = re.compile(r'^[a-z][a-z0-9+.-]*:', re.IGNORECASE)
 # An origin on GitHub, in HTTPS, SSH, or scp-like form, such as git@github.com:owner/name.git.
 GITHUB_REMOTE = re.compile(r'^(?:[a-z+]+://)?(?:[^@/]+@)?github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?/?$',
@@ -1060,6 +1064,33 @@ def parent_of(doc: Path, root: Path) -> Path | None:
     return index_file(doc.parent, skip=doc) or folder_owner(doc.parent, root)
 
 
+def is_entry(doc: Path, root: Path | None) -> bool:
+    """True for a document that needs no parent.
+
+    Agent files are read by name, the collection root's index file enters the
+    collection, and a README beside a SKILL.md introduces the folder to people
+    browsing it.
+    """
+    name = doc.name.lower()
+    if name in ENTRY_NAMES or (root is not None and doc == index_file(root)):
+        return True
+    return name == 'readme.md' and index_file(doc.parent).name.lower() == 'skill.md'
+
+
+def tree_entry(doc: Path, root: Path | None) -> Path | None:
+    """Return the entry of the tree that holds a document, or None when none is found.
+
+    Without a collection root, parents are unknown, so only a document that is
+    itself an entry is recognized.
+    """
+    while not is_entry(doc, root):
+        parent = parent_of(doc, root) if root is not None else None
+        if parent is None:
+            return None
+        doc = parent
+    return doc
+
+
 REPOSITORIES: dict[Path, tuple[str, str, set[str]] | None] = {}
 
 
@@ -1156,9 +1187,46 @@ class Tree:
 
     def check(self, path: Path, check: FileCheck, root: Path | None) -> None:
         self.check_links(path, check)
+        self.note_agent_tree(path, check, root)
         if root is not None:
             self.check_parent(path, check, root)
+            self.check_agent_depth(path, check, root)
             self.check_summaries(path, check, root)
+
+    def note_agent_tree(self, path: Path, check: FileCheck, root: Path | None) -> None:
+        """Name the agent tree and its depth rule in findings whose fix creates a file.
+
+        Skills and agent instructions keep their documents directly below the
+        entry, so a new file there is placed by that rule rather than in a
+        companion folder.
+        """
+        found = [d for d in check.diagnostics if d.code in NEW_FILE_CODES]
+        if not found:
+            return
+        entry = tree_entry(path, root)
+        if entry is None or entry.name.lower() not in ENTRY_NAMES:
+            return
+        kind = 'skill' if entry.name.lower() == 'skill.md' else 'agent instruction'
+        where = 'this file' if entry == path else relative(entry, path)
+        note = (f'; in the {kind} tree of {where}, whose depth rule is at '
+                f'{SKILL_DIR / "references" / AGENT_DEPTH_RULE}')
+        for d in found:
+            d.detail += note
+
+    def check_agent_depth(self, path: Path, check: FileCheck, root: Path) -> None:
+        """Report a document of an agent tree whose parent is not the entry.
+
+        Agents often reach a document through another one only in part, so
+        skills and agent instructions keep their documents directly below the
+        entry. Some companion folders still fit, which only a reader can judge.
+        """
+        entry = tree_entry(path, root)
+        if entry is None or entry == path or entry.name.lower() not in ENTRY_NAMES:
+            return
+        parent = parent_of(path, root)
+        if parent != entry:
+            check.report('agent-depth', 1,
+                         f'parent {relative(parent, path)} is below the entry {relative(entry, path)}')
 
     def check_summaries(self, path: Path, check: FileCheck, root: Path) -> None:
         """Report children whose every link from this parent lacks a summary."""
@@ -1221,10 +1289,7 @@ class Tree:
                 check.report('anchor-to-part', line, f'links to part "{heading.text}" in {where}')
 
     def check_parent(self, path: Path, check: FileCheck, root: Path) -> None:
-        if path.name.lower() in ENTRY_NAMES or path == index_file(root):
-            return
-        # A README beside a SKILL.md introduces the folder to people browsing it.
-        if path.name.lower() == 'readme.md' and index_file(path.parent).name.lower() == 'skill.md':
+        if is_entry(path, root):
             return
         parent = parent_of(path, root)
         if parent is None:

@@ -69,6 +69,13 @@ JSON output is an object whose keys `files` and `skipped` list the checked and s
 Its key `diagnostics` lists the findings without fix guidance, each with the fields `file`, `line`, `endLine`, `code`, `severity`, and `message`.
 The message joins the code's summary and the finding's detail, and the key `outlines` appears only with `--outline` or `--review`.
 
+In the tree of a skill or agent instruction file, the output adds context to some findings:
+
+- **Placement notes**: Findings of `h1-multiple`, `heading-depth`, `section-count`, `sibling-imbalance`, and `file-size` have a fix that can move content into a new file.
+  Their detail also names the tree's entry and the [depth rule](uses.md#agent-instructions-and-skills) that places such a file.
+- **Recognition**: The checker finds the tree, for these notes and for `agent-depth`, only from a collection root at or above its entry.
+  Otherwise, as without a collection root, it recognizes only the entry document itself, so results can differ by invocation.
+
 Both formats are written in UTF-8 regardless of the locale, so headings and file names in any language keep their characters.
 
 ## Options
