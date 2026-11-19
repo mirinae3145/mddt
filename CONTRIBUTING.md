@@ -1,7 +1,7 @@
 # Contributing
 
 This guide covers design and review priorities, preparation for changes, and maintenance of the skill and checker.
-It also covers self-conformance, licensing, and verification.
+It also covers versions, licensing, and verification, including how the repository applies the skill to itself.
 The skill is meant for any agent and repository, so keep it independent of personal instruction sets, machine paths, and particular workflow tools.
 
 ## Design and review
@@ -34,7 +34,7 @@ What to read before a change depends on which files it touches:
 - **Checker code**: A change to `skills/mddt/scripts/mddt.py` or `calibration/measure.py` needs the whole repository.
   The rule text, checker, registry, fix guidance, tests, summaries, and measurement script depend on one another.
   Reading only the touched files can leave them out of step.
-  The license texts and the calibration inputs and outputs can be skipped, since they record one past round.
+  The license texts and the generated `skills/mddt/scripts/mddt.py.lock` can be skipped, as can the calibration inputs and outputs, which record one past round.
 - **Skill documents, checker data, and tests**: Another change inside `skills/mddt/` or `tests/` needs `SKILL.md` and the skill's reference documents.
   For each code whose rule text, registry entry, fix guidance, or tests it changes, it also needs what [changing a rule](#changing-a-rule) lists for that code.
   That includes the code's detection in `mddt.py` and its tests, but not the rest of the checker.
@@ -52,6 +52,9 @@ The checker keeps each kind of content in one place.
 - **Registry**: `skills/mddt/scripts/rules.toml` holds each code's severity, output group, summary, and rule location.
 - **Fix guidance**: `skills/mddt/scripts/fixes.toml` holds the text printed with each code's findings.
   It is one file so that related codes keep consistent wording and option order.
+- **Dependencies**: `skills/mddt/scripts/mddt.py.lock` fixes the versions of the dependencies that `mddt.py` declares, so that one version of the skill keeps its results over time.
+  Update it with `uv lock --script skills/mddt/scripts/mddt.py --upgrade` in a change of its own, judging its effect on errors as [versions](#versions) describes.
+  CI checks that the lockfile matches the dependencies in the script's metadata.
 
 The rule behind each code is marked in the skill's reference documents with a comment such as `<!-- code: list-intro -->` at the end of the rule's line.
 Tests check that the registry, fix guidance, and markers name the same codes, and that each marker lies inside its rule location.
@@ -78,15 +81,34 @@ Tests also check that the numbers in `model.md` and in `rules.toml` summaries ma
 The calibration inputs and outputs record one past round, so they are not updated when a rule changes.
 `calibration/measure.py` imports the checker's internals, so a change to the names it uses updates it as well.
 
-## Self-conformance
+## Versions
 
-The repository applies the skill to itself on a best-effort basis, aiming for these properties:
+The skill's version is the `metadata.version` field in the front matter of `skills/mddt/SKILL.md`.
+It has two numbers, `MAJOR.MINOR`, so that repositories that adopt mddt can tell which changes can alter the outcome of their checks.
+Each number covers these changes:
 
-- **Model conformance**: The repository's documents follow the document model, including the judgment rules that the checker does not decide.
-  Apart from the generated calibration material, they also pass the checker without errors or warnings.
-- **Formatting**: The same documents pass the Markdown linter configured in `.rumdl.toml`, which covers formatting that the model leaves out.
-- **Checker consistency**: Tests keep the checker's codes, rule locations, numeric limits, and options in step with the reference documents.
-- **Self-containment**: The skill folder works without files outside it, since it holds the checker's specification and an index of terms.
+- **Major**: Changes to the checker's errors for the same files and options, whether a rule changed or a bug was fixed.
+  The errors are the error findings, identified by code, file, and location, and the exit status, but not the wording of messages.
+  Findings that become errors, stop being errors, or disappear count too, so one major version gives the same files and options the same errors.
+  The cause does not matter, since dependencies, file selection, link resolution, and `.mddtignore` matching can change errors as detection does.
+- **Minor**: Every other change to the skill folder, such as new warnings, fix guidance, or revised procedures.
+
+Scripts read the checker's JSON output and exit status, so part of the output is a contract as well:
+
+- **Contract**: The names and meanings of JSON keys and fields, and the meanings of exit statuses.
+  Changing them needs a major version, and such changes are avoided even then.
+- **Outside the contract**: Added keys and fields, the text output, and the wording of messages, which can change in a minor version.
+
+The version is raised as follows:
+
+- **Once per change**: A change that touches `skills/mddt/` raises the version once when it enters `main`, through a pull request or a direct merge.
+  Changes outside the folder, such as tests, CI, or repository documents, leave it unchanged.
+  The maintainer decides how much one change bundles and makes sure that changes open at the same time do not claim the same version.
+- **Best effort**: Whether a change alters errors is judged without a fixed set of inputs.
+  The repository's own documents aim for no findings, so their results cannot show such a change.
+- **Changelog and tag**: Each raise adds a section for its version to [the changelog](CHANGELOG.md), where a major version lists its changes to errors first.
+  The merged commit gets the tag `vMAJOR.MINOR`, matching the front matter.
+  Tests check that the changelog's newest section names the version in the front matter.
 
 ## Licenses
 
@@ -101,6 +123,16 @@ A change is verified by the tests, and a change to the repository's documents al
 The CI workflow in `.github/workflows/ci.yml` runs these checks on pull requests and pushes to `main`.
 It runs the tests only under coverage, and its document check is the plain run of the documented command.
 Self-conformance aims for no warnings, so the document check fails on mddt warnings as well as errors.
+
+### Self-conformance
+
+The repository applies the skill to itself on a best-effort basis, aiming for these properties:
+
+- **Model conformance**: The repository's documents follow the document model, including the judgment rules that the checker does not decide.
+  Apart from the generated calibration material, they also pass the checker without errors or warnings.
+- **Formatting**: The same documents pass the Markdown linter configured in `.rumdl.toml`, which covers formatting that the model leaves out.
+- **Checker consistency**: Tests keep the checker's codes, rule locations, numeric limits, and options in step with the reference documents.
+- **Self-containment**: The skill folder works without files outside it, since it holds the checker's specification and an index of terms.
 
 ### Tests
 
@@ -121,7 +153,7 @@ uvx coverage@7.17.2 combine
 uvx coverage@7.17.2 report -m --fail-under=100
 ```
 
-The coverage run builds one environment from the script's dependencies and starts each checker run in it with `python -m coverage`.
+The coverage run builds one environment from the script's locked dependencies and starts each checker run in it with `python -m coverage`.
 It skips uv's script mode and the script's Python requirement, so the plain run remains the check that the documented command works.
 
 Code that the tests do not reach is handled as follows:

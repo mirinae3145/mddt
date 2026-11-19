@@ -10,6 +10,8 @@ description: >
   edits confined to existing sentences, such as typo fixes, rewording, or
   value updates, or for formatting-only changes that leave structure unchanged.
 license: CC-BY-4.0 for the instructions and references; MIT for the scripts; copyright 2026 Taeha Shin
+metadata:
+  version: "1.0"
 ---
 
 # mddt
@@ -59,7 +61,7 @@ uv run <skill-dir>/scripts/mddt.py FILE...
 Each finding comes with fix guidance, and errors make the command exit with status 1.
 Apply the findings as described in [checking](references/writing.md#checking), which limits them to what the current task created or made worse.
 A requested restructuring applies more of them, though not every sentence-level finding.
-The [checker reference](references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
+The [checker reference](references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, its exit statuses, and its versions.
 Read it in these cases:
 
 - **File selection**: A run takes a directory, excludes files, or sets the collection root.

@@ -25,16 +25,19 @@ COVERAGE = 'coverage==7.17.2'
 def coverage_python():
     """Build one environment for the coverage run and return its interpreter.
 
-    The environment holds the script's dependencies from its inline metadata
-    and the pinned coverage, so the network is used once per test run rather
-    than once per checker run.
+    The environment holds the script's dependencies at the versions in its
+    lockfile and the pinned coverage, so the network is used once per test run
+    rather than once per checker run.
     """
     folder = Path(tempfile.mkdtemp(prefix='mddt-coverage-'))
     atexit.register(shutil.rmtree, folder, ignore_errors=True)
     python = folder / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+    locked = folder / 'requirements.txt'
     for command in (['uv', 'venv', '--quiet', str(folder)],
+                    ['uv', 'export', '--quiet', '--frozen', '--script', str(SCRIPT),
+                     '--no-header', '--output-file', str(locked)],
                     ['uv', 'pip', 'install', '--quiet', '--python', str(python),
-                     '--requirements', str(SCRIPT), COVERAGE]):
+                     '--requirements', str(locked), COVERAGE]):
         result = subprocess.run(command, capture_output=True, text=True)
         if result.returncode:
             raise RuntimeError(f'cannot build the coverage environment:\n{result.stderr}')
@@ -521,7 +524,7 @@ class ProseRules(CheckerCase):
 
     def test_lines_are_counted_as_markdown_counts_them(self):
         # U+2028 and similar characters do not end a line, so later findings keep their lines.
-        for separator in (' ', '\u0085', '\x0c', '\x1c'):
+        for separator in ('\u2028', '\u0085', '\x0c', '\x1c'):
             with self.subTest(separator=repr(separator)):
                 self.assertEqual(self.codes(f'# T\n\nOverview{separator}here.\n\nOne line. Two Lines.\n'),
                                  [('line-sentences', 5)])
@@ -609,7 +612,7 @@ class SentenceUnits(CheckerCase):
         right = f'{self.RIGHT} and keeps every previous result in a separate directory for later review'
         texts = [f'The build failed; {right}.', f'The build failed;\n{right}.',
                  f'The build failed:\n{right}.', f'The build failed &mdash;\n  {right}.']
-        texts.append(f'The build failed;  \n{right}.')
+        texts.append(f'The build failed; \u2028\n{right}.')
         for result, line in zip(self.findings(texts), (3, 4, 4, 4, 4)):
             self.assertEqual([(d['code'], d['line']) for d in result], [('sentence-length', line)])
             self.assertIn('sentence unit has 27 words', result[0]['message'])
@@ -1558,6 +1561,16 @@ def checker_constant(name):
     """Evaluate a literal assigned at the top level of the checker."""
     source = (SCRIPTS / 'mddt.py').read_text(encoding='utf-8')
     return ast.literal_eval(re.search(rf'^{name} = (.+)$', source, re.M).group(1))
+
+
+class Version(unittest.TestCase):
+    def test_changelog_names_the_declared_version_first(self):
+        front = (SKILL / 'SKILL.md').read_text(encoding='utf-8').split('---\n')[1]
+        declared = re.search(r'^metadata:\n  version: "(\d+\.\d+)"$', front, re.M)
+        self.assertIsNotNone(declared, 'SKILL.md declares metadata.version as "MAJOR.MINOR"')
+        changelog = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
+        newest = re.search(r'^## (\S+)', changelog, re.M)
+        self.assertEqual(newest.group(1), declared.group(1))
 
 
 class Registry(unittest.TestCase):

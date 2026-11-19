@@ -1,7 +1,7 @@
 # Checker reference
 
 This document describes the checker that comes with the skill.
-It covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
+It covers running the checker, its findings and output, its options, the files and links it checks, its exit statuses, and its versions.
 Read it when choosing the files or collection root of a run, when a script reads the output or exit status, or without uv.
 
 ## Running
@@ -14,8 +14,11 @@ uv run <skill-dir>/scripts/mddt.py FILE...
 ```
 
 The dependencies include spaCy 3.8.18 and its English model `en_core_web_md` 3.8.0, pinned together to keep sentence analysis reproducible.
+The lockfile `scripts/mddt.py.lock` fixes the versions of all dependencies, including indirect ones, and `uv run` installs those versions.
+A few of the locked versions differ between Python versions, since some packages support only newer ones.
+
 uv downloads the model wheel from the official spaCy model releases with the other dependencies.
-Without uv, install every dependency in the script's metadata into the Python environment used to run it.
+Without uv, install the versions in the lockfile into the Python environment used to run the checker.
 The checker loads the model locally when prose contains a possible clause boundary; it sends no document text to a service.
 
 ## Findings
@@ -154,7 +157,7 @@ Links in the checked files are resolved as follows, while images and links writt
 
 Formulas in dollar math are read as math, so brackets and parentheses in them do not form links.
 
-## Exit status
+## Exit status and versions
 
 The command ends with one of these statuses:
 
@@ -163,3 +166,12 @@ The command ends with one of these statuses:
 | 0 | No errors were found |
 | 1 | At least one error was found |
 | 2 | An input cannot be read or the English sentence model cannot be loaded, and no findings are reported |
+
+The skill's version, `metadata.version` in the front matter of `SKILL.md`, has two numbers.
+The first number changes whenever the same files and options would get different errors or exit status, including through bug fixes and dependency updates.
+Every other change to the skill raises the second number.
+The [changelog](https://github.com/mirinae3145/mddt/blob/main/CHANGELOG.md) lists the changes in each version.
+
+Within one first number, scripts can rely on the meanings of exit statuses and the names and meanings of JSON keys and fields.
+Keys and fields can be added in any version.
+The text output and the wording of messages can change in any version, so scripts identify findings by `code` instead of parsing text.
