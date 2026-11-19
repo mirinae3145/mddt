@@ -58,6 +58,10 @@ The closing group is left out when checking date or number order among the prece
 Other titles, including translations and combined titles, need judgment; a warning can remain when they serve the same closing role.
 The exception changes only ordering findings, so the sections retain their topic or part roles and their other checks.
 
+The fixes for `heading-depth`, `section-count`, `sibling-imbalance`, and `file-size` can move content into a new file.
+In the tree of a skill or agent instruction file, such a finding also names the entry and the [depth rule](uses.md#agent-instructions-and-skills) for new files.
+Without a collection root, the checker recognizes the tree only in its entry document.
+
 ## Output
 
 Text output opens with a summary line, the skipped files if any, and a `reread:` line that points to [checking](writing.md#checking).

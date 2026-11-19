@@ -721,6 +721,51 @@ class TreeRules(CheckerCase):
         })
         self.assertEqual(found, [])
 
+    def agent_notes(self, files, *options):
+        """Return (file, code, note) for findings, with the agent tree note or None."""
+        for name, text in files.items():
+            path = self.dir / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding='utf-8')
+        data = json.loads(run('--format', 'json', '--root', str(self.dir), *options, str(self.dir)).stdout)
+        found = []
+        for d in data['diagnostics']:
+            note = re.search(r'; in the (.+) tree of (.+), see the depth rule at (.+)$', d['message'])
+            found.append((Path(d['file']).relative_to(self.dir).as_posix(), d['code'],
+                          note.groups() if note else None))
+        return sorted(found, key=lambda f: (f[0], f[1]))
+
+    def test_findings_that_create_files_name_the_agent_tree(self):
+        deep = '## Topic\n\nOverview.\n\n### A\n\nX.\n\n#### B\n\nY.\n\n### C\n\nZ.\n'
+        rule = str(SKILL / 'references' / checker_constant('AGENT_DEPTH_RULE'))
+        found = self.agent_notes({
+            'README.md': '# R\n\nSee [docs](docs/): the documentation.\n',
+            'docs/README.md': '# Docs\n\nSee [guide](guide.md): the guide.\n',
+            'docs/guide.md': f'# Guide\n\nOverview.\n\n{deep}',
+            'skills/x/SKILL.md': '# X\n\nSee [ref](references/r.md): rules, and [rules](references/rules.md): more.\n',
+            'skills/x/README.md': f'# X for people\n\nOverview.\n\n{deep}',
+            'skills/x/references/r.md': f'# Ref\n\nOverview.\n\n{deep}',
+            'skills/x/references/rules.md': '# Rules\n\nSee [plots](rules/plots.md): plots.\n',
+            'skills/x/references/rules/plots.md': '# Plots\n\nOverview.\n\n'
+                                                  + ''.join(f'- {n} item\n' for n in range(400)),
+            'AGENTS.md': f'# Agents\n\nOverview.\n\n{deep}',
+        }, '--review')
+        self.assertEqual(found, [
+            ('AGENTS.md', 'heading-depth', ('agent instruction', 'this file', rule)),
+            ('docs/guide.md', 'heading-depth', None),
+            ('skills/x/README.md', 'heading-depth', None),
+            ('skills/x/references/r.md', 'heading-depth', ('skill', '../SKILL.md', rule)),
+            ('skills/x/references/rules/plots.md', 'file-size', ('skill', '../../SKILL.md', rule)),
+        ])
+
+    def test_agent_tree_needs_a_root_unless_the_file_is_its_entry(self):
+        deep = '# T\n\nOverview.\n\n## Topic\n\nOverview.\n\n### A\n\nX.\n\n#### B\n\nY.\n\n### C\n\nZ.\n'
+        for name, noted in (('CLAUDE.md', True), ('guide.md', False)):
+            with self.subTest(name=name):
+                path = self.write(name, deep)
+                [finding] = json.loads(run('--format', 'json', str(path)).stdout)['diagnostics']
+                self.assertEqual('agent instruction tree of this file' in finding['message'], noted)
+
     def test_exclude_skips_non_documents(self):
         found = self.tree({
             'README.md': '# R\n\nOverview.\n',
