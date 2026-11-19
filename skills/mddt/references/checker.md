@@ -35,7 +35,7 @@ For example, a summary in a table cell beside a link is not recognized.
 An item counts as a block by its number of sentences alone.
 
 The skill's version, `metadata.version` in the front matter of `SKILL.md`, has two numbers.
-The first number changes whenever the same files and options would get different errors, including through bug fixes.
+The first number changes whenever the same files and options would get different errors or exit status, including through bug fixes and dependency updates.
 Every other change to the skill raises the second number.
 The [changelog](https://github.com/mirinae3145/mddt/blob/main/CHANGELOG.md) lists the changes in each version.
 
