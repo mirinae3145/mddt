@@ -25,16 +25,19 @@ COVERAGE = 'coverage==7.17.2'
 def coverage_python():
     """Build one environment for the coverage run and return its interpreter.
 
-    The environment holds the script's dependencies from its inline metadata
-    and the pinned coverage, so the network is used once per test run rather
-    than once per checker run.
+    The environment holds the script's dependencies at the versions in its
+    lockfile and the pinned coverage, so the network is used once per test run
+    rather than once per checker run.
     """
     folder = Path(tempfile.mkdtemp(prefix='mddt-coverage-'))
     atexit.register(shutil.rmtree, folder, ignore_errors=True)
     python = folder / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
+    locked = folder / 'requirements.txt'
     for command in (['uv', 'venv', '--quiet', str(folder)],
+                    ['uv', 'export', '--quiet', '--frozen', '--script', str(SCRIPT),
+                     '--no-header', '--output-file', str(locked)],
                     ['uv', 'pip', 'install', '--quiet', '--python', str(python),
-                     '--requirements', str(SCRIPT), COVERAGE]):
+                     '--requirements', str(locked), COVERAGE]):
         result = subprocess.run(command, capture_output=True, text=True)
         if result.returncode:
             raise RuntimeError(f'cannot build the coverage environment:\n{result.stderr}')

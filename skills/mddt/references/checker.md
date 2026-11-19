@@ -14,8 +14,11 @@ uv run <skill-dir>/scripts/mddt.py FILE...
 ```
 
 The dependencies include spaCy 3.8.18 and its English model `en_core_web_md` 3.8.0, pinned together to keep sentence analysis reproducible.
+The lockfile `scripts/mddt.py.lock` fixes the versions of all dependencies, including indirect ones, and `uv run` installs those versions.
+A few of the locked versions differ between Python versions, since some packages support only newer ones.
+
 uv downloads the model wheel from the official spaCy model releases with the other dependencies.
-Without uv, install every dependency in the script's metadata into the Python environment used to run it.
+Without uv, install the versions in the lockfile into the Python environment used to run the checker.
 The checker loads the model locally when prose contains a possible clause boundary; it sends no document text to a service.
 
 ## Findings

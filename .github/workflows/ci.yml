@@ -21,7 +21,9 @@ jobs:
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           enable-cache: true
-          cache-dependency-glob: skills/mddt/scripts/mddt.py
+          cache-dependency-glob: skills/mddt/scripts/mddt.py*
+      - name: Check that the lockfile matches the script's dependencies
+        run: uv lock --script skills/mddt/scripts/mddt.py --check
       - name: Run the tests under coverage
         env:
           MDDT_COVERAGE: '1'
@@ -44,7 +46,7 @@ jobs:
       - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
         with:
           enable-cache: true
-          cache-dependency-glob: skills/mddt/scripts/mddt.py
+          cache-dependency-glob: skills/mddt/scripts/mddt.py*
       # The plain run also confirms that the documented command works.
       - name: Check the documents against the model, failing on warnings
         shell: bash

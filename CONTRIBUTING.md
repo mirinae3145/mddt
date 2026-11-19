@@ -34,7 +34,7 @@ What to read before a change depends on which files it touches:
 - **Checker code**: A change to `skills/mddt/scripts/mddt.py` or `calibration/measure.py` needs the whole repository.
   The rule text, checker, registry, fix guidance, tests, summaries, and measurement script depend on one another.
   Reading only the touched files can leave them out of step.
-  The license texts and the calibration inputs and outputs can be skipped, since they record one past round.
+  The license texts and the generated `skills/mddt/scripts/mddt.py.lock` can be skipped, as can the calibration inputs and outputs, which record one past round.
 - **Skill documents, checker data, and tests**: Another change inside `skills/mddt/` or `tests/` needs `SKILL.md` and the skill's reference documents.
   For each code whose rule text, registry entry, fix guidance, or tests it changes, it also needs what [changing a rule](#changing-a-rule) lists for that code.
   That includes the code's detection in `mddt.py` and its tests, but not the rest of the checker.
@@ -52,6 +52,9 @@ The checker keeps each kind of content in one place.
 - **Registry**: `skills/mddt/scripts/rules.toml` holds each code's severity, output group, summary, and rule location.
 - **Fix guidance**: `skills/mddt/scripts/fixes.toml` holds the text printed with each code's findings.
   It is one file so that related codes keep consistent wording and option order.
+- **Dependencies**: `skills/mddt/scripts/mddt.py.lock` fixes the versions of the dependencies that `mddt.py` declares, so that one version of the skill keeps its results over time.
+  Update it with `uv lock --script skills/mddt/scripts/mddt.py --upgrade` in a change of its own, judging its effect on errors as [versions](#versions) describes.
+  CI checks that the lockfile matches the dependencies in the script's metadata.
 
 The rule behind each code is marked in the skill's reference documents with a comment such as `<!-- code: list-intro -->` at the end of the rule's line.
 Tests check that the registry, fix guidance, and markers name the same codes, and that each marker lies inside its rule location.
@@ -150,7 +153,7 @@ uvx coverage@7.17.2 combine
 uvx coverage@7.17.2 report -m --fail-under=100
 ```
 
-The coverage run builds one environment from the script's dependencies and starts each checker run in it with `python -m coverage`.
+The coverage run builds one environment from the script's locked dependencies and starts each checker run in it with `python -m coverage`.
 It skips uv's script mode and the script's Python requirement, so the plain run remains the check that the documented command works.
 
 Code that the tests do not reach is handled as follows:

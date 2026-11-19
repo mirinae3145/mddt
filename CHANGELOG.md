@@ -12,6 +12,7 @@ The entries below are changes from that baseline, whose existing features its do
 
 ### Added
 
+- **Locked dependencies**: `scripts/mddt.py.lock` fixes the versions of all the checker's dependencies, so that a version of the skill keeps its errors over time.
 - **Version**: `SKILL.md` declares the skill's version in the `metadata.version` field of its front matter.
 - **Output contract**: The checker reference states which parts of the JSON output and exit statuses change only with a new first number.
 - **Pinned versions**: The adoption guide pins a version tag instead of a revision, and default-branch jobs print the version they used.
