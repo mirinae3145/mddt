@@ -206,5 +206,5 @@ rule = "model.md#lists"
 [agent-depth]
 severity = "warning"
 group = "structure"
-summary = "agent document is not directly below its entry"
+summary = "agent document is more than one level below its entry"
 rule = "uses.md#agent-instructions-and-skills"

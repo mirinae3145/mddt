@@ -793,7 +793,7 @@ class TreeRules(CheckerCase):
         self.assertEqual(result.returncode, 0)
         data = json.loads(result.stdout)
         self.assertEqual([d['message'] for d in data['diagnostics']],
-                         ['agent document is not directly below its entry: '
+                         ['agent document is more than one level below its entry: '
                           'parent ../writing.md is below the entry ../../AGENTS.md'])
 
     def test_agent_tree_needs_a_root_at_or_above_its_entry(self):

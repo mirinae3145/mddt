@@ -23,7 +23,7 @@ The placement takes these steps:
    Short topics that the same reader needs for the same task stay together in one file, as parts or as topic H2s.
    A topic gets its own file when it serves another reader or task, outgrows its siblings, or needs more than two heading levels.
    A new file goes into its parent's folder, or into the parent's companion folder when the parent is not an index file.
-   In agent instructions and skills, that parent is the entry itself, as [their depth rule](uses.md#agent-instructions-and-skills) describes.
+   In agent instructions and skills, that parent defaults to the entry itself, as [their depth rule](uses.md#agent-instructions-and-skills) describes.
 1. Decide each new topic's kind with [document kinds](kinds.md#document-kinds), using the vocabulary in [common uses](uses.md).
 1. For a new topic set or a large file, sketch the [topic-by-type review](kinds.md#topic-by-type-review) to see which blocks each subject needs.
 

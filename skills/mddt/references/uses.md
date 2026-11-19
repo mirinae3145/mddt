@@ -68,7 +68,8 @@ They are organized as follows.
   The summary next to each link says when to read that document, so an agent loads only what its task needs.
 - **Instruction sets**: An entry file, such as `AGENTS.md`, introduces supplementary documents, and the summary next to each link says when that document applies.
 - **Depth**: A skill's references and an instruction set's supplements stay one level below their entry in the tree. <!-- code: agent-depth -->
-  That level is the entry's folder, or its companion folder when the entry is not an index file, such as `AGENTS/` beside `AGENTS.md`.
+  That level is the entry's folder, including subfolders such as `references/` that have no index file or companion document of their own.
+  When the entry is not an index file, its companion folder plays that role instead, such as `AGENTS/` beside `AGENTS.md`.
   Agents read the entry whole but may preview a document reached through another one, such as with `head`, and miss its links to its children.
   Such readers do not necessarily read each chosen file whole, as [the reading procedure](reading.md#reading-files-whole) asks.
 

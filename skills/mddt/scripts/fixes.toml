@@ -11,7 +11,7 @@ Avoid promoting a section heading to H1 without adjusting the levels below it.
 
 h1-multiple = """
 Fix, in order of preference:
-1. If the file holds several documents, split it into one file per H1 and link the files from a parent document.
+1. If the file holds several documents, split it into one file per H1, placed as writing.md's Placing a document describes, and link the files from a parent document.
 2. Otherwise demote the extra H1 headings to H2 and adjust the levels below them.
 """
 
