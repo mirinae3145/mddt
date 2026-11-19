@@ -730,7 +730,7 @@ class TreeRules(CheckerCase):
         data = json.loads(run('--format', 'json', '--root', str(self.dir), *options, str(self.dir)).stdout)
         found = []
         for d in data['diagnostics']:
-            note = re.search(r'; in the (.+) tree of (.+), see the depth rule at (.+)$', d['message'])
+            note = re.search(r'; in the (.+) tree of (.+), whose depth rule is at (.+)$', d['message'])
             found.append((Path(d['file']).relative_to(self.dir).as_posix(), d['code'],
                           note.groups() if note else None))
         return sorted(found, key=lambda f: (f[0], f[1]))
@@ -749,7 +749,15 @@ class TreeRules(CheckerCase):
             'skills/x/references/rules/plots.md': '# Plots\n\nOverview.\n\n'
                                                   + ''.join(f'- {n} item\n' for n in range(400)),
             'AGENTS.md': f'# Agents\n\nOverview.\n\n{deep}',
+            'skills/y/SKILL.md': '# Y\n\nSee [many](references/many.md): sections, [uneven](references/uneven.md): sizes, '
+                                 'and [two](references/two.md): titles.\n',
+            'skills/y/references/many.md': '# Many\n\nOverview.\n\n' + ''.join(
+                f'## {w}\n\nText.\n\n' for w in 'pear apple fig kiwi plum lime date cherry'.split()),
+            'skills/y/references/uneven.md': '# Uneven\n\nOverview.\n\n## A\n\nShort.\n\n## B\n\n'
+                                             + ''.join(f'- {n} item\n' for n in range(30)) + '\n## C\n\nShort.\n',
+            'skills/y/references/two.md': '# Two\n\nOverview.\n\n# Second\n\nOverview.\n',
         }, '--review')
+        yrule = ('skill', '../SKILL.md', rule)
         self.assertEqual(found, [
             ('AGENTS.md', 'heading-depth', ('agent instruction', 'this file', rule)),
             ('docs/guide.md', 'heading-depth', None),
@@ -757,6 +765,9 @@ class TreeRules(CheckerCase):
             ('skills/x/references/r.md', 'heading-depth', ('skill', '../SKILL.md', rule)),
             ('skills/x/references/rules/plots.md', 'agent-depth', None),
             ('skills/x/references/rules/plots.md', 'file-size', ('skill', '../../SKILL.md', rule)),
+            ('skills/y/references/many.md', 'section-count', yrule),
+            ('skills/y/references/two.md', 'h1-multiple', yrule),
+            ('skills/y/references/uneven.md', 'sibling-imbalance', yrule),
         ])
 
     def test_agent_documents_below_another_document_are_warnings(self):
@@ -785,13 +796,20 @@ class TreeRules(CheckerCase):
                          ['agent document is not directly below its entry: '
                           'parent ../writing.md is below the entry ../../AGENTS.md'])
 
-    def test_agent_tree_needs_a_root_unless_the_file_is_its_entry(self):
+    def test_agent_tree_needs_a_root_at_or_above_its_entry(self):
         deep = '# T\n\nOverview.\n\n## Topic\n\nOverview.\n\n### A\n\nX.\n\n#### B\n\nY.\n\n### C\n\nZ.\n'
-        for name, noted in (('CLAUDE.md', True), ('guide.md', False)):
-            with self.subTest(name=name):
-                path = self.write(name, deep)
-                [finding] = json.loads(run('--format', 'json', str(path)).stdout)['diagnostics']
-                self.assertEqual('agent instruction tree of this file' in finding['message'], noted)
+        (self.dir / 'skill/references').mkdir(parents=True)
+        self.write('skill/SKILL.md', '# S\n\nSee [ref](references/r.md): rules.\n')
+        ref = self.write('skill/references/r.md', deep)
+        entry = self.write('CLAUDE.md', deep)
+        for path, options, noted in (
+                (entry, (), True),
+                (ref, (), False),
+                (ref, ('--root', str(self.dir / 'skill/references')), False),
+                (ref, ('--root', str(self.dir)), True)):
+            with self.subTest(path=path.name, options=options):
+                [finding] = json.loads(run('--format', 'json', *options, str(path)).stdout)['diagnostics']
+                self.assertEqual('depth rule is at' in finding['message'], noted)
 
     def test_exclude_skips_non_documents(self):
         found = self.tree({

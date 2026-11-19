@@ -58,10 +58,6 @@ The closing group is left out when checking date or number order among the prece
 Other titles, including translations and combined titles, need judgment; a warning can remain when they serve the same closing role.
 The exception changes only ordering findings, so the sections retain their topic or part roles and their other checks.
 
-The fixes for `heading-depth`, `section-count`, `sibling-imbalance`, and `file-size` can move content into a new file.
-In the tree of a skill or agent instruction file, such a finding also names the entry and the [depth rule](uses.md#agent-instructions-and-skills) for new files.
-Without a collection root, the checker recognizes the tree only in its entry document.
-
 ## Output
 
 Text output opens with a summary line, the skipped files if any, and a `reread:` line that points to [checking](writing.md#checking).
@@ -72,6 +68,13 @@ Files with structural findings also get an outline that shows how the checker in
 JSON output is an object whose keys `files` and `skipped` list the checked and skipped files.
 Its key `diagnostics` lists the findings without fix guidance, each with the fields `file`, `line`, `endLine`, `code`, `severity`, and `message`.
 The message joins the code's summary and the finding's detail, and the key `outlines` appears only with `--outline` or `--review`.
+
+In the tree of a skill or agent instruction file, the output adds context to some findings:
+
+- **Placement notes**: Findings of `h1-multiple`, `heading-depth`, `section-count`, `sibling-imbalance`, and `file-size` have a fix that can move content into a new file.
+  Their detail also names the tree's entry and the [depth rule](uses.md#agent-instructions-and-skills) that places such a file.
+- **Recognition**: The checker finds the tree, for these notes and for `agent-depth`, only from a collection root at or above its entry.
+  Otherwise, as without a collection root, it recognizes only the entry document itself, so results can differ by invocation.
 
 Both formats are written in UTF-8 regardless of the locale, so headings and file names in any language keep their characters.
 

@@ -84,7 +84,7 @@ INDEX_NAMES = ('skill.md', 'readme.md', 'index.md')
 ENTRY_NAMES = {'skill.md', 'agents.md', 'claude.md', 'gemini.md'}
 # Findings whose fix moves content into a new file. In the tree of an agent
 # file, their detail names the entry and the rule that places such files.
-NEW_FILE_CODES = {'heading-depth', 'section-count', 'sibling-imbalance', 'file-size'}
+NEW_FILE_CODES = {'h1-multiple', 'heading-depth', 'section-count', 'sibling-imbalance', 'file-size'}
 AGENT_DEPTH_RULE = 'uses.md#agent-instructions-and-skills'
 URL_SCHEME = re.compile(r'^[a-z][a-z0-9+.-]*:', re.IGNORECASE)
 # An origin on GitHub, in HTTPS, SSH, or scp-like form, such as git@github.com:owner/name.git.
@@ -1208,7 +1208,7 @@ class Tree:
             return
         kind = 'skill' if entry.name.lower() == 'skill.md' else 'agent instruction'
         where = 'this file' if entry == path else relative(entry, path)
-        note = (f'; in the {kind} tree of {where}, see the depth rule at '
+        note = (f'; in the {kind} tree of {where}, whose depth rule is at '
                 f'{SKILL_DIR / "references" / AGENT_DEPTH_RULE}')
         for d in found:
             d.detail += note
