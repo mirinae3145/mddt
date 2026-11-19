@@ -1107,6 +1107,16 @@ class Interface(CheckerCase):
         self.assertIn(f'{a}:1', out)
         self.assertIn(f'{b}:1', out)
 
+    def test_text_output_points_to_the_reread(self):
+        reread = ('reread: findings cover only what a parser can decide; reread each changed part or topic as '
+                  f'{SKILL / "references/writing.md"}#checking describes')
+        ok = self.write('ok.md', '# T\n\nOverview.\n')
+        bad = self.write('bad.md', '# T\n')
+        for doc in (ok, bad):
+            with self.subTest(doc=doc.name):
+                self.assertEqual(run(str(doc)).stdout.splitlines()[1], reread)
+        self.assertNotIn('reread', run('--format', 'json', str(bad)).stdout)
+
     def check_unreadable_directory(self, nested, ignored=False):
         if os.name == 'nt':
             self.skipTest('POSIX directory permissions are unavailable')

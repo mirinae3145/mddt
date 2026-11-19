@@ -1532,6 +1532,10 @@ def render_text(registry: dict, fixes: dict[str, str], diagnostics: list[Diagnos
         # Excluded folders can hold many files, so long lists are only counted.
         listed = ', '.join(skipped) if len(skipped) <= 5 else f'{len(skipped)} files'
         out.append(f'skipped: {listed}')
+    # A clean run is easy to take for conformance, so every text run names the
+    # reread that the findings do not replace.
+    out.append('reread: findings cover only what a parser can decide; reread each changed part or topic as '
+               f'{SKILL_DIR / "references" / "writing.md"}#checking describes')
     current = None
     for d in sorted(diagnostics, key=lambda d: sort_key(registry, d)):
         if d.code != current:

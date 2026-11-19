@@ -60,7 +60,9 @@ The exception changes only ordering findings, so the sections retain their topic
 
 ## Output
 
-Text output prints each code once with its summary and rule location, then every location where it occurs, then its fix guidance.
+Text output opens with a summary line, the skipped files if any, and a `reread:` line that points to [checking](writing.md#checking).
+That line is there because findings cover only what a parser can decide.
+It then prints each code once with its summary and rule location, then every location where it occurs, then its fix guidance.
 Files with structural findings also get an outline that shows how the checker interpreted them.
 
 JSON output is an object whose keys `files` and `skipped` list the checked and skipped files.
