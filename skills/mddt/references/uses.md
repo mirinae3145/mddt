@@ -65,5 +65,12 @@ They are organized as follows.
   Workflows are action with numbered steps, rule sets and option lists are reference made mostly of principle blocks, and rationale is explanation.
 - **Skills**: `SKILL.md` is the entry document and a landing page, and the documents in `references/` are its children.
   The summary next to each link says when to read that document, so an agent loads only what its task needs.
-- **Instruction sets**: An entry file, such as `AGENTS.md`, introduces supplementary documents, and their own subdocuments go in companion folders, such as `writing.md` with `writing/markdown.md`.
+- **Instruction sets**: An entry file, such as `AGENTS.md`, introduces supplementary documents, and the summary next to each link says when that document applies.
+- **Depth**: A skill's references and an instruction set's supplements stay directly below their entry in the tree.
+  An agent that reaches a document through another one can preview it instead of reading it whole.
+  A document that outgrows one file splits into siblings that the entry introduces, or absorbs the content, rather than gaining a companion folder.
+  A companion folder still fits when every task that needs its documents reads their parent first, as in these cases:
+  - Optional material that the entry opens only on an explicit request, through an index of its own.
+  - A procedure that links each child at the step that uses it.
+  - A collection of parallel examples that an index introduces.
 - **Directives**: A default rule comes first and its exceptions after it, as described in [condition placement](model.md#paragraphs-and-sentences).
