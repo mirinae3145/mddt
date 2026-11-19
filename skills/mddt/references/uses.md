@@ -66,7 +66,7 @@ They are organized as follows.
 - **Skills**: `SKILL.md` is the entry document and a landing page, and the documents in `references/` are its children.
   The summary next to each link says when to read that document, so an agent loads only what its task needs.
 - **Instruction sets**: An entry file, such as `AGENTS.md`, introduces supplementary documents, and the summary next to each link says when that document applies.
-- **Depth**: A skill's references and an instruction set's supplements stay directly below their entry in the tree.
+- **Depth**: A skill's references and an instruction set's supplements stay directly below their entry in the tree. <!-- code: agent-depth -->
   An agent that reaches a document through another one can preview it instead of reading it whole.
   A document that outgrows one file splits into siblings that the entry introduces, or absorbs the content, rather than gaining a companion folder.
   A companion folder still fits when every task that needs its documents reads their parent first, as in these cases:

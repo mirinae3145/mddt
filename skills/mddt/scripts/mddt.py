@@ -1190,6 +1190,7 @@ class Tree:
         self.note_agent_tree(path, check, root)
         if root is not None:
             self.check_parent(path, check, root)
+            self.check_agent_depth(path, check, root)
             self.check_summaries(path, check, root)
 
     def note_agent_tree(self, path: Path, check: FileCheck, root: Path | None) -> None:
@@ -1211,6 +1212,21 @@ class Tree:
                 f'{SKILL_DIR / "references" / AGENT_DEPTH_RULE}')
         for d in found:
             d.detail += note
+
+    def check_agent_depth(self, path: Path, check: FileCheck, root: Path) -> None:
+        """Report a document of an agent tree whose parent is not the entry.
+
+        Agents often reach a document through another one only in part, so
+        skills and agent instructions keep their documents directly below the
+        entry. Some companion folders still fit, which only a reader can judge.
+        """
+        entry = tree_entry(path, root)
+        if entry is None or entry == path or entry.name.lower() not in ENTRY_NAMES:
+            return
+        parent = parent_of(path, root)
+        if parent != entry:
+            check.report('agent-depth', 1,
+                         f'parent {relative(parent, path)} is below the entry {relative(entry, path)}')
 
     def check_summaries(self, path: Path, check: FileCheck, root: Path) -> None:
         """Report children whose every link from this parent lacks a summary."""

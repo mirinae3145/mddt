@@ -255,3 +255,11 @@ Information for structural review; blocks nested in blocks suggest a missing hea
 1. Promote the enclosing item, named or not, to a heading so that the inner items can carry names.
 2. Shorten the item of several sentences into one sentence when it is only a detail.
 """
+
+agent-depth = """
+A companion folder still fits when every task that needs its documents reads their parent first; keeping it is a valid outcome.
+1. Move the document directly below the entry, and link it from the entry with a summary that says when to read it.
+2. Absorb its content into its parent when the parent stays comfortable to read whole.
+3. Keep it when its parent is optional material opened through its own index, a procedure that links each child at the step that uses it, or an index of parallel examples.
+4. If none of these fits, check whether the skill or instruction set covers more than one subject, so that part of it could become a separate skill.
+"""

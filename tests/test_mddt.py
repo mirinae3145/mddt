@@ -755,8 +755,35 @@ class TreeRules(CheckerCase):
             ('docs/guide.md', 'heading-depth', None),
             ('skills/x/README.md', 'heading-depth', None),
             ('skills/x/references/r.md', 'heading-depth', ('skill', '../SKILL.md', rule)),
+            ('skills/x/references/rules/plots.md', 'agent-depth', None),
             ('skills/x/references/rules/plots.md', 'file-size', ('skill', '../../SKILL.md', rule)),
         ])
+
+    def test_agent_documents_below_another_document_are_warnings(self):
+        files = {
+            'README.md': '# R\n\nSee [docs](docs/): the documentation.\n',
+            'docs/README.md': '# Docs\n\nSee [guide](guide.md): the guide.\n',
+            'docs/guide.md': '# Guide\n\nSee [step](guide/step.md): one step.\n',
+            'docs/guide/step.md': '# Step\n\nOverview.\n',
+            'skills/x/SKILL.md': '# X\n\nSee [rules](references/rules.md): rules, and [tmpl](assets/t.md): a template.\n',
+            'skills/x/README.md': '# X for people\n\nOverview.\n',
+            'skills/x/assets/t.md': '# Template\n\nOverview.\n',
+            'skills/x/references/rules.md': '# Rules\n\nSee [plots](rules/plots.md): plots.\n',
+            'skills/x/references/rules/plots.md': '# Plots\n\nOverview.\n',
+            'AGENTS.md': '# Agents\n\nSee [writing](AGENTS/writing.md): writing.\n',
+            'AGENTS/writing.md': '# Writing\n\nSee [markdown](writing/markdown.md): Markdown.\n',
+            'AGENTS/writing/markdown.md': '# Markdown\n\nOverview.\n',
+        }
+        self.assertEqual(self.tree(files), [
+            ('AGENTS/writing/markdown.md', 'agent-depth'),
+            ('skills/x/references/rules/plots.md', 'agent-depth'),
+        ])
+        result = run('--format', 'json', '--root', str(self.dir), str(self.dir / 'AGENTS/writing/markdown.md'))
+        self.assertEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual([d['message'] for d in data['diagnostics']],
+                         ['agent document is not directly below its entry: '
+                          'parent ../writing.md is below the entry ../../AGENTS.md'])
 
     def test_agent_tree_needs_a_root_unless_the_file_is_its_entry(self):
         deep = '# T\n\nOverview.\n\n## Topic\n\nOverview.\n\n### A\n\nX.\n\n#### B\n\nY.\n\n### C\n\nZ.\n'
