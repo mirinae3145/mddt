@@ -54,7 +54,7 @@ Changelogs are checked with exceptions that preserve their release structure, as
 Its length checks use a local English parsing model to count independent clauses joined by semicolons, colons, or dashes separately.
 Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes, before the length checks counted such clauses separately.
 
-The [checker reference](skills/mddt/references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
+The [checker reference](skills/mddt/references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, its exit statuses, and its versions.
 The checker does not cover formatting, which a repository's own Markdown linter can check.
 GitHub branch URLs need local branch refs, including in CI; the [checker reference](skills/mddt/references/checker.md#links-checked) describes that prerequisite.
 

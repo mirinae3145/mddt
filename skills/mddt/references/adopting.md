@@ -73,7 +73,7 @@ A job that fits the checker's design has these properties:
 - **Warnings on changed files**: Warnings call for a writer's judgment, so the job reports them only in changed files and does not fail on them.
 
 The skill's version is `metadata.version` in the front matter of `SKILL.md`.
-Its first number rises whenever the same documents can get different errors or exit status, as the [checker reference](checker.md#findings) describes.
+Its first number rises whenever the same documents can get different errors or exit status, as the [checker reference](checker.md#exit-status-and-versions) describes.
 Every change to the skill on the mddt repository's default branch carries a new version, so the version identifies the rules a run used.
 
 The job either pins a version or follows the default branch.

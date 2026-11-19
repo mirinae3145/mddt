@@ -1,7 +1,7 @@
 # Checker reference
 
 This document describes the checker that comes with the skill.
-It covers running the checker, its findings and output, its options, the files and links it checks, and its exit statuses.
+It covers running the checker, its findings and output, its options, the files and links it checks, its exit statuses, and its versions.
 Read it when choosing the files or collection root of a run, when a script reads the output or exit status, or without uv.
 
 ## Running
@@ -33,11 +33,6 @@ The codes, their severities, and their rule locations are listed in `scripts/rul
 Information findings rest on approximate detection, so judge each one before acting on it.
 For example, a summary in a table cell beside a link is not recognized.
 An item counts as a block by its number of sentences alone.
-
-The skill's version, `metadata.version` in the front matter of `SKILL.md`, has two numbers.
-The first number changes whenever the same files and options would get different errors or exit status, including through bug fixes and dependency updates.
-Every other change to the skill raises the second number.
-The [changelog](https://github.com/mirinae3145/mddt/blob/main/CHANGELOG.md) lists the changes in each version.
 
 Length checks apply the [sentence unit rule](model.md#paragraphs-and-sentences) as follows:
 
@@ -85,10 +80,6 @@ In the tree of a skill or agent instruction file, the output adds context to som
   Otherwise, as without a collection root, it recognizes only the entry document itself, so results can differ by invocation.
 
 Both formats are written in UTF-8 regardless of the locale, so headings and file names in any language keep their characters.
-
-Scripts can rely on the names and meanings of JSON keys and fields, which change only with the first number of the version.
-Keys and fields can be added in any version.
-The text output and the wording of messages can also change in any version, so scripts identify findings by `code` instead of parsing text.
 
 ## Options
 
@@ -166,7 +157,7 @@ Links in the checked files are resolved as follows, while images and links writt
 
 Formulas in dollar math are read as math, so brackets and parentheses in them do not form links.
 
-## Exit status
+## Exit status and versions
 
 The command ends with one of these statuses:
 
@@ -176,4 +167,11 @@ The command ends with one of these statuses:
 | 1 | At least one error was found |
 | 2 | An input cannot be read or the English sentence model cannot be loaded, and no findings are reported |
 
-The meanings of these statuses change only with the first number of the version.
+The skill's version, `metadata.version` in the front matter of `SKILL.md`, has two numbers.
+The first number changes whenever the same files and options would get different errors or exit status, including through bug fixes and dependency updates.
+Every other change to the skill raises the second number.
+The [changelog](https://github.com/mirinae3145/mddt/blob/main/CHANGELOG.md) lists the changes in each version.
+
+Within one first number, scripts can rely on the meanings of exit statuses and the names and meanings of JSON keys and fields.
+Keys and fields can be added in any version.
+The text output and the wording of messages can change in any version, so scripts identify findings by `code` instead of parsing text.
