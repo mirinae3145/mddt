@@ -104,6 +104,7 @@ Scripts read the checker's JSON output and exit status, so part of the output is
 The version is raised as follows:
 
 - **Once per change**: A change that touches `skills/mddt/` raises the version once when it enters `main`, through a pull request or a direct merge.
+  The raise and its changelog section come last, in a commit of their own, so earlier commits keep the previous version.
   Changes outside the folder, such as tests, CI, or repository documents, leave it unchanged.
   The maintainer decides how much one change bundles and makes sure that changes open at the same time do not claim the same version.
 - **Best effort**: Whether a change alters errors is judged without a fixed set of inputs.
