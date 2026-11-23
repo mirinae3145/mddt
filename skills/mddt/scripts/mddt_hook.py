@@ -41,7 +41,11 @@ FENCE = re.compile(r' {0,3}(`{3,}|~{3,})')
 
 # Commands that print a file's contents.
 READERS = frozenset(('cat', 'nl', 'bat', 'batcat', 'head', 'tail', 'sed', 'awk', 'gawk', 'more', 'less'))
+# Shells whose `-c` script is judged like the command itself, as in Codex's `bash -lc`.
+SHELLS = frozenset(('bash', 'sh', 'zsh', 'dash'))
 SEPARATORS = frozenset((';', '&&', '||', '&', ';;'))
+# An output redirection such as `>`, `>>`, or `2>`, whose next word is written, not read.
+OUTPUT = re.compile(r'\d*>[>|]?')
 
 
 def is_whole_file(path):
@@ -88,17 +92,29 @@ def tokens(command):
     Quoting errors fall back to splitting at spaces and operators, which still finds plain
     commands such as `head -80 README.md`.
     """
-    # Lines end commands like semicolons; this also splits multi-line quoted
-    # text, which only matters for the rare command that quotes a file name.
-    command = command.replace('\n', ' ; ')
+    # A backslash before a line break continues the command on the next line.
+    command = re.sub(r'\\\r?\n', ' ', command)
     # Descriptor duplication such as `2>&1` or `&>` is not a command separator.
     command = re.sub(r'(?<=[<>])&|&(?=>)', '', command)
-    lexer = shlex.shlex(command, posix=True, punctuation_chars=';&|<')
-    lexer.whitespace_split = True
-    try:
-        return list(lexer)
-    except ValueError:
-        return re.findall(r'\|\||&&|[;|&<]|[^\s;|&<]+', command)
+    words = []
+    # Lines end commands like semicolons, and each is split on its own; this also
+    # splits multi-line quoted text, which only matters for the rare command that quotes a file name.
+    for line in command.splitlines():
+        lexer = shlex.shlex(line, posix=True, punctuation_chars=';&|<')
+        lexer.whitespace_split = True
+        # shlex starts a comment at any `#`, even inside a word, while the shell starts
+        # one only at the start of a word, so comments are dropped below instead.
+        lexer.commenters = ''
+        try:
+            line_words = list(lexer)
+        except ValueError:
+            line_words = re.findall(r'\|\||&&|[;|&<]|[^\s;|&<]+', line)
+        for word in line_words:
+            if word.startswith('#'):
+                break
+            words.append(word)
+        words.append(';')
+    return words
 
 
 def pipelines(words):
@@ -133,24 +149,59 @@ def truncates(name, args):
     if name in ('head', 'tail'):
         return True
     if name == 'sed':
-        return any(arg == '-n' or re.fullmatch(r'-[a-zA-Z]*n[a-zA-Z]*', arg) for arg in args) or any(
-            re.search(r'\d\s*q', arg) for arg in args)
+        # An in-place edit such as `sed -i` writes the file instead of printing it.
+        if any(re.fullmatch(r'-[a-zA-Z]*i.*', arg) or arg.startswith('--in-place') for arg in args):
+            return False
+        quiet = any(arg in ('--quiet', '--silent') or re.fullmatch(r'-[a-zA-Z]*n[a-zA-Z]*', arg) for arg in args)
+        # A quit command after a line number, such as `80q` or `1,5p;5q`, but not a
+        # number followed by q inside a substitution such as `s/1 quarter/.../`.
+        quits = any(re.search(r'(?:^|[;\s{])\d+\s*[qQ](?:$|[;\s}\d])', arg) for arg in args)
+        return quiet or quits
     if name in ('awk', 'gawk'):
-        return any('NR' in arg for arg in args)
+        # A condition on the line number, such as `NR<10`, rather than `print NR`.
+        return any(re.search(r'\bNR\s*(?:[<>]=?|[!=]=)|(?:[<>]=?|[!=]=)\s*NR\b', arg) for arg in args)
     return False
 
 
-def covered_file(name, args):
-    """Return a covered file that a reading command takes as an argument."""
-    if name not in READERS:
-        return None
+def operands(args):
+    """Yield a command's arguments, leaving out the targets of output redirections."""
+    written = False
     for arg in args:
+        if written:
+            written = False
+        elif OUTPUT.fullmatch(arg):
+            written = True
+        else:
+            yield arg
+
+
+def covered_file(args):
+    """Return a covered file that a reading command takes as an argument or an input redirection."""
+    for arg in operands(args):
         if not arg.startswith('-') and is_whole_file(arg):
-            return Path(arg).name
+            return arg
     return None
 
 
-def partial_shell_read(command):
+def shell_script(args):
+    """Return the script of a shell's `-c` option, such as the one in `bash -lc 'head README.md'`."""
+    for i, arg in enumerate(args):
+        if re.fullmatch(r'-[a-zA-Z]*c[a-zA-Z]*', arg):
+            return args[i + 1] if i + 1 < len(args) else None
+    return None
+
+
+def cut_whole_file(path, cwd):
+    """Whether a truncated shell read of a covered file is denied.
+
+    The file is found from the event's directory, not from a `cd` earlier in the
+    command, and one that is not found there is still denied.
+    """
+    full = Path(cwd or '.') / path
+    return not (full.is_file() and too_large(full))
+
+
+def partial_shell_read(command, cwd=None):
     """Return the file name when a shell command prints part of a covered file."""
     for pipeline in pipelines(tokens(command)):
         read = None
@@ -158,18 +209,19 @@ def partial_shell_read(command):
             name, args = program(simple)
             if name is None:
                 continue
-            for i, arg in enumerate(args):
-                # An input redirection such as `head -5 < README.md`.
-                if arg == '<' and i + 1 < len(args) and is_whole_file(args[i + 1]):
-                    read = read or Path(args[i + 1]).name
-                    if truncates(name, args):
-                        return read
-            target = covered_file(name, args)
-            if target and truncates(name, args):
-                return target
-            if read and truncates(name, args):
-                return read
-            read = read or target
+            if name in SHELLS:
+                script = shell_script(args)
+                found = partial_shell_read(script, cwd) if script else None
+                if found:
+                    return found
+                read = None
+            elif name not in READERS:
+                # A filter such as grep shows search results, which may be cut, rather than the file.
+                read = None
+            else:
+                read = covered_file(args) or read
+                if read and truncates(name, args) and cut_whole_file(read, cwd):
+                    return Path(read).name
     return None
 
 
@@ -285,8 +337,9 @@ def decide(event):
     elif tool == 'Bash':
         command = tool_input.get('command')
         if isinstance(command, list):
-            command = ' '.join(str(part) for part in command)
-        name = partial_shell_read(command) if isinstance(command, str) else None
+            # Quoting keeps each part one word, such as the script of `bash -lc`.
+            command = shlex.join(str(part) for part in command)
+        name = partial_shell_read(command, event.get('cwd')) if isinstance(command, str) else None
     else:
         return None
     if name is None:
@@ -300,7 +353,8 @@ def decide(event):
 
 def main():
     try:
-        event = json.load(sys.stdin)
+        # Hosts send UTF-8, which the locale encoding of a Windows console may not be.
+        event = json.load(sys.stdin.buffer)
         decision = decide(event) if isinstance(event, dict) else None
     except Exception as error:  # Fail open: a hook that cannot judge must not block.
         print(f'mddt hook skipped: {type(error).__name__}', file=sys.stderr)

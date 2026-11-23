@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 """Behavioral checks of the mddt hook through its event interface."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -129,6 +130,12 @@ class ShellCommands(HookCase):
             'nl GEMINI.md | sed -n 1,20p': 'GEMINI.md',
             'FOO=1 /usr/bin/head -3 readme.md': 'readme.md',
             'cd /x && ls\ncat README.md | head -3': 'README.md',
+            '# preview the guide\nhead -40 README.md': 'README.md',
+            'echo a#b; head -5 README.md': 'README.md',
+            'head -5 \\\n  README.md': 'README.md',
+            'sed --quiet 1,5p README.md': 'README.md',
+            'sed -e 1,5p -e 5q README.md': 'README.md',
+            "bash -lc 'head -5 README.md'": 'README.md',
         }
         for command, name in commands.items():
             with self.subTest(command=command):
@@ -142,15 +149,28 @@ class ShellCommands(HookCase):
                         'wc -l README.md', "sed -i 's/a/b/' README.md",
                         'git log --oneline -- README.md | head -5', 'git show HEAD:README.md | head',
                         'head -3 notes.md', 'cat notes.md | head', 'cat "README.md | head"',
-                        "awk '{print $1}' README.md", 'echo README.md; head -3 notes.md'):
+                        "awk '{print $1}' README.md", 'echo README.md; head -3 notes.md',
+                        "sed -i 's/1 quarter/2 quarters/' README.md", "sed 's/1 quarter/2 quarters/' README.md",
+                        'tail -n +3 draft.md > README.md', "sed -n '1,10p' template.md >> docs/README.md",
+                        'head -5 notes.md 2> README.md', 'awk \'{print NR": "$0}\' README.md',
+                        'cat README.md | grep -n install | head', 'grep -n install < README.md | head',
+                        "bash -lc 'cat README.md'", '# head -5 README.md'):
             with self.subTest(command=command):
                 self.assertIsNone(self.shell(command))
+
+    def test_files_too_large_to_read_at_once_pass(self):
+        self.write('README.md', lines=2001)
+        self.assertIsNone(self.shell('head -80 README.md'))
+        self.write('CONTRIBUTING.md')
+        self.assertIsNotNone(self.shell('head -5 CONTRIBUTING.md'))
 
     def test_unbalanced_quotes_fall_back_to_words(self):
         self.assertIsNotNone(self.shell("head -80 README.md; echo 'unclosed"))
 
     def test_command_given_as_a_list(self):
         self.assertIsNotNone(self.decide(self.event('Bash', {'command': ['head', '-5', 'README.md']})))
+        self.assertIsNotNone(self.decide(self.event('Bash', {'command': ['bash', '-lc', 'head -5 README.md']})))
+        self.assertIsNone(self.decide(self.event('Bash', {'command': ['bash', '-lc', 'cat README.md']})))
 
 
 class HeadingEdits(HookCase):
@@ -200,6 +220,15 @@ class Events(HookCase):
         self.assertIsNone(self.decide(self.event('Grep', {'pattern': 'x', 'path': str(path)})))
         self.assertIsNone(self.decide(self.event('Bash', {})))
         self.assertIsNone(self.decide({**event, 'tool_input': 'head README.md'}))
+
+    def test_input_is_read_as_utf8(self):
+        result = subprocess.run([sys.executable, str(HOOK)], capture_output=True,
+                                input=json.dumps(self.event('Write', {'file_path': str(self.dir / '문서.md'),
+                                                                      'content': '# 제목\n'}),
+                                                 ensure_ascii=False).encode('utf-8'),
+                                env={**os.environ, 'PYTHONIOENCODING': 'latin-1', 'PYTHONUTF8': '0'})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('문서.md', json.loads(result.stdout)['hookSpecificOutput']['additionalContext'])
 
     def test_malformed_input_fails_open(self):
         for payload in ('', 'not json', '[1, 2]'):
