@@ -48,6 +48,9 @@ Before exploring a set of Markdown documents to answer a question or verify a fa
 It explains how to select an entry, choose files, read them whole, and handle documents outside the model.
 It also shows which reading strategy each guarantee of the model supports.
 
+An optional hook stops agents from reading READMEs, agent entries, and contributor guides in part.
+Read [the read-whole hook](references/read-whole-hook.md) when installing, configuring, or troubleshooting it.
+
 ## Checking
 
 The checker decides the rules a parser can see and flags some that need judgment.

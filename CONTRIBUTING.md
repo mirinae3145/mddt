@@ -42,6 +42,8 @@ What to read before a change depends on which files it touches:
 - **Repository documents**: A change to another document, such as README or this guide, needs the skill's reference documents.
   The repository's documents follow the model, as [self-conformance](#self-conformance) describes, and the checker covers only part of it.
   The change also needs the documents that the changed text summarizes or that summarize it.
+- **Hook**: A change to `skills/mddt/scripts/read_whole.py` needs [the read-whole hook](skills/mddt/references/read-whole-hook.md) and `tests/test_read_whole.py`.
+  The hook does not use the checker, so the rest of the repository can stay unread.
 - **Licensing and configuration**: A change to `REUSE.toml`, `LICENSES/`, `.github/`, `.gitignore`, `.mddtignore`, or `.rumdl.toml` needs only this guide.
 
 ## Checker layout
@@ -143,6 +145,7 @@ python3 -m unittest discover -s tests -v
 ```
 
 The tests run the checker through `uv run`, so uv must be installed.
+The hook's tests run it with the same Python interpreter as the tests, since it uses only the standard library.
 Add a test with each new code or behavior change, including a case that must not be reported.
 
 After changing `mddt.py`, also run the tests with coverage, which must reach every line and branch:
