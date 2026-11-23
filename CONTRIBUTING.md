@@ -42,6 +42,8 @@ What to read before a change depends on which files it touches:
 - **Repository documents**: A change to another document, such as README or this guide, needs the skill's reference documents.
   The repository's documents follow the model, as [self-conformance](#self-conformance) describes, and the checker covers only part of it.
   The change also needs the documents that the changed text summarizes or that summarize it.
+- **Hook**: A change to `skills/mddt/scripts/mddt_hook.py` needs [hooks](skills/mddt/references/hooks.md) and `tests/test_hook.py`.
+  The hook does not use the checker, so the rest of the repository can stay unread.
 - **Licensing and configuration**: A change to `REUSE.toml`, `LICENSES/`, `.github/`, `.gitignore`, `.mddtignore`, or `.rumdl.toml` needs only this guide.
 
 ## Checker layout
@@ -102,6 +104,7 @@ Scripts read the checker's JSON output and exit status, so part of the output is
 The version is raised as follows:
 
 - **Once per change**: A change that touches `skills/mddt/` raises the version once when it enters `main`, through a pull request or a direct merge.
+  The raise and its changelog section come last, in a commit of their own, so earlier commits keep the previous version.
   Changes outside the folder, such as tests, CI, or repository documents, leave it unchanged.
   The maintainer decides how much one change bundles and makes sure that changes open at the same time do not claim the same version.
 - **Best effort**: Whether a change alters errors is judged without a fixed set of inputs.
@@ -143,6 +146,7 @@ python3 -m unittest discover -s tests -v
 ```
 
 The tests run the checker through `uv run`, so uv must be installed.
+The hook's tests run it with the same Python interpreter as the tests, since it uses only the standard library.
 Add a test with each new code or behavior change, including a case that must not be reported.
 
 After changing `mddt.py`, also run the tests with coverage, which must reach every line and branch:

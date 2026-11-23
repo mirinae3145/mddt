@@ -11,7 +11,7 @@ description: >
   value updates, or for formatting-only changes that leave structure unchanged.
 license: CC-BY-4.0 for the instructions and references; MIT for the scripts; copyright 2026 Taeha Shin
 metadata:
-  version: "1.0"
+  version: "1.1"
 ---
 
 # mddt
@@ -70,6 +70,12 @@ Read it in these cases:
 
 A collection can hold documents that do not follow the model, such as a user's originals or generated material.
 A `.mddtignore` file leaves them out of the check, as the [ignore file](references/ignore-file.md) describes.
+
+## Optional hook
+
+An optional hook for Claude Code and Codex keeps agents to the reading and writing procedures.
+It denies partial reads of READMEs, agent entries, and contributor guides, and points to the writing procedure when an edit adds a heading.
+Read [hooks](references/hooks.md) when installing, configuring, or troubleshooting it.
 
 ## Scope
 
