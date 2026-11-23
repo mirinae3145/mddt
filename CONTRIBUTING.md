@@ -42,7 +42,7 @@ What to read before a change depends on which files it touches:
 - **Repository documents**: A change to another document, such as README or this guide, needs the skill's reference documents.
   The repository's documents follow the model, as [self-conformance](#self-conformance) describes, and the checker covers only part of it.
   The change also needs the documents that the changed text summarizes or that summarize it.
-- **Hook**: A change to `skills/mddt/scripts/read_whole.py` needs [the read-whole hook](skills/mddt/references/read-whole-hook.md) and `tests/test_read_whole.py`.
+- **Hook**: A change to `skills/mddt/scripts/mddt_hook.py` needs [hooks](skills/mddt/references/hooks.md) and `tests/test_hook.py`.
   The hook does not use the checker, so the rest of the repository can stay unread.
 - **Licensing and configuration**: A change to `REUSE.toml`, `LICENSES/`, `.github/`, `.gitignore`, `.mddtignore`, or `.rumdl.toml` needs only this guide.
 

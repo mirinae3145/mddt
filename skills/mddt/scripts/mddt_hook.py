@@ -1,14 +1,16 @@
 # SPDX-FileCopyrightText: 2026 Taeha Shin
 # SPDX-License-Identifier: MIT
-"""PreToolUse hook that stops partial reads of documents agents must read whole.
+"""Hook that keeps agents to the mddt skill's reading and writing procedures.
 
-The reading procedure asks agents to read a chosen file whole.
+The skill asks agents to read a chosen file whole and to follow its writing
+procedure when they change a document's structure.
 Agents still preview entry documents and contributor guides with `head` or a
-line range, and miss what lies below the cut.
-This hook denies such reads for Claude Code and Codex and asks for a whole read.
+line range, and add sections without the procedure.
+For Claude Code and Codex, this hook denies partial reads of those documents
+and, when an edit adds a Markdown heading, points the agent to the skill.
 
-It reads one PreToolUse event as JSON on stdin and prints a denial as JSON on
-stdout, or nothing to let the call proceed.
+It reads one PreToolUse event as JSON on stdin and prints its response as JSON on
+stdout, or nothing to let the call proceed unchanged.
 Any error lets the call proceed, so the hook never blocks work it cannot judge.
 Only the Python standard library is used, so the hook starts quickly.
 """
@@ -28,6 +30,14 @@ WHOLE_FILES = frozenset(name.lower() for name in (
 # at topic boundaries and the hook lets ranged reads through.
 MAX_WHOLE_BYTES = 256 * 1024
 MAX_WHOLE_LINES = 2000
+
+# The skill this script belongs to, named in messages so that an agent that has
+# not loaded the skill can find it.
+SKILL = Path(__file__).resolve().parents[1] / 'SKILL.md'
+
+# ATX headings and code fences, which the heading count skips over.
+HEADING = re.compile(r' {0,3}#{1,6}(?:[ \t]|$)')
+FENCE = re.compile(r' {0,3}(`{3,}|~{3,})')
 
 # Commands that print a file's contents.
 READERS = frozenset(('cat', 'nl', 'bat', 'batcat', 'head', 'tail', 'sed', 'awk', 'gawk', 'more', 'less'))
@@ -163,24 +173,113 @@ def partial_shell_read(command):
     return None
 
 
-def reason(name, tool):
+def skill_intro():
+    """Introduce the skill by its entry, so that an agent can load it."""
+    if SKILL.is_file():
+        return f'The mddt skill, whose entry is {SKILL}, governs the structure of Markdown documents.'
+    return 'The mddt skill governs the structure of Markdown documents.'
+
+
+def read_reason(name, tool):
     if tool == 'Read':
         how = 'Call Read again without offset or limit.'
     else:
         how = 'Read it with a tool that shows the whole file, such as Read, or print it whole with cat.'
-    return (f'mddt: {name} is a document that agents read whole, because what lies below a cut '
-            f'can change what else to read or do. {how} '
-            'Searching it with grep is still fine.')
+    return (f'mddt: {name} is read whole. {skill_intro()} '
+            'Its reading procedure, references/reading.md, asks for whole reads, '
+            'and such documents decide what else to read or do, so a cut can hide a link or a requirement. '
+            f'{how} Searching it with grep is still fine.')
+
+
+def write_context(names):
+    files = ', '.join(sorted(names))
+    return (f'mddt: this edit adds a heading to {files}. {skill_intro()} '
+            'Load it if it is not loaded, and follow its writing procedure, references/writing.md: '
+            'place new content in the document tree, and once the content settles, '
+            'reread each changed part or topic whole and run the checker.')
+
+
+def headings(text):
+    """Count ATX headings outside fenced code blocks."""
+    count, fence = 0, None
+    for line in text.splitlines():
+        match = FENCE.match(line)
+        if fence:
+            if match and match.group(1)[0] == fence[0] and len(match.group(1)) >= len(fence):
+                fence = None
+        elif match:
+            fence = match.group(1)
+        elif HEADING.match(line):
+            count += 1
+    return count
+
+
+def is_markdown(path):
+    return isinstance(path, str) and path.lower().endswith(('.md', '.markdown'))
+
+
+def current_text(path, cwd):
+    try:
+        return (Path(cwd or '.') / path).read_text(encoding='utf-8')
+    except (OSError, UnicodeDecodeError):
+        return ''
+
+
+def patch_headings(patch):
+    """Return the Markdown files that a Codex patch adds headings to.
+
+    The patch names each file on a line such as `*** Update File: path` or
+    `*** Add File: path`, and prefixes added and removed lines with + and -.
+    """
+    added, removed, path = {}, {}, None
+    for line in patch.splitlines():
+        header = re.match(r'\*\*\* (?:Add|Update|Delete) File: (.+)', line)
+        if header:
+            path = header.group(1).strip()
+            continue
+        if not is_markdown(path) or line[:3] in ('+++', '---'):
+            continue
+        if line.startswith('+'):
+            added[path] = added.get(path, '') + line[1:] + '\n'
+        elif line.startswith('-'):
+            removed[path] = removed.get(path, '') + line[1:] + '\n'
+    return {Path(p).name for p in added if headings(added[p]) > headings(removed.get(p, ''))}
+
+
+def added_headings(tool, tool_input, cwd):
+    """Return the names of Markdown files that a write call adds headings to."""
+    if tool == 'apply_patch':
+        patch = tool_input.get('command')
+        return patch_headings(patch) if isinstance(patch, str) else set()
+    path = tool_input.get('file_path')
+    if not is_markdown(path):
+        return set()
+    if tool == 'Edit':
+        old, new = tool_input.get('old_string'), tool_input.get('new_string')
+        grew = isinstance(old, str) and isinstance(new, str) and headings(new) > headings(old)
+    elif tool == 'Write':
+        content = tool_input.get('content')
+        # Judged before the call runs, so the file still holds the earlier text.
+        grew = isinstance(content, str) and headings(content) > headings(current_text(path, cwd))
+    else:
+        grew = False
+    return {Path(path).name} if grew else set()
 
 
 def decide(event):
-    """Return a denial for a PreToolUse event, or None to let the call proceed."""
+    """Return the hook's response to an event, or None to let the call proceed unchanged."""
     if event.get('hook_event_name') != 'PreToolUse':
         return None
     tool = event.get('tool_name')
     tool_input = event.get('tool_input')
     if not isinstance(tool_input, dict):
         return None
+    if tool in ('Edit', 'Write', 'apply_patch'):
+        names = added_headings(tool, tool_input, event.get('cwd'))
+        if not names:
+            return None
+        # Context without a permission decision lets the call proceed.
+        return {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'additionalContext': write_context(names)}}
     if tool == 'Read':
         name = partial_read(tool_input, event.get('cwd'))
     elif tool == 'Bash':
@@ -195,7 +294,7 @@ def decide(event):
     return {'hookSpecificOutput': {
         'hookEventName': 'PreToolUse',
         'permissionDecision': 'deny',
-        'permissionDecisionReason': reason(name, tool),
+        'permissionDecisionReason': read_reason(name, tool),
     }}
 
 
@@ -204,7 +303,7 @@ def main():
         event = json.load(sys.stdin)
         decision = decide(event) if isinstance(event, dict) else None
     except Exception as error:  # Fail open: a hook that cannot judge must not block.
-        print(f'mddt read-whole hook skipped: {type(error).__name__}', file=sys.stderr)
+        print(f'mddt hook skipped: {type(error).__name__}', file=sys.stderr)
         return 0
     if decision:
         json.dump(decision, sys.stdout)

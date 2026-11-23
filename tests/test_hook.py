@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Taeha Shin
 # SPDX-License-Identifier: MIT
-"""Behavioral checks of the read-whole hook through its event interface."""
+"""Behavioral checks of the mddt hook through its event interface."""
 import json
 from pathlib import Path
 import subprocess
@@ -9,7 +9,8 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-HOOK = ROOT / 'skills/mddt/scripts/read_whole.py'
+HOOK = ROOT / 'skills/mddt/scripts/mddt_hook.py'
+SKILL = ROOT / 'skills/mddt/SKILL.md'
 
 
 def run(payload):
@@ -36,15 +37,32 @@ class HookCase(unittest.TestCase):
         return {'hook_event_name': 'PreToolUse', 'cwd': str(self.dir),
                 'tool_name': tool, 'tool_input': tool_input}
 
-    def decide(self, payload):
+    def respond(self, payload):
         result = run(payload)
         self.assertEqual(result.returncode, 0, result.stderr)
         if not result.stdout:
             return None
         output = json.loads(result.stdout)['hookSpecificOutput']
         self.assertEqual(output['hookEventName'], 'PreToolUse')
+        return output
+
+    def decide(self, payload):
+        """Return the reason of a denial, or None when the call proceeds without one."""
+        output = self.respond(payload)
+        if output is None or 'permissionDecision' not in output:
+            return None
         self.assertEqual(output['permissionDecision'], 'deny')
+        self.assertIn(str(SKILL), output['permissionDecisionReason'])
         return output['permissionDecisionReason']
+
+    def context(self, tool, tool_input):
+        """Return the context added to a call, checking that the call proceeds."""
+        output = self.respond(self.event(tool, tool_input))
+        if output is None:
+            return None
+        self.assertNotIn('permissionDecision', output)
+        self.assertIn(str(SKILL), output['additionalContext'])
+        return output['additionalContext']
 
     def read(self, path, **options):
         return self.decide(self.event('Read', {'file_path': str(path), **options}))
@@ -135,12 +153,51 @@ class ShellCommands(HookCase):
         self.assertIsNotNone(self.decide(self.event('Bash', {'command': ['head', '-5', 'README.md']})))
 
 
+class HeadingEdits(HookCase):
+    def test_edit_adding_a_heading_names_the_skill_and_procedure(self):
+        text = self.context('Edit', {'file_path': str(self.dir / 'notes.md'),
+                                     'old_string': 'Some notes.', 'new_string': 'Some notes.\n\n## Usage\n\nRun it.'})
+        self.assertIn('notes.md', text)
+        self.assertIn('references/writing.md', text)
+        self.assertIn('Load it if it is not loaded', text)
+
+    def test_edits_without_new_headings_pass(self):
+        path = str(self.dir / 'notes.md')
+        for old, new in (('Some notes.', 'Other notes.'), ('## Old', '## New'),
+                         ('Text.', 'Text.\n\n```\n# a comment in code\n```'),
+                         ('Text.', 'Text with #hashtag.'), ('## A\n\n## B', '## A')):
+            with self.subTest(new=new):
+                self.assertIsNone(self.context('Edit', {'file_path': path, 'old_string': old, 'new_string': new}))
+
+    def test_other_files_pass(self):
+        self.assertIsNone(self.context('Edit', {'file_path': str(self.dir / 'run.py'),
+                                                'old_string': 'x', 'new_string': '# comment\nx'}))
+
+    def test_write_compares_with_the_current_file(self):
+        path = self.dir / 'doc.md'
+        self.assertIsNotNone(self.context('Write', {'file_path': str(path), 'content': '# Doc\n\nText.\n'}))
+        path.write_text('# Doc\n\n## A\n', encoding='utf-8')
+        self.assertIsNone(self.context('Write', {'file_path': str(path), 'content': '# Doc\n\n## B\n'}))
+        self.assertIsNotNone(self.context('Write', {'file_path': str(path), 'content': '# Doc\n\n## A\n\n## B\n'}))
+
+    def test_codex_patch_adding_headings(self):
+        patch = ('*** Begin Patch\n*** Update File: docs/guide.md\n@@\n-Old text.\n+Old text.\n+\n+## Setup\n'
+                 '*** Add File: run.py\n+# comment\n*** End Patch\n')
+        text = self.context('apply_patch', {'command': patch})
+        self.assertIn('guide.md', text)
+        self.assertNotIn('run.py', text)
+        renamed = '*** Begin Patch\n*** Update File: a.md\n@@\n-## Old\n+## New\n*** End Patch\n'
+        self.assertIsNone(self.context('apply_patch', {'command': renamed}))
+        self.assertIsNone(self.context('apply_patch', {'command': 42}))
+
+
 class Events(HookCase):
     def test_other_events_and_tools_pass(self):
         path = self.write('README.md')
         event = self.event('Read', {'file_path': str(path), 'limit': 5})
         self.assertIsNone(self.decide({**event, 'hook_event_name': 'PostToolUse'}))
         self.assertIsNone(self.decide(self.event('Edit', {'file_path': str(path)})))
+        self.assertIsNone(self.decide(self.event('Grep', {'pattern': 'x', 'path': str(path)})))
         self.assertIsNone(self.decide(self.event('Bash', {})))
         self.assertIsNone(self.decide({**event, 'tool_input': 'head README.md'}))
 

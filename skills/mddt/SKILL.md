@@ -48,9 +48,6 @@ Before exploring a set of Markdown documents to answer a question or verify a fa
 It explains how to select an entry, choose files, read them whole, and handle documents outside the model.
 It also shows which reading strategy each guarantee of the model supports.
 
-An optional hook stops agents from reading READMEs, agent entries, and contributor guides in part.
-Read [the read-whole hook](references/read-whole-hook.md) when installing, configuring, or troubleshooting it.
-
 ## Checking
 
 The checker decides the rules a parser can see and flags some that need judgment.
@@ -73,6 +70,12 @@ Read it in these cases:
 
 A collection can hold documents that do not follow the model, such as a user's originals or generated material.
 A `.mddtignore` file leaves them out of the check, as the [ignore file](references/ignore-file.md) describes.
+
+## Optional hook
+
+An optional hook for Claude Code and Codex keeps agents to the reading and writing procedures.
+It denies partial reads of READMEs, agent entries, and contributor guides, and points to the writing procedure when an edit adds a heading.
+Read [hooks](references/hooks.md) when installing, configuring, or troubleshooting it.
 
 ## Scope
 

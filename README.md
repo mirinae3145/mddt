@@ -26,9 +26,10 @@ A repository that adopts mddt for its documents therefore points its contributor
 The skill covers structure, so other skills and tools often govern the same documents.
 [Combining mddt with other guidance](skills/mddt/references/combining.md) says which of them complement it and how to resolve their conflicts with it.
 
-Agents often preview a document with `head` or a line range, even where the reading procedure asks them to read it whole.
-The skill includes an optional hook for Claude Code and Codex that denies such partial reads of READMEs, agent entries, and contributor guides.
-[The read-whole hook](skills/mddt/references/read-whole-hook.md) describes the files it covers, its judgment, its registration, and its limits.
+Agents often preview a document with `head` or a line range, or add sections without the writing procedure.
+The skill includes an optional hook for Claude Code and Codex for both cases.
+It denies partial reads of READMEs, agent entries, and contributor guides, and points the agent to the skill when an edit adds a heading.
+[Hooks](skills/mddt/references/hooks.md) describes its behaviors, its registration, and its limits.
 
 ## Document model
 
