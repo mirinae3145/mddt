@@ -58,9 +58,11 @@ Run it on the Markdown files you created or changed:
 uv run <skill-dir>/scripts/mddt.py FILE...
 ```
 
-Read the output whole, since a filter would hide each finding's fix guidance, and errors make the command exit with status 1.
+Each finding comes with fix guidance, so read the output whole rather than filtering it.
+Errors make the command exit with status 1.
 Apply the findings as described in [checking](references/writing.md#checking), which limits them to what the current task created or made worse.
 A requested restructuring applies more of them, though not every sentence-level finding.
+
 The [checker reference](references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, its exit statuses, and its versions.
 Read it in these cases:
 
