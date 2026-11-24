@@ -57,8 +57,8 @@ Agents still pass that output through `grep`, `head`, or `tail`, which drops the
 The hook denies a shell pipeline in which the checker's text output flows into `head`, `tail`, the `grep` family, `rg`, `sed`, `awk`, `cut`, or `wc`.
 
 The checker is recognized as `mddt.py`, run directly or through `uv`, `uvx`, a Python interpreter, or a wrapper such as `timeout`, also inside `bash -c` or `sh -c`.
-`tee` and `cat` pass the output on, so a filter after them is denied as well.
-JSON output, help text, a run without a filter, and output written to a file pass.
+`tee`, `cat`, `sort`, `nl`, and `tr` pass every line on, so a filter after them is denied as well.
+JSON output, help text, a run without a filter, output written to a file, and a module run with `-m`, such as a linter given `mddt.py`, pass.
 A denial asks the agent to run the checker again without the filter.
 For long output it suggests checking only the changed files, and for scripts `--format json`.
 

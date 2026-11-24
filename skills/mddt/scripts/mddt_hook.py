@@ -63,11 +63,25 @@ BEHAVIORS = ('reads', 'headings', 'output')
 # command wrapper, such as in `uv run .../mddt.py` or `timeout 300 python3 .../mddt.py`.
 CHECKER = 'mddt.py'
 LAUNCHER = re.compile(r'uv|uvx|py|python[0-9.]*|timeout|env|nice|nohup|time|stdbuf')
+# Launcher and wrapper options whose next word is their value, not the program they run.
+UV_VALUES = frozenset(('--with', '--with-editable', '--with-requirements', '--python', '-p', '--from',
+                       '--directory', '--project', '--env-file', '--index', '--extra', '--group'))
+VALUE_OPTIONS = {
+    'uv': UV_VALUES, 'uvx': UV_VALUES, 'timeout': frozenset(('-s', '--signal', '-k', '--kill-after')),
+    'nice': frozenset(('-n', '--adjustment')), 'env': frozenset(('-u', '--unset', '-C', '--chdir')),
+    'stdbuf': frozenset(('-i', '-o', '-e')),
+}
+# Python interpreters' options whose next word is their value.
+PYTHON_VALUES = frozenset(('-W', '-X'))
+# Launcher words that precede the program, such as uv's `run` or the duration of `timeout`.
+LAUNCHER_WORD = re.compile(r'run|\d+(?:\.\d+)?[smhd]?|[A-Za-z_][A-Za-z0-9_]*=.*')
+# An output redirection of standard output, which writes the checker's output to a file.
+STDOUT_REDIRECT = re.compile(r'1?>[>|]?')
 # Commands that pass on only part of their input or transform it, so the checker's
 # text output loses its fix guidance or reread line through them.
 FILTERS = frozenset(('head', 'tail', 'grep', 'egrep', 'fgrep', 'rg', 'sed', 'awk', 'gawk', 'cut', 'wc'))
-# Commands that pass their whole input on, so a filter after them still cuts the output.
-PASS_THROUGH = frozenset(('tee', 'cat'))
+# Commands that pass every line of their input on, so a filter after them still cuts the output.
+PASS_THROUGH = frozenset(('tee', 'cat', 'sort', 'nl', 'tr'))
 
 
 def is_whole_file(path):
@@ -147,7 +161,7 @@ def pipelines(words):
             current.append(command)
             yield current
             current, command = [], []
-        elif word == '|':
+        elif word in ('|', '|&'):
             current.append(command)
             command = []
         else:
@@ -247,38 +261,89 @@ def partial_shell_read(command, cwd=None):
     return None
 
 
-def runs_checker(name, args):
-    """Whether a simple command runs the checker with text output.
+def command_name(word):
+    """The name of a program, without the .exe suffix that Windows commands may carry."""
+    name = Path(word).name
+    return name[:-4] if name.lower().endswith('.exe') else name
 
-    JSON output is meant for scripts, and help text carries no findings.
+
+def launched(name, args):
+    """Return the program that launchers and wrappers run, with its arguments, or None.
+
+    A launcher's own options, uv's `run`, and a wrapper's duration come before
+    the program; a module or inline code run with -m or -c is not a script.
     """
-    if name != CHECKER and not (LAUNCHER.fullmatch(name) and any(Path(arg).name == CHECKER for arg in args)):
-        return False
-    if any(arg in ('-h', '--help', '--format=json') for arg in args):
-        return False
-    return not any(arg == '--format' and value == 'json' for arg, value in zip(args, args[1:]))
+    while LAUNCHER.fullmatch(name):
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg in ('-m', '-c'):
+                return None
+            if arg in VALUE_OPTIONS.get(name, PYTHON_VALUES):
+                i += 2
+            elif arg.startswith('-') or LAUNCHER_WORD.fullmatch(arg):
+                i += 1
+            else:
+                break
+        if i >= len(args):
+            return None
+        name, args = command_name(args[i]), args[i + 1:]
+    return name, args
 
 
-def filtered_checker(command):
-    """Whether a shell command passes the checker's text output through a filter."""
+def runs_checker(name, args):
+    """Whether a simple command runs the checker with text output to its standard output.
+
+    JSON output is meant for scripts, help text carries no findings, and output
+    written to a file is not filtered in the pipeline.
+    """
+    run = launched(command_name(name), args)
+    if run is None or run[0] != CHECKER:
+        return False
+    args = run[1]
+    if any(STDOUT_REDIRECT.fullmatch(arg) for arg in args):
+        return False
+    # The checker accepts unambiguous abbreviations such as --form, and the last --format wins.
+    output = 'text'
+    for i, arg in enumerate(args):
+        option, equals, value = arg.partition('=')
+        if arg == '-h' or (len(option) > 2 and '--help'.startswith(option)):
+            return False
+        if len(option) > 2 and '--format'.startswith(option):
+            output = value if equals else (args[i + 1] if i + 1 < len(args) else '')
+    return output != 'json'
+
+
+def checker_flow(command):
+    """Return whether a shell command filters the checker's text output, and whether
+    the output of its last pipeline is still that text output."""
+    trailing = False
     for pipeline in pipelines(tokens(command)):
-        checker = False
+        checker, seen = False, False
         for simple in pipeline:
             name, args = program(simple)
             if name is None:
                 continue
+            seen = True
             if name in SHELLS:
                 script = shell_script(args)
-                if script and filtered_checker(script):
-                    return True
-                checker = False
+                filtered, checker = checker_flow(script) if script else (False, False)
+                if filtered:
+                    return True, False
             elif runs_checker(name, args):
                 checker = True
-            elif checker and name in FILTERS:
-                return True
-            elif name not in PASS_THROUGH:
+            elif checker and command_name(name) in FILTERS:
+                return True, False
+            elif command_name(name) not in PASS_THROUGH:
                 checker = False
-    return False
+        if seen:
+            trailing = checker
+    return False, trailing
+
+
+def filtered_checker(command):
+    """Whether a shell command passes the checker's text output through a filter."""
+    return checker_flow(command)[0]
 
 
 def skill_intro():

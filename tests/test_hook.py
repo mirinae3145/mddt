@@ -199,7 +199,12 @@ class CheckerOutput(HookCase):
                         'uv run /x/mddt.py . 2>&1 | tail -15', 'python3 /x/mddt.py a.md | head -40',
                         "bash -lc 'uv run mddt.py . | grep warning'", 'uv run mddt.py . | tee out.txt | tail',
                         './mddt.py --outline a.md | sed -n 1,5p', 'uv run --quiet mddt.py a.md | cut -c1-80',
-                        'cd docs && uv run mddt.py . | wc -l', 'timeout 300 uv run mddt.py . 2>&1 | tail -8', 'uv run mddt.py --format text a.md | head'):
+                        'cd docs && uv run mddt.py . | wc -l', 'timeout 300 uv run mddt.py . 2>&1 | tail -8', 'uv run mddt.py --format text a.md | head',
+                        'uv run mddt.py . | sort | head', 'uv run mddt.py . | nl | head', 'uv run mddt.py . |& tail',
+                        "bash -c 'cd docs && uv run mddt.py .' | head", 'python.exe mddt.py . | head',
+                        'uv run python mddt.py . | head', 'python3 -u mddt.py . | head', 'uv run --with x mddt.py . | head',
+                        'env A=1 timeout -s KILL 30 uv run mddt.py . | grep x',
+                        'uv run mddt.py --format json --format text . | head', 'uv run mddt.py . --format | head'):
             with self.subTest(command=command):
                 reason = self.shell(command)
                 self.assertIsNotNone(reason)
@@ -212,7 +217,12 @@ class CheckerOutput(HookCase):
                         'uv run mddt.py . | tee out.txt', 'uv run mddt.py --help | head', 'uv run mddt.py -h | head',
                         'grep -n mddt.py notes.txt | head', 'git log -- skills/mddt/scripts/mddt.py | head',
                         'uv run mddt.py . | python3 summarize.py | head', 'uv run mddt.py .; tail -5 log.txt',
-                        "bash -lc 'uv run mddt.py .'"):
+                        "bash -lc 'uv run mddt.py .'", 'uv run mddt.py --form json . | head', 'uv run mddt.py --he | head',
+                        'uv run mddt.py . > out.txt | head', "bash -c 'uv run mddt.py . > out.txt' | head",
+                        "bash -c 'uv run mddt.py .; echo done' | head", 'bash -c | head',
+                        'uvx ruff check skills/mddt/scripts/mddt.py | head', 'timeout 5 cat mddt.py | head',
+                        'python3 -m mypy mddt.py | head', 'python3 -c "import mddt" mddt.py | head',
+                        'python3 -W ignore | head', 'timeout 5 | head'):
             with self.subTest(command=command):
                 self.assertIsNone(self.shell(command))
 
