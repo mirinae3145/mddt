@@ -144,6 +144,8 @@ Check the result as follows:
    Run it on the whole collection after adding, removing, moving, or renaming a file, or removing, moving, or renaming a heading.
    After adding child documents, add `--review` to see links that lack summaries.
    Information findings rest on approximate detection, so judge each one before acting on it.
+   - **Reading the output**: Read the text output whole, since each code's fix guidance says how to apply its findings.
+     A filter that keeps only finding lines hides that guidance and the `reread:` line, so a script that processes findings reads `--format json` instead.
 1. Fix structural findings before sentence-level ones, because structural fixes move sentences.
    Before applying a fix, judge the structure it will produce against the model, including the rules whose warnings it may raise.
    After fixing, reread each fixed part or topic whole.
