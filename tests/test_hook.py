@@ -109,6 +109,10 @@ class ReadTool(HookCase):
         self.write('README.md')
         self.assertIsNotNone(self.read('README.md', limit=5))
 
+    def test_documents_an_ignore_file_leaves_out_are_still_read_whole(self):
+        (self.dir / '.mddtignore').write_text('*\n', encoding='utf-8')
+        self.assertIsNotNone(self.read(self.write('README.md'), limit=5))
+
     def test_other_files_pass(self):
         for name in ('notes.md', 'README.txt', 'README.md.bak', 'myREADME.md'):
             with self.subTest(name=name):
@@ -192,6 +196,36 @@ class HeadingEdits(HookCase):
     def test_other_files_pass(self):
         self.assertIsNone(self.context('Edit', {'file_path': str(self.dir / 'run.py'),
                                                 'old_string': 'x', 'new_string': '# comment\nx'}))
+
+    def test_documents_an_ignore_file_leaves_out_pass(self):
+        (self.dir / '.mddtignore').write_text('# Kept as received.\noriginals/\n', encoding='utf-8')
+        (self.dir / 'notes').mkdir()
+        (self.dir / 'notes/.mddtignore').write_text('*.md\n!kept.md\n', encoding='utf-8')
+        edit = {'old_string': 'Text.', 'new_string': 'Text.\n\n## Part\n'}
+        for name in ('originals/source.md', 'originals/deeper/source.md', 'notes/draft.md'):
+            with self.subTest(name=name):
+                self.assertIsNone(self.context('Edit', {'file_path': str(self.dir / name), **edit}))
+        for name in ('guide.md', 'notes/kept.md', 'originals.md'):
+            with self.subTest(name=name):
+                self.assertIsNotNone(self.context('Edit', {'file_path': str(self.dir / name), **edit}))
+        patch = ('*** Begin Patch\n*** Update File: originals/source.md\n@@\n+## Part\n'
+                 '*** Update File: guide.md\n@@\n+## Part\n*** End Patch\n')
+        text = self.context('apply_patch', {'command': patch})
+        self.assertIn('guide.md', text)
+        self.assertNotIn('source.md', text)
+
+    def test_ignore_files_above_the_git_root_are_not_read(self):
+        (self.dir / '.mddtignore').write_text('*.md\n', encoding='utf-8')
+        (self.dir / 'repo/.git').mkdir(parents=True)
+        edit = {'old_string': 'Text.', 'new_string': 'Text.\n\n## Part\n'}
+        self.assertIsNotNone(self.context('Edit', {'file_path': str(self.dir / 'repo/doc.md'), **edit}))
+        # Without a Git root, every folder above the document is read.
+        self.assertIsNone(self.context('Edit', {'file_path': str(self.dir / 'other/doc.md'), **edit}))
+
+    def test_unreadable_ignore_files_leave_the_context(self):
+        (self.dir / '.mddtignore').write_bytes(b'\xff\xfe*.md\n')
+        self.assertIsNotNone(self.context('Edit', {'file_path': str(self.dir / 'doc.md'),
+                                                   'old_string': 'Text.', 'new_string': '## Part\n'}))
 
     def test_write_compares_with_the_current_file(self):
         path = self.dir / 'doc.md'

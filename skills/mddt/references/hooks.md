@@ -29,6 +29,7 @@ Files over 2,000 lines or 256 KiB pass both, since they cannot be read at once a
 
 Whole reads, searches such as `grep` and their cut results, edits such as `sed -i`, writes through `>`, and commands such as `git` that only name a file pass.
 A denial tells the agent which file it tried to cut and how to read it whole.
+These denials apply in documents that a [`.mddtignore`](ignore-file.md) leaves out as well, since a cut there can still hide a link or a requirement.
 
 ## Heading edits
 
@@ -43,6 +44,11 @@ The hook compares heading counts outside fenced code before and after the change
 - **Codex `apply_patch`**: The added lines of a Markdown file have more headings than its removed lines.
 
 Renaming a heading or editing text under it adds no heading, so it passes without context.
+
+A document that a [`.mddtignore`](ignore-file.md) leaves out also passes without context, since its collection does not write it to the model.
+The hook reads the ignore files from the collection root down to the document's folder, as the checker does.
+Like the checker, it takes the nearest folder above the document that holds `.git` as the root.
+Without one, it reads the ignore files of every folder above the document, while the checker starts from its working directory.
 
 ## Registration
 
@@ -83,6 +89,8 @@ The hook is a guardrail against habitual partial reads and unplanned structure, 
 - **Short previews**: A deliberate preview such as `head -1 README.md` is denied as well, since reading these files whole costs little.
 - **Context, not checks**: The heading context reminds the agent of the procedure but cannot tell whether the agent follows it.
   Headings added by shell commands, and Setext headings, are not detected.
+- **Ignore files**: A checker run with `--root`, or without a Git root, can read other ignore files than the hook.
+  The two can then disagree about whether a document is left out.
 - **Codex patches**: The Codex hook documentation does not describe the patch format that the hook reads.
   A change to that format can stop heading detection.
 - **Host delivery**: The tests run the script with sample events.

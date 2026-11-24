@@ -8,6 +8,7 @@ Agents still preview entry documents and contributor guides with `head` or a
 line range, and add sections without the procedure.
 For Claude Code and Codex, this hook denies partial reads of those documents
 and, when an edit adds a Markdown heading, points the agent to the skill.
+Documents that a .mddtignore leaves out of the model get no such pointer.
 
 It reads one PreToolUse event as JSON on stdin and prints its response as JSON on
 stdout, or nothing to let the call proceed unchanged.
@@ -46,6 +47,9 @@ SHELLS = frozenset(('bash', 'sh', 'zsh', 'dash'))
 SEPARATORS = frozenset((';', '&&', '||', '&', ';;'))
 # An output redirection such as `>`, `>>`, or `2>`, whose next word is written, not read.
 OUTPUT = re.compile(r'\d*>[>|]?')
+
+# The checker's ignore file, which lists documents a collection does not write to the model.
+IGNORE_FILE = '.mddtignore'
 
 
 def is_whole_file(path):
@@ -278,7 +282,7 @@ def current_text(path, cwd):
 
 
 def patch_headings(patch):
-    """Return the Markdown files that a Codex patch adds headings to.
+    """Return the paths of the Markdown files that a Codex patch adds headings to.
 
     The patch names each file on a line such as `*** Update File: path` or
     `*** Add File: path`, and prefixes added and removed lines with + and -.
@@ -295,11 +299,11 @@ def patch_headings(patch):
             added[path] = added.get(path, '') + line[1:] + '\n'
         elif line.startswith('-'):
             removed[path] = removed.get(path, '') + line[1:] + '\n'
-    return {Path(p).name for p in added if headings(added[p]) > headings(removed.get(p, ''))}
+    return {p for p in added if headings(added[p]) > headings(removed.get(p, ''))}
 
 
 def added_headings(tool, tool_input, cwd):
-    """Return the names of Markdown files that a write call adds headings to."""
+    """Return the paths of the Markdown files that a write call adds headings to."""
     if tool == 'apply_patch':
         patch = tool_input.get('command')
         return patch_headings(patch) if isinstance(patch, str) else set()
@@ -315,7 +319,110 @@ def added_headings(tool, tool_input, cwd):
         grew = isinstance(content, str) and headings(content) > headings(current_text(path, cwd))
     else:
         grew = False
-    return {Path(path).name} if grew else set()
+    return {path} if grew else set()
+
+
+def _class_end(segment, start):
+    """Index of the ] closing the character class opened at start, or -1."""
+    k = start + 1
+    if k < len(segment) and segment[k] in '!^':
+        k += 1
+    if k < len(segment) and segment[k] == ']':
+        k += 1
+    return segment.find(']', k)
+
+
+def _segment_regex(segment):
+    out, k = [], 0
+    while k < len(segment):
+        c = segment[k]
+        if c == '*':
+            while k + 1 < len(segment) and segment[k + 1] == '*':
+                k += 1
+            out.append('[^/]*')
+        elif c == '?':
+            out.append('[^/]')
+        elif c == '\\' and k + 1 < len(segment):
+            k += 1
+            out.append(re.escape(segment[k]))
+        elif c == '[' and _class_end(segment, k) != -1:
+            end = _class_end(segment, k)
+            body = segment[k + 1:end]
+            negate = body[:1] in ('!', '^')
+            body = body[1:] if negate else body
+            out.append('[' + ('^' if negate else '') + body.replace('\\', '\\\\') + ']')
+            k = end
+        else:
+            out.append(re.escape(c))
+        k += 1
+    return ''.join(out)
+
+
+def ignore_rule(line):
+    """Translate one .mddtignore line into (pattern, negated, folders only), or None.
+
+    This repeats parse_ignore_line in mddt.py, which the hook cannot import
+    without the checker's dependencies; keep the two in step.
+    """
+    while line.endswith(' ') and not line.endswith('\\ '):
+        line = line[:-1]
+    if not line or line.startswith('#'):
+        return None
+    negated = line.startswith('!')
+    if negated:
+        line = line[1:]
+    dir_only = line.endswith('/')
+    line = line.rstrip('/') if dir_only else line
+    if not line:
+        return None
+    anchored = '/' in line
+    segments = line.lstrip('/').split('/')
+    last = len(segments) - 1
+    parts = []
+    for i, segment in enumerate(segments):
+        if segment == '**':
+            parts.append('.+' if i == last else '(?:[^/]+/)*')
+        else:
+            parts.append(_segment_regex(segment) + ('' if i == last else '/'))
+    regex = ('' if anchored else '(?:[^/]+/)*') + ''.join(parts)
+    return re.compile(regex, re.DOTALL), negated, dir_only
+
+
+def ignore_rules(folder, cache):
+    """The rules of a folder's .mddtignore; an unreadable file has none, so the hook still points to the skill."""
+    if folder not in cache:
+        try:
+            text = (folder / IGNORE_FILE).read_text(encoding='utf-8')
+        except (OSError, UnicodeDecodeError):
+            text = ''
+        cache[folder] = [rule for rule in map(ignore_rule, text.splitlines()) if rule]
+    return cache[folder]
+
+
+def ignored(path, cwd):
+    """Whether a .mddtignore leaves a document out of the model, as the checker would.
+
+    The checker reads ignore files from the collection root down to the document's
+    folder and finds the root as the nearest folder above that holds .git.
+    Without one, the checker starts from its working directory, which the hook
+    does not know, so the hook reads the ignore files of every folder above.
+    """
+    full = Path(os.path.abspath(Path(cwd or '.') / path))
+    base = next((folder for folder in full.parents if (folder / '.git').exists()), Path(full.anchor))
+    parts = full.relative_to(base).parts
+    cache = {}
+    # As in the checker, a path inside an ignored folder stays ignored, and within
+    # one path the last matching line, from the shallowest file down, wins.
+    for i in range(1, len(parts) + 1):
+        hit = False
+        for j in range(i):
+            relative = '/'.join(parts[j:i])
+            for pattern, negated, dir_only in ignore_rules(base.joinpath(*parts[:j]), cache):
+                if (i < len(parts) or not dir_only) and pattern.fullmatch(relative):
+                    hit = not negated
+        if hit:
+            return True
+    return False
 
 
 def decide(event):
@@ -327,7 +434,10 @@ def decide(event):
     if not isinstance(tool_input, dict):
         return None
     if tool in ('Edit', 'Write', 'apply_patch'):
-        names = added_headings(tool, tool_input, event.get('cwd'))
+        cwd = event.get('cwd')
+        # A collection does not write the documents it ignores to the model, so the
+        # writing procedure does not apply to them.
+        names = {Path(path).name for path in added_headings(tool, tool_input, cwd) if not ignored(path, cwd)}
         if not names:
             return None
         # Context without a permission decision lets the call proceed.
