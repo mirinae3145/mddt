@@ -43,7 +43,8 @@ What to read before a change depends on which files it touches:
   The repository's documents follow the model, as [self-conformance](#self-conformance) describes, and the checker covers only part of it.
   The change also needs the documents that the changed text summarizes or that summarize it.
 - **Hook**: A change to `skills/mddt/scripts/mddt_hook.py` needs [hooks](skills/mddt/references/hooks.md) and `tests/test_hook.py`.
-  The hook does not use the checker, so the rest of the repository can stay unread.
+  The hook does not import the checker, so the rest of the repository can stay unread.
+  It repeats the checker's reading of `.mddtignore`, though, so a change to that reading in either script updates both, and their tests share its pattern cases.
 - **Licensing and configuration**: A change to `REUSE.toml`, `LICENSES/`, `.github/`, `.gitignore`, `.mddtignore`, or `.rumdl.toml` needs only this guide.
 
 ## Checker layout
@@ -146,10 +147,10 @@ python3 -m unittest discover -s tests -v
 ```
 
 The tests run the checker through `uv run`, so uv must be installed.
-The hook's tests run it with the same Python interpreter as the tests, since it uses only the standard library.
+Outside the coverage run, the hook's tests run it with the same Python interpreter as the tests, since it uses only the standard library.
 Add a test with each new code or behavior change, including a case that must not be reported.
 
-After changing `mddt.py`, also run the tests with coverage, which must reach every line and branch:
+After changing `mddt.py` or `mddt_hook.py`, also run the tests with coverage, which must reach every line and branch of both scripts:
 
 ```bash
 MDDT_COVERAGE=1 python3 -m unittest discover -s tests
@@ -157,13 +158,13 @@ uvx coverage@7.17.2 combine
 uvx coverage@7.17.2 report -m --fail-under=100
 ```
 
-The coverage run builds one environment from the script's locked dependencies and starts each checker run in it with `python -m coverage`.
+The coverage run builds one environment from the checker's locked dependencies and starts each checker and hook run in it with `python -m coverage`.
 It skips uv's script mode and the script's Python requirement, so the plain run remains the check that the documented command works.
 
 Code that the tests do not reach is handled as follows:
 
 - **Specified behavior**: A line that decides a finding, file selection, output, or exit status needs a test, and it is never excluded.
-  Specified behavior is what the model, the checker reference, or a comment in the checker states.
+  Specified behavior is what the model, the checker or hook reference, or a comment in either script states.
 - **Unspecified conditions**: A guard against another platform, a broken registry, impossible parser output, or a similar unspecified condition is excluded.
   Mark it with `# pragma: no cover`, or `# pragma: no branch` for one side of a branch, followed by the reason on the same line.
 

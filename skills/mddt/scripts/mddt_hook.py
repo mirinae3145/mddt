@@ -8,9 +8,14 @@ Agents still preview entry documents and contributor guides with `head` or a
 line range, and add sections without the procedure.
 For Claude Code and Codex, this hook denies partial reads of those documents
 and, when an edit adds a Markdown heading, points the agent to the skill.
+Documents that a .mddtignore leaves out of the model get no such pointer.
+Agents also filter the checker's text output, which drops each code's fix
+guidance and the reread line, so the hook denies such filters as well.
 
 It reads one PreToolUse event as JSON on stdin and prints its response as JSON on
 stdout, or nothing to let the call proceed unchanged.
+Its arguments name the behaviors to run, so that each can be registered on its
+own; without arguments, all of them run.
 Any error lets the call proceed, so the hook never blocks work it cannot judge.
 Only the Python standard library is used, so the hook starts quickly.
 """
@@ -46,6 +51,37 @@ SHELLS = frozenset(('bash', 'sh', 'zsh', 'dash'))
 SEPARATORS = frozenset((';', '&&', '||', '&', ';;'))
 # An output redirection such as `>`, `>>`, or `2>`, whose next word is written, not read.
 OUTPUT = re.compile(r'\d*>[>|]?')
+
+# The checker's ignore file, which lists documents a collection does not write to the model.
+IGNORE_FILE = '.mddtignore'
+
+# Behaviors that the hook's arguments select: whole reads of covered files,
+# context for heading edits, and whole checker output.
+BEHAVIORS = ('reads', 'headings', 'output')
+
+# The checker, recognized as a program or as an argument of a launcher or of a
+# command wrapper, such as in `uv run .../mddt.py` or `timeout 300 python3 .../mddt.py`.
+CHECKER = 'mddt.py'
+LAUNCHER = re.compile(r'uv|uvx|py|python[0-9.]*|timeout|env|nice|nohup|time|stdbuf')
+# Launcher and wrapper options whose next word is their value, not the program they run.
+UV_VALUES = frozenset(('--with', '--with-editable', '--with-requirements', '--python', '-p', '--from',
+                       '--directory', '--project', '--env-file', '--index', '--extra', '--group'))
+VALUE_OPTIONS = {
+    'uv': UV_VALUES, 'uvx': UV_VALUES, 'timeout': frozenset(('-s', '--signal', '-k', '--kill-after')),
+    'nice': frozenset(('-n', '--adjustment')), 'env': frozenset(('-u', '--unset', '-C', '--chdir')),
+    'stdbuf': frozenset(('-i', '-o', '-e')),
+}
+# Python interpreters' options whose next word is their value.
+PYTHON_VALUES = frozenset(('-W', '-X'))
+# Launcher words that precede the program, such as uv's `run` or the duration of `timeout`.
+LAUNCHER_WORD = re.compile(r'run|\d+(?:\.\d+)?[smhd]?|[A-Za-z_][A-Za-z0-9_]*=.*')
+# An output redirection of standard output, which writes the checker's output to a file.
+STDOUT_REDIRECT = re.compile(r'1?>[>|]?')
+# Commands that pass on only part of their input or transform it, so the checker's
+# text output loses its fix guidance or reread line through them.
+FILTERS = frozenset(('head', 'tail', 'grep', 'egrep', 'fgrep', 'rg', 'sed', 'awk', 'gawk', 'cut', 'wc'))
+# Commands that pass every line of their input on, so a filter after them still cuts the output.
+PASS_THROUGH = frozenset(('tee', 'cat', 'sort', 'nl', 'tr'))
 
 
 def is_whole_file(path):
@@ -125,7 +161,7 @@ def pipelines(words):
             current.append(command)
             yield current
             current, command = [], []
-        elif word == '|':
+        elif word in ('|', '|&'):
             current.append(command)
             command = []
         else:
@@ -225,11 +261,96 @@ def partial_shell_read(command, cwd=None):
     return None
 
 
+def command_name(word):
+    """The name of a program, without the .exe suffix that Windows commands may carry."""
+    name = Path(word).name
+    return name[:-4] if name.lower().endswith('.exe') else name
+
+
+def launched(name, args):
+    """Return the program that launchers and wrappers run, with its arguments, or None.
+
+    A launcher's own options, uv's `run`, and a wrapper's duration come before
+    the program; a module or inline code run with -m or -c is not a script.
+    """
+    while LAUNCHER.fullmatch(name):
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg in ('-m', '-c'):
+                return None
+            if arg in VALUE_OPTIONS.get(name, PYTHON_VALUES):
+                i += 2
+            elif arg.startswith('-') or LAUNCHER_WORD.fullmatch(arg):
+                i += 1
+            else:
+                break
+        if i >= len(args):
+            return None
+        name, args = command_name(args[i]), args[i + 1:]
+    return name, args
+
+
+def runs_checker(name, args):
+    """Whether a simple command runs the checker with text output to its standard output.
+
+    JSON output is meant for scripts, help text carries no findings, and output
+    written to a file is not filtered in the pipeline.
+    """
+    run = launched(command_name(name), args)
+    if run is None or run[0] != CHECKER:
+        return False
+    args = run[1]
+    if any(STDOUT_REDIRECT.fullmatch(arg) for arg in args):
+        return False
+    # The checker accepts unambiguous abbreviations such as --form, and the last --format wins.
+    output = 'text'
+    for i, arg in enumerate(args):
+        option, equals, value = arg.partition('=')
+        if arg == '-h' or (len(option) > 2 and '--help'.startswith(option)):
+            return False
+        if len(option) > 2 and '--format'.startswith(option):
+            output = value if equals else (args[i + 1] if i + 1 < len(args) else '')
+    return output != 'json'
+
+
+def checker_flow(command):
+    """Return whether a shell command filters the checker's text output, and whether
+    the output of its last pipeline is still that text output."""
+    trailing = False
+    for pipeline in pipelines(tokens(command)):
+        checker, seen = False, False
+        for simple in pipeline:
+            name, args = program(simple)
+            if name is None:
+                continue
+            seen = True
+            if name in SHELLS:
+                script = shell_script(args)
+                filtered, checker = checker_flow(script) if script else (False, False)
+                if filtered:
+                    return True, False
+            elif runs_checker(name, args):
+                checker = True
+            elif checker and command_name(name) in FILTERS:
+                return True, False
+            elif command_name(name) not in PASS_THROUGH:
+                checker = False
+        if seen:
+            trailing = checker
+    return False, trailing
+
+
+def filtered_checker(command):
+    """Whether a shell command passes the checker's text output through a filter."""
+    return checker_flow(command)[0]
+
+
 def skill_intro():
     """Introduce the skill by its entry, so that an agent can load it."""
     if SKILL.is_file():
         return f'The mddt skill, whose entry is {SKILL}, governs the structure of Markdown documents.'
-    return 'The mddt skill governs the structure of Markdown documents.'
+    return 'The mddt skill governs the structure of Markdown documents.'  # pragma: no cover - only a copy outside the skill folder
 
 
 def read_reason(name, tool):
@@ -241,6 +362,15 @@ def read_reason(name, tool):
             'Its reading procedure, references/reading.md, asks for whole reads, '
             'and such documents decide what else to read or do, so a cut can hide a link or a requirement. '
             f'{how} Searching it with grep is still fine.')
+
+
+def output_reason():
+    return ('mddt: the checker\'s output is read whole. '
+            f'{skill_intro()} The checking step of its writing procedure, references/writing.md, '
+            'asks for the whole text output: each code\'s fix guidance says how to apply its findings, '
+            'and the reread line points back to that step, so a filter hides both. '
+            'Run the checker again without the filter. For a long run, check only the files you changed; '
+            'a script that processes findings reads --format json.')
 
 
 def write_context(names):
@@ -278,7 +408,7 @@ def current_text(path, cwd):
 
 
 def patch_headings(patch):
-    """Return the Markdown files that a Codex patch adds headings to.
+    """Return the paths of the Markdown files that a Codex patch adds headings to.
 
     The patch names each file on a line such as `*** Update File: path` or
     `*** Add File: path`, and prefixes added and removed lines with + and -.
@@ -295,11 +425,11 @@ def patch_headings(patch):
             added[path] = added.get(path, '') + line[1:] + '\n'
         elif line.startswith('-'):
             removed[path] = removed.get(path, '') + line[1:] + '\n'
-    return {Path(p).name for p in added if headings(added[p]) > headings(removed.get(p, ''))}
+    return {p for p in added if headings(added[p]) > headings(removed.get(p, ''))}
 
 
 def added_headings(tool, tool_input, cwd):
-    """Return the names of Markdown files that a write call adds headings to."""
+    """Return the paths of the Markdown files that a write call adds headings to."""
     if tool == 'apply_patch':
         patch = tool_input.get('command')
         return patch_headings(patch) if isinstance(patch, str) else set()
@@ -309,16 +439,126 @@ def added_headings(tool, tool_input, cwd):
     if tool == 'Edit':
         old, new = tool_input.get('old_string'), tool_input.get('new_string')
         grew = isinstance(old, str) and isinstance(new, str) and headings(new) > headings(old)
-    elif tool == 'Write':
-        content = tool_input.get('content')
-        # Judged before the call runs, so the file still holds the earlier text.
-        grew = isinstance(content, str) and headings(content) > headings(current_text(path, cwd))
     else:
-        grew = False
-    return {Path(path).name} if grew else set()
+        # A Write call, judged before it runs, so the file still holds the earlier text.
+        content = tool_input.get('content')
+        grew = isinstance(content, str) and headings(content) > headings(current_text(path, cwd))
+    return {path} if grew else set()
 
 
-def decide(event):
+def _class_end(segment, start):
+    """Index of the ] closing the character class opened at start, or -1."""
+    k = start + 1
+    if k < len(segment) and segment[k] in '!^':
+        k += 1
+    if k < len(segment) and segment[k] == ']':
+        k += 1
+    return segment.find(']', k)
+
+
+def _segment_regex(segment):
+    out, k = [], 0
+    while k < len(segment):
+        c = segment[k]
+        if c == '*':
+            while k + 1 < len(segment) and segment[k + 1] == '*':
+                k += 1
+            out.append('[^/]*')
+        elif c == '?':
+            out.append('[^/]')
+        elif c == '\\' and k + 1 < len(segment):
+            k += 1
+            out.append(re.escape(segment[k]))
+        elif c == '[' and _class_end(segment, k) != -1:
+            end = _class_end(segment, k)
+            body = segment[k + 1:end]
+            negate = body[:1] in ('!', '^')
+            body = body[1:] if negate else body
+            out.append('[' + ('^' if negate else '') + body.replace('\\', '\\\\') + ']')
+            k = end
+        else:
+            out.append(re.escape(c))
+        k += 1
+    return ''.join(out)
+
+
+def ignore_rule(line):
+    """Translate one .mddtignore line into (pattern, negated, folders only), or None.
+
+    This repeats parse_ignore_line in mddt.py, which the hook cannot import
+    without the checker's dependencies; keep the two in step.
+    """
+    while line.endswith(' ') and not line.endswith('\\ '):
+        line = line[:-1]
+    if not line or line.startswith('#'):
+        return None
+    negated = line.startswith('!')
+    if negated:
+        line = line[1:]
+    dir_only = line.endswith('/')
+    line = line.rstrip('/') if dir_only else line
+    if not line:
+        return None
+    anchored = '/' in line
+    segments = line.lstrip('/').split('/')
+    last = len(segments) - 1
+    parts = []
+    for i, segment in enumerate(segments):
+        if segment == '**':
+            parts.append('.+' if i == last else '(?:[^/]+/)*')
+        else:
+            parts.append(_segment_regex(segment) + ('' if i == last else '/'))
+    regex = ('' if anchored else '(?:[^/]+/)*') + ''.join(parts)
+    return re.compile(regex, re.DOTALL), negated, dir_only
+
+
+def ignore_rules(folder, cache):
+    """The rules of a folder's .mddtignore; an unreadable file has none, so the hook still points to the skill."""
+    if folder not in cache:
+        try:
+            text = (folder / IGNORE_FILE).read_text(encoding='utf-8')
+        except (OSError, UnicodeDecodeError):
+            text = ''
+        cache[folder] = [rule for rule in map(ignore_rule, text.splitlines()) if rule]
+    return cache[folder]
+
+
+def ignored(path, cwd):
+    """Whether a .mddtignore leaves a document out of the model, as the checker would.
+
+    The checker reads ignore files from the collection root down to the document's
+    folder and finds the root as the nearest folder above that holds .git.
+    Without one, the checker starts from its working directory, which the hook
+    does not know, so the hook reads the ignore files of every folder above.
+    """
+    full = Path(os.path.abspath(Path(cwd or '.') / path))
+    base = next((folder for folder in full.parents if (folder / '.git').exists()), Path(full.anchor))
+    parts = full.relative_to(base).parts
+    cache = {}
+    # As in the checker, a path inside an ignored folder stays ignored, and within
+    # one path the last matching line, from the shallowest file down, wins.
+    for i in range(1, len(parts) + 1):
+        hit = False
+        for j in range(i):
+            relative = '/'.join(parts[j:i])
+            for pattern, negated, dir_only in ignore_rules(base.joinpath(*parts[:j]), cache):
+                if (i < len(parts) or not dir_only) and pattern.fullmatch(relative):
+                    hit = not negated
+        if hit:
+            return True
+    return False
+
+
+def selected(args):
+    """Return the behaviors that the arguments name, or all of them without arguments."""
+    unknown = [arg for arg in args if arg not in BEHAVIORS]
+    if unknown:
+        # Reported rather than fatal, so a misspelled registration leaves the call to proceed.
+        print(f'mddt hook ignores unknown behaviors: {", ".join(unknown)}', file=sys.stderr)
+    return {arg for arg in args if arg in BEHAVIORS} if args else set(BEHAVIORS)
+
+
+def decide(event, behaviors=BEHAVIORS):
     """Return the hook's response to an event, or None to let the call proceed unchanged."""
     if event.get('hook_event_name') != 'PreToolUse':
         return None
@@ -327,35 +567,47 @@ def decide(event):
     if not isinstance(tool_input, dict):
         return None
     if tool in ('Edit', 'Write', 'apply_patch'):
-        names = added_headings(tool, tool_input, event.get('cwd'))
+        if 'headings' not in behaviors:
+            return None
+        cwd = event.get('cwd')
+        # A collection does not write the documents it ignores to the model, so the
+        # writing procedure does not apply to them.
+        names = {Path(path).name for path in added_headings(tool, tool_input, cwd) if not ignored(path, cwd)}
         if not names:
             return None
         # Context without a permission decision lets the call proceed.
         return {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'additionalContext': write_context(names)}}
-    if tool == 'Read':
+    reason = None
+    if tool == 'Read' and 'reads' in behaviors:
         name = partial_read(tool_input, event.get('cwd'))
+        reason = read_reason(name, tool) if name else None
     elif tool == 'Bash':
         command = tool_input.get('command')
         if isinstance(command, list):
             # Quoting keeps each part one word, such as the script of `bash -lc`.
             command = shlex.join(str(part) for part in command)
-        name = partial_shell_read(command, event.get('cwd')) if isinstance(command, str) else None
-    else:
-        return None
-    if name is None:
+        if not isinstance(command, str):
+            return None
+        name = partial_shell_read(command, event.get('cwd')) if 'reads' in behaviors else None
+        if name:
+            reason = read_reason(name, tool)
+        elif 'output' in behaviors and filtered_checker(command):
+            reason = output_reason()
+    if reason is None:
         return None
     return {'hookSpecificOutput': {
         'hookEventName': 'PreToolUse',
         'permissionDecision': 'deny',
-        'permissionDecisionReason': read_reason(name, tool),
+        'permissionDecisionReason': reason,
     }}
 
 
 def main():
     try:
+        behaviors = selected(sys.argv[1:])
         # Hosts send UTF-8, which the locale encoding of a Windows console may not be.
         event = json.load(sys.stdin.buffer)
-        decision = decide(event) if isinstance(event, dict) else None
+        decision = decide(event, behaviors) if isinstance(event, dict) else None
     except Exception as error:  # Fail open: a hook that cannot judge must not block.
         print(f'mddt hook skipped: {type(error).__name__}', file=sys.stderr)
         return 0
@@ -364,5 +616,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no branch - the hook runs only as a script
     sys.exit(main())

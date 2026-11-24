@@ -5,6 +5,19 @@
 This file records the changes in each version of the mddt skill, newest first.
 The [contributing guide](CONTRIBUTING.md#versions) says what each number of a version means.
 
+## 1.2 &mdash; 2026-11-24
+
+### Added
+
+- **Checker output**: The hook's new `output` behavior denies shell pipelines that pass the checker's text output through a filter such as `grep`, `head`, or `tail`.
+  JSON output, help text, unfiltered runs, and output written to a file pass.
+- **Behavior selection**: The hook's arguments name the behaviors a registration runs, `reads`, `headings`, and `output`, and all of them run without arguments.
+
+### Changed
+
+- **Ignored documents**: The hook adds no heading context to documents that a `.mddtignore` leaves out, reading the ignore files as the checker does.
+- **Reading the output**: The checking procedure and `SKILL.md` ask agents to read the checker's text output whole, and point scripts that process findings to `--format json`.
+
 ## 1.1 &mdash; 2026-11-23
 
 ### Added

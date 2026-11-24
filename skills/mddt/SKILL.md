@@ -11,7 +11,7 @@ description: >
   value updates, or for formatting-only changes that leave structure unchanged.
 license: CC-BY-4.0 for the instructions and references; MIT for the scripts; copyright 2026 Taeha Shin
 metadata:
-  version: "1.1"
+  version: "1.2"
 ---
 
 # mddt
@@ -58,9 +58,11 @@ Run it on the Markdown files you created or changed:
 uv run <skill-dir>/scripts/mddt.py FILE...
 ```
 
-Each finding comes with fix guidance, and errors make the command exit with status 1.
+Each finding comes with fix guidance, so read the output whole rather than filtering it.
+Errors make the command exit with status 1.
 Apply the findings as described in [checking](references/writing.md#checking), which limits them to what the current task created or made worse.
 A requested restructuring applies more of them, though not every sentence-level finding.
+
 The [checker reference](references/checker.md) covers running the checker, its findings and output, its options, the files and links it checks, its exit statuses, and its versions.
 Read it in these cases:
 
@@ -74,7 +76,8 @@ A `.mddtignore` file leaves them out of the check, as the [ignore file](referenc
 ## Optional hook
 
 An optional hook for Claude Code and Codex keeps agents to the reading and writing procedures.
-It denies partial reads of READMEs, agent entries, and contributor guides, and points to the writing procedure when an edit adds a heading.
+It denies partial reads of READMEs, agent entries, and contributor guides, and filters of the checker's output.
+It points to the writing procedure when an edit adds a heading.
 Read [hooks](references/hooks.md) when installing, configuring, or troubleshooting it.
 
 ## Scope
