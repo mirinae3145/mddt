@@ -12,6 +12,8 @@ Documents that a .mddtignore leaves out of the model get no such pointer.
 
 It reads one PreToolUse event as JSON on stdin and prints its response as JSON on
 stdout, or nothing to let the call proceed unchanged.
+Its arguments name the behaviors to run, so that each can be registered on its
+own; without arguments, all of them run.
 Any error lets the call proceed, so the hook never blocks work it cannot judge.
 Only the Python standard library is used, so the hook starts quickly.
 """
@@ -50,6 +52,10 @@ OUTPUT = re.compile(r'\d*>[>|]?')
 
 # The checker's ignore file, which lists documents a collection does not write to the model.
 IGNORE_FILE = '.mddtignore'
+
+# Behaviors that the hook's arguments select: whole reads of covered files and
+# context for heading edits.
+BEHAVIORS = ('reads', 'headings')
 
 
 def is_whole_file(path):
@@ -423,7 +429,16 @@ def ignored(path, cwd):
     return False
 
 
-def decide(event):
+def selected(args):
+    """Return the behaviors that the arguments name, or all of them without arguments."""
+    unknown = [arg for arg in args if arg not in BEHAVIORS]
+    if unknown:
+        # Reported rather than fatal, so a misspelled registration leaves the call to proceed.
+        print(f'mddt hook ignores unknown behaviors: {", ".join(unknown)}', file=sys.stderr)
+    return {arg for arg in args if arg in BEHAVIORS} if args else set(BEHAVIORS)
+
+
+def decide(event, behaviors=BEHAVIORS):
     """Return the hook's response to an event, or None to let the call proceed unchanged."""
     if event.get('hook_event_name') != 'PreToolUse':
         return None
@@ -432,6 +447,8 @@ def decide(event):
     if not isinstance(tool_input, dict):
         return None
     if tool in ('Edit', 'Write', 'apply_patch'):
+        if 'headings' not in behaviors:
+            return None
         cwd = event.get('cwd')
         # A collection does not write the documents it ignores to the model, so the
         # writing procedure does not apply to them.
@@ -440,6 +457,8 @@ def decide(event):
             return None
         # Context without a permission decision lets the call proceed.
         return {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'additionalContext': write_context(names)}}
+    if 'reads' not in behaviors:
+        return None
     if tool == 'Read':
         name = partial_read(tool_input, event.get('cwd'))
     elif tool == 'Bash':
@@ -461,9 +480,10 @@ def decide(event):
 
 def main():
     try:
+        behaviors = selected(sys.argv[1:])
         # Hosts send UTF-8, which the locale encoding of a Windows console may not be.
         event = json.load(sys.stdin.buffer)
-        decision = decide(event) if isinstance(event, dict) else None
+        decision = decide(event, behaviors) if isinstance(event, dict) else None
     except Exception as error:  # Fail open: a hook that cannot judge must not block.
         print(f'mddt hook skipped: {type(error).__name__}', file=sys.stderr)
         return 0

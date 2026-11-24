@@ -29,10 +29,10 @@ def command():
     return [sys.executable, str(HOOK)]
 
 
-def run(payload):
-    """Run the hook as an agent host would, with one event on stdin."""
+def run(payload, *behaviors):
+    """Run the hook as an agent host would, with one event on stdin and the registration's arguments."""
     text = payload if isinstance(payload, str) else json.dumps(payload)
-    return subprocess.run(command(), input=text, capture_output=True, text=True)
+    return subprocess.run([*command(), *behaviors], input=text, capture_output=True, text=True)
 
 
 class HookCase(unittest.TestCase):
@@ -301,6 +301,31 @@ class IgnorePatterns(HookCase):
         self.assertEqual(self.left_out('[a.md\n', ['[a.md', 'a.md']), ['[a.md'])
         self.assertEqual(self.left_out('[]x].md\n', [']a.md', '].md', 'x.md']), ['].md', 'x.md'])
         self.assertEqual(self.left_out('a**c.md\n/\n', ['abc.md', 'a/c.md']), ['abc.md'])
+
+
+class Behaviors(HookCase):
+    """Arguments name the behaviors a registration runs; without them, all run."""
+
+    def outputs(self, *behaviors):
+        """Return whether a partial README read and a heading edit each get a response."""
+        read = self.event('Read', {'file_path': str(self.write('README.md')), 'limit': 5})
+        edit = self.event('Edit', {'file_path': str(self.dir / 'doc.md'), 'old_string': 'A', 'new_string': '## B'})
+        results = [run(event, *behaviors) for event in (read, edit)]
+        for result in results:
+            self.assertEqual(result.returncode, 0, result.stderr)
+        return tuple(bool(result.stdout) for result in results), results[0].stderr
+
+    def test_arguments_select_behaviors(self):
+        for behaviors, expected in (((), (True, True)), (('reads',), (True, False)),
+                                    (('headings',), (False, True)), (('headings', 'reads'), (True, True))):
+            with self.subTest(behaviors=behaviors):
+                self.assertEqual(self.outputs(*behaviors)[0], expected)
+
+    def test_unknown_behaviors_are_reported_and_ignored(self):
+        responses, errors = self.outputs('read', 'headings')
+        self.assertEqual(responses, (False, True))
+        self.assertIn('unknown behaviors: read', errors)
+        self.assertEqual(self.outputs('read')[0], (False, False))
 
 
 class Events(HookCase):

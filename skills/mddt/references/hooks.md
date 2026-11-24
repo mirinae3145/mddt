@@ -53,16 +53,22 @@ Without one, it reads the ignore files of every folder above the document, while
 ## Registration
 
 Register the script as a command hook for `PreToolUse` in the host's hook configuration.
-Each behavior follows the tools it judges, so a matcher that leaves out a behavior's tools turns that behavior off.
-Merge the hook with existing registrations rather than replacing the hook file, and use an interpreter and quoted path suited to the platform.
-When an installation manager registers hooks, declare the hook through it instead.
+Its arguments name the behaviors that a registration runs: `reads` for whole reads and `headings` for heading edits.
+Without arguments every behavior runs, and an unknown name is reported on standard error and ignored.
+
+Register each behavior on its own with a matcher for the tools it judges, so that each can be turned on or off separately.
+Merge the registrations with existing ones rather than replacing the hook file, and use an interpreter and quoted path suited to the platform.
+When an installation manager registers hooks, declare each registration through it instead.
 
 For Claude Code, match `Read` and `Bash` for whole reads and `Edit` and `Write` for heading edits in `settings.json`:
 
 ```json
 {
   "hooks": {
-    "PreToolUse": [{"matcher": "Read|Bash|Edit|Write", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py", "timeout": 10}]}]
+    "PreToolUse": [
+      {"matcher": "Read|Bash", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py reads", "timeout": 10}]},
+      {"matcher": "Edit|Write", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py headings", "timeout": 10}]}
+    ]
   }
 }
 ```
@@ -72,7 +78,10 @@ For Codex, match `Bash` for whole reads, since Codex reads files through the she
 ```json
 {
   "hooks": {
-    "PreToolUse": [{"matcher": "^(Bash|apply_patch)$", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py", "timeout": 10}]}]
+    "PreToolUse": [
+      {"matcher": "^Bash$", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py reads", "timeout": 10}]},
+      {"matcher": "^apply_patch$", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py headings", "timeout": 10}]}
+    ]
   }
 }
 ```
