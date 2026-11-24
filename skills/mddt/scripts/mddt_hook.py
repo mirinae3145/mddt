@@ -233,7 +233,7 @@ def skill_intro():
     """Introduce the skill by its entry, so that an agent can load it."""
     if SKILL.is_file():
         return f'The mddt skill, whose entry is {SKILL}, governs the structure of Markdown documents.'
-    return 'The mddt skill governs the structure of Markdown documents.'
+    return 'The mddt skill governs the structure of Markdown documents.'  # pragma: no cover - only a copy outside the skill folder
 
 
 def read_reason(name, tool):
@@ -313,12 +313,10 @@ def added_headings(tool, tool_input, cwd):
     if tool == 'Edit':
         old, new = tool_input.get('old_string'), tool_input.get('new_string')
         grew = isinstance(old, str) and isinstance(new, str) and headings(new) > headings(old)
-    elif tool == 'Write':
-        content = tool_input.get('content')
-        # Judged before the call runs, so the file still holds the earlier text.
-        grew = isinstance(content, str) and headings(content) > headings(current_text(path, cwd))
     else:
-        grew = False
+        # A Write call, judged before it runs, so the file still holds the earlier text.
+        content = tool_input.get('content')
+        grew = isinstance(content, str) and headings(content) > headings(current_text(path, cwd))
     return {path} if grew else set()
 
 
@@ -474,5 +472,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no branch - the hook runs only as a script
     sys.exit(main())

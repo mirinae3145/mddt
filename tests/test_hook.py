@@ -14,10 +14,25 @@ HOOK = ROOT / 'skills/mddt/scripts/mddt_hook.py'
 SKILL = ROOT / 'skills/mddt/SKILL.md'
 
 
+def command():
+    """The command that runs the hook, under branch coverage measurement with MDDT_COVERAGE set.
+
+    The hook uses only the standard library, so it runs with the tests' own
+    interpreter, or with the checker tests' coverage environment, whose
+    .coverage.* files `coverage combine` merges with the checker's.
+    """
+    if os.environ.get('MDDT_COVERAGE'):
+        # Imported here because only `discover -s tests`, as the coverage run uses, puts test_mddt on the path.
+        from test_mddt import coverage_python
+        return [str(coverage_python()), '-m', 'coverage', 'run', '--branch', '--parallel-mode',
+                f'--data-file={ROOT / ".coverage"}', f'--include={HOOK}', str(HOOK)]
+    return [sys.executable, str(HOOK)]
+
+
 def run(payload):
     """Run the hook as an agent host would, with one event on stdin."""
     text = payload if isinstance(payload, str) else json.dumps(payload)
-    return subprocess.run([sys.executable, str(HOOK)], input=text, capture_output=True, text=True)
+    return subprocess.run(command(), input=text, capture_output=True, text=True)
 
 
 class HookCase(unittest.TestCase):
@@ -140,6 +155,7 @@ class ShellCommands(HookCase):
             'sed --quiet 1,5p README.md': 'README.md',
             'sed -e 1,5p -e 5q README.md': 'README.md',
             "bash -lc 'head -5 README.md'": 'README.md',
+            "bash -e -c 'head -5 README.md'": 'README.md',
         }
         for command, name in commands.items():
             with self.subTest(command=command):
@@ -158,7 +174,7 @@ class ShellCommands(HookCase):
                         'tail -n +3 draft.md > README.md', "sed -n '1,10p' template.md >> docs/README.md",
                         'head -5 notes.md 2> README.md', 'awk \'{print NR": "$0}\' README.md',
                         'cat README.md | grep -n install | head', 'grep -n install < README.md | head',
-                        "bash -lc 'cat README.md'", '# head -5 README.md'):
+                        "bash -lc 'cat README.md'", '# head -5 README.md', 'bash run.sh | head -5'):
             with self.subTest(command=command):
                 self.assertIsNone(self.shell(command))
 
@@ -245,6 +261,48 @@ class HeadingEdits(HookCase):
         self.assertIsNone(self.context('apply_patch', {'command': 42}))
 
 
+class IgnorePatterns(HookCase):
+    """The hook reads .mddtignore as the checker does; these cases repeat the checker's pattern tests."""
+
+    def left_out(self, patterns, paths):
+        """Return the paths whose heading edits get no context, with the test folder as the Git root."""
+        (self.dir / '.git').mkdir(exist_ok=True)
+        (self.dir / '.mddtignore').write_text(patterns, encoding='utf-8')
+        edit = {'old_string': 'Text.', 'new_string': 'Text.\n\n## Part\n'}
+        return sorted(p for p in paths if self.context('Edit', {'file_path': str(self.dir / p), **edit}) is None)
+
+    def test_pattern_syntax(self):
+        paths = ['a.md', 'sub/a.md', 'sub/deep/a.md', 'b1.md', 'keep.md', 'gen/x.md', 'docs/g/y.md', 'docs/z.md']
+        cases = [
+            ('# comment\n\na.md\n', ['a.md', 'sub/a.md', 'sub/deep/a.md']),
+            ('/a.md\n', ['a.md']),
+            ('sub/a.md\n', ['sub/a.md']),
+            ('*.md\n!keep.md\n', [p for p in paths if p != 'keep.md']),
+            ('b?.md\n[ab].md\n', ['a.md', 'sub/a.md', 'sub/deep/a.md', 'b1.md']),
+            ('gen/\ngen\n', ['gen/x.md']),
+            ('gen/**\n', ['gen/x.md']),
+            ('**/deep/a.md\n', ['sub/deep/a.md']),
+            ('docs/**/y.md\n', ['docs/g/y.md']),
+            ('docs/*.md\n', ['docs/z.md']),
+            ('sub/*/a.md\n', ['sub/deep/a.md']),
+            ('a.md\n!sub/a.md\n', ['a.md', 'sub/deep/a.md']),
+            ('gen/\n!gen/x.md\n', ['gen/x.md']),
+            ('\\#x.md\n/keep.md   \n', ['keep.md']),
+        ]
+        for patterns, expected in cases:
+            with self.subTest(patterns=patterns):
+                self.assertEqual(self.left_out(patterns, paths), sorted(expected))
+
+    def test_directory_pattern_does_not_match_a_file_of_that_name(self):
+        self.assertEqual(self.left_out('a.md/\n', ['a.md']), [])
+
+    def test_escaped_and_bracket_patterns(self):
+        self.assertEqual(self.left_out('\\#x.md\n[!a]*.md\n', ['#x.md', 'a.md', 'b.md']), ['#x.md', 'b.md'])
+        self.assertEqual(self.left_out('[a.md\n', ['[a.md', 'a.md']), ['[a.md'])
+        self.assertEqual(self.left_out('[]x].md\n', [']a.md', '].md', 'x.md']), ['].md', 'x.md'])
+        self.assertEqual(self.left_out('a**c.md\n/\n', ['abc.md', 'a/c.md']), ['abc.md'])
+
+
 class Events(HookCase):
     def test_other_events_and_tools_pass(self):
         path = self.write('README.md')
@@ -256,7 +314,7 @@ class Events(HookCase):
         self.assertIsNone(self.decide({**event, 'tool_input': 'head README.md'}))
 
     def test_input_is_read_as_utf8(self):
-        result = subprocess.run([sys.executable, str(HOOK)], capture_output=True,
+        result = subprocess.run(command(), capture_output=True,
                                 input=json.dumps(self.event('Write', {'file_path': str(self.dir / '문서.md'),
                                                                       'content': '# 제목\n'}),
                                                  ensure_ascii=False).encode('utf-8'),
