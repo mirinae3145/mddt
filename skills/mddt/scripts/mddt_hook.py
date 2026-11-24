@@ -9,6 +9,8 @@ line range, and add sections without the procedure.
 For Claude Code and Codex, this hook denies partial reads of those documents
 and, when an edit adds a Markdown heading, points the agent to the skill.
 Documents that a .mddtignore leaves out of the model get no such pointer.
+Agents also filter the checker's text output, which drops each code's fix
+guidance and the reread line, so the hook denies such filters as well.
 
 It reads one PreToolUse event as JSON on stdin and prints its response as JSON on
 stdout, or nothing to let the call proceed unchanged.
@@ -53,9 +55,19 @@ OUTPUT = re.compile(r'\d*>[>|]?')
 # The checker's ignore file, which lists documents a collection does not write to the model.
 IGNORE_FILE = '.mddtignore'
 
-# Behaviors that the hook's arguments select: whole reads of covered files and
-# context for heading edits.
-BEHAVIORS = ('reads', 'headings')
+# Behaviors that the hook's arguments select: whole reads of covered files,
+# context for heading edits, and whole checker output.
+BEHAVIORS = ('reads', 'headings', 'output')
+
+# The checker, recognized as a program or as an argument of a launcher or of a
+# command wrapper, such as in `uv run .../mddt.py` or `timeout 300 python3 .../mddt.py`.
+CHECKER = 'mddt.py'
+LAUNCHER = re.compile(r'uv|uvx|py|python[0-9.]*|timeout|env|nice|nohup|time|stdbuf')
+# Commands that pass on only part of their input or transform it, so the checker's
+# text output loses its fix guidance or reread line through them.
+FILTERS = frozenset(('head', 'tail', 'grep', 'egrep', 'fgrep', 'rg', 'sed', 'awk', 'gawk', 'cut', 'wc'))
+# Commands that pass their whole input on, so a filter after them still cuts the output.
+PASS_THROUGH = frozenset(('tee', 'cat'))
 
 
 def is_whole_file(path):
@@ -235,6 +247,40 @@ def partial_shell_read(command, cwd=None):
     return None
 
 
+def runs_checker(name, args):
+    """Whether a simple command runs the checker with text output.
+
+    JSON output is meant for scripts, and help text carries no findings.
+    """
+    if name != CHECKER and not (LAUNCHER.fullmatch(name) and any(Path(arg).name == CHECKER for arg in args)):
+        return False
+    if any(arg in ('-h', '--help', '--format=json') for arg in args):
+        return False
+    return not any(arg == '--format' and value == 'json' for arg, value in zip(args, args[1:]))
+
+
+def filtered_checker(command):
+    """Whether a shell command passes the checker's text output through a filter."""
+    for pipeline in pipelines(tokens(command)):
+        checker = False
+        for simple in pipeline:
+            name, args = program(simple)
+            if name is None:
+                continue
+            if name in SHELLS:
+                script = shell_script(args)
+                if script and filtered_checker(script):
+                    return True
+                checker = False
+            elif runs_checker(name, args):
+                checker = True
+            elif checker and name in FILTERS:
+                return True
+            elif name not in PASS_THROUGH:
+                checker = False
+    return False
+
+
 def skill_intro():
     """Introduce the skill by its entry, so that an agent can load it."""
     if SKILL.is_file():
@@ -251,6 +297,15 @@ def read_reason(name, tool):
             'Its reading procedure, references/reading.md, asks for whole reads, '
             'and such documents decide what else to read or do, so a cut can hide a link or a requirement. '
             f'{how} Searching it with grep is still fine.')
+
+
+def output_reason():
+    return ('mddt: the checker\'s output is read whole. '
+            f'{skill_intro()} The checking step of its writing procedure, references/writing.md, '
+            'asks for the whole text output: each code\'s fix guidance says how to apply its findings, '
+            'and the reread line points back to that step, so a filter hides both. '
+            'Run the checker again without the filter. For a long run, check only the files you changed; '
+            'a script that processes findings reads --format json.')
 
 
 def write_context(names):
@@ -457,24 +512,28 @@ def decide(event, behaviors=BEHAVIORS):
             return None
         # Context without a permission decision lets the call proceed.
         return {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'additionalContext': write_context(names)}}
-    if 'reads' not in behaviors:
-        return None
-    if tool == 'Read':
+    reason = None
+    if tool == 'Read' and 'reads' in behaviors:
         name = partial_read(tool_input, event.get('cwd'))
+        reason = read_reason(name, tool) if name else None
     elif tool == 'Bash':
         command = tool_input.get('command')
         if isinstance(command, list):
             # Quoting keeps each part one word, such as the script of `bash -lc`.
             command = shlex.join(str(part) for part in command)
-        name = partial_shell_read(command, event.get('cwd')) if isinstance(command, str) else None
-    else:
-        return None
-    if name is None:
+        if not isinstance(command, str):
+            return None
+        name = partial_shell_read(command, event.get('cwd')) if 'reads' in behaviors else None
+        if name:
+            reason = read_reason(name, tool)
+        elif 'output' in behaviors and filtered_checker(command):
+            reason = output_reason()
+    if reason is None:
         return None
     return {'hookSpecificOutput': {
         'hookEventName': 'PreToolUse',
         'permissionDecision': 'deny',
-        'permissionDecisionReason': read_reason(name, tool),
+        'permissionDecisionReason': reason,
     }}
 
 

@@ -74,7 +74,8 @@ A `.mddtignore` file leaves them out of the check, as the [ignore file](referenc
 ## Optional hook
 
 An optional hook for Claude Code and Codex keeps agents to the reading and writing procedures.
-It denies partial reads of READMEs, agent entries, and contributor guides, and points to the writing procedure when an edit adds a heading.
+It denies partial reads of READMEs, agent entries, and contributor guides, and filters of the checker's output.
+It points to the writing procedure when an edit adds a heading.
 Read [hooks](references/hooks.md) when installing, configuring, or troubleshooting it.
 
 ## Scope

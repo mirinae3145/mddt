@@ -2,7 +2,7 @@
 
 This document covers the optional hook that keeps agents to this skill's reading and writing procedures.
 Read it when installing, configuring, or troubleshooting the hook.
-It describes the hook's two behaviors, how to register them in Claude Code and Codex, and their limits.
+It describes the hook's three behaviors, how to register them in Claude Code and Codex, and their limits.
 The implementation is [`scripts/mddt_hook.py`](../scripts/mddt_hook.py), which uses only the Python standard library.
 
 The hook handles `PreToolUse` events and judges each call by its tool.
@@ -50,37 +50,51 @@ The hook reads the ignore files from the collection root down to the document's 
 Like the checker, it takes the nearest folder above the document that holds `.git` as the root.
 Without one, it reads the ignore files of every folder above the document, while the checker starts from its working directory.
 
+## Checker output
+
+The [checking step](writing.md#checking) asks for the checker's whole text output, since each code's fix guidance says how to apply its findings.
+Agents still pass that output through `grep`, `head`, or `tail`, which drops the guidance and the `reread:` line.
+The hook denies a shell pipeline in which the checker's text output flows into `head`, `tail`, the `grep` family, `rg`, `sed`, `awk`, `cut`, or `wc`.
+
+The checker is recognized as `mddt.py`, run directly or through `uv`, `uvx`, a Python interpreter, or a wrapper such as `timeout`, also inside `bash -c` or `sh -c`.
+`tee` and `cat` pass the output on, so a filter after them is denied as well.
+JSON output, help text, a run without a filter, and output written to a file pass.
+A denial asks the agent to run the checker again without the filter.
+For long output it suggests checking only the changed files, and for scripts `--format json`.
+
 ## Registration
 
 Register the script as a command hook for `PreToolUse` in the host's hook configuration.
-Its arguments name the behaviors that a registration runs: `reads` for whole reads and `headings` for heading edits.
+Its arguments name the behaviors that a registration runs: `reads` for whole reads, `headings` for heading edits, and `output` for checker output.
 Without arguments every behavior runs, and an unknown name is reported on standard error and ignored.
 
 Register each behavior on its own with a matcher for the tools it judges, so that each can be turned on or off separately.
 Merge the registrations with existing ones rather than replacing the hook file, and use an interpreter and quoted path suited to the platform.
 When an installation manager registers hooks, declare each registration through it instead.
 
-For Claude Code, match `Read` and `Bash` for whole reads and `Edit` and `Write` for heading edits in `settings.json`:
+For Claude Code, match `Read` and `Bash` for whole reads, `Edit` and `Write` for heading edits, and `Bash` for checker output in `settings.json`:
 
 ```json
 {
   "hooks": {
     "PreToolUse": [
       {"matcher": "Read|Bash", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py reads", "timeout": 10}]},
-      {"matcher": "Edit|Write", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py headings", "timeout": 10}]}
+      {"matcher": "Edit|Write", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py headings", "timeout": 10}]},
+      {"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py output", "timeout": 10}]}
     ]
   }
 }
 ```
 
-For Codex, match `Bash` for whole reads, since Codex reads files through the shell, and `apply_patch` for heading edits in `hooks.json`:
+For Codex, match `Bash` for whole reads, since Codex reads files through the shell, `apply_patch` for heading edits, and `Bash` for checker output in `hooks.json`:
 
 ```json
 {
   "hooks": {
     "PreToolUse": [
       {"matcher": "^Bash$", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py reads", "timeout": 10}]},
-      {"matcher": "^apply_patch$", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py headings", "timeout": 10}]}
+      {"matcher": "^apply_patch$", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py headings", "timeout": 10}]},
+      {"matcher": "^Bash$", "hooks": [{"type": "command", "command": "python3 /absolute/mddt/skills/mddt/scripts/mddt_hook.py output", "timeout": 10}]}
     ]
   }
 }
@@ -100,6 +114,8 @@ The hook is a guardrail against habitual partial reads and unplanned structure, 
   Headings added by shell commands, and Setext headings, are not detected.
 - **Ignore files**: A checker run with `--root`, or without a Git root, can read other ignore files than the hook.
   The two can then disagree about whether a document is left out.
+- **Checker output**: Output saved to a file and filtered later, or filtered after JSON output, passes.
+  A checker renamed or run through another launcher is not recognized.
 - **Codex patches**: The Codex hook documentation does not describe the patch format that the hook reads.
   A change to that format can stop heading detection.
 - **Host delivery**: The tests run the script with sample events.

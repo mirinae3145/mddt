@@ -193,6 +193,41 @@ class ShellCommands(HookCase):
         self.assertIsNone(self.decide(self.event('Bash', {'command': ['bash', '-lc', 'cat README.md']})))
 
 
+class CheckerOutput(HookCase):
+    def test_filtered_text_output_is_denied(self):
+        for command in ('uv run skills/mddt/scripts/mddt.py README.md | grep -E "^(error|warning)"',
+                        'uv run /x/mddt.py . 2>&1 | tail -15', 'python3 /x/mddt.py a.md | head -40',
+                        "bash -lc 'uv run mddt.py . | grep warning'", 'uv run mddt.py . | tee out.txt | tail',
+                        './mddt.py --outline a.md | sed -n 1,5p', 'uv run --quiet mddt.py a.md | cut -c1-80',
+                        'cd docs && uv run mddt.py . | wc -l', 'timeout 300 uv run mddt.py . 2>&1 | tail -8', 'uv run mddt.py --format text a.md | head'):
+            with self.subTest(command=command):
+                reason = self.shell(command)
+                self.assertIsNotNone(reason)
+                self.assertIn('--format json', reason)
+                self.assertIn('references/writing.md', reason)
+
+    def test_whole_output_json_and_other_commands_pass(self):
+        for command in ('uv run mddt.py .', 'uv run mddt.py --format json . | jq .',
+                        'uv run mddt.py --format=json . | head', 'uv run mddt.py . > out.txt',
+                        'uv run mddt.py . | tee out.txt', 'uv run mddt.py --help | head', 'uv run mddt.py -h | head',
+                        'grep -n mddt.py notes.txt | head', 'git log -- skills/mddt/scripts/mddt.py | head',
+                        'uv run mddt.py . | python3 summarize.py | head', 'uv run mddt.py .; tail -5 log.txt',
+                        "bash -lc 'uv run mddt.py .'"):
+            with self.subTest(command=command):
+                self.assertIsNone(self.shell(command))
+
+    def test_command_given_as_a_list(self):
+        self.assertIsNotNone(self.decide(self.event('Bash', {'command': ['bash', '-lc', 'uv run mddt.py . | head']})))
+
+    def test_registrations_select_the_behavior(self):
+        self.write('README.md')
+        filtered = self.event('Bash', {'command': 'uv run mddt.py . | head'})
+        cut = self.event('Bash', {'command': 'head -5 README.md'})
+        self.assertEqual(run(filtered, 'reads').stdout, '')
+        self.assertIn('checker', run(filtered, 'output').stdout)
+        self.assertEqual(run(cut, 'output').stdout, '')
+
+
 class HeadingEdits(HookCase):
     def test_edit_adding_a_heading_names_the_skill_and_procedure(self):
         text = self.context('Edit', {'file_path': str(self.dir / 'notes.md'),
