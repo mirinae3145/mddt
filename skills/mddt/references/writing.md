@@ -9,7 +9,7 @@ The model holds the rules, and this document adds only the steps and the rules t
 
 In an existing collection, use the request, contributor guidance, and the affected documents to decide whether and where to apply the model.
 A repository may use mddt for its handbook while another set of documents follows its own template.
-Outside the model's scope, fit the requested edit to the local section order and line wrapping.
+Outside the model's scope, follow the document's established conventions when making the requested change.
 
 For content the model covers, decide where it sits in the tree.
 When adding to an existing document, place only the added content.
