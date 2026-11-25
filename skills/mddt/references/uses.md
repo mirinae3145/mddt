@@ -61,14 +61,15 @@ A project can instead keep each decision in a [MADR](https://adr.github.io/madr/
 Such a record keeps the format of its convention as follows:
 
 - **Title**: The title names the problem and its solution.
-  It stands in for the file overview and for the summary beside a link to the record.
-- **Fixed sections**: The template fixes its sections and their order.
-  Topic overviews, parts after topics, single-child demotion, and single-item lists therefore do not apply.
+  It stands in for the file overview, and for the summary beside a link whose text is that title.
+- **Template sections**: The template fixes its sections and their order.
+  Within them, topic overviews, parts after topics, single-child demotion, single-item lists, and size comparisons do not apply.
 - **Options**: Each option's pros and cons form a section of their own, instead of a column in a comparison table.
-- **Other rules**: Heading depth, list and table introductions, and the paragraph and sentence rules still apply.
+- **Other rules**: Sections a writer adds, heading depth, list and table introductions, and the paragraph and sentence rules follow the ordinary rules.
   An index document links each record, as any parent links its children.
 
-[Recognized conventions](conventions.md) says how the checker recognizes such records and which findings it omits for them.
+These exceptions hold where the checker recognizes the record, as [recognized conventions](conventions.md) describes, including which template sections they cover.
+A record it does not recognize, such as one with translated section titles, keeps the ordinary findings.
 
 ## Agent instructions and skills
 

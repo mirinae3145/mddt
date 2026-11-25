@@ -34,6 +34,9 @@ External documents, generated files, and long logs do not guarantee this structu
 Search them for the parts you need instead of reading them whole.
 When it is unclear whether a document follows the model, run the checker on it.
 
+Documents in a recognized convention, such as changelogs and MADR decision records, follow the model only in part.
+[Recognized conventions](conventions.md) lists the rules they set aside, such as overviews, and the guarantees resting on those rules do not hold there.
+
 ## Using the model's guarantees
 
 These properties of the model support reading strategies:

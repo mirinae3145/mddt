@@ -78,6 +78,7 @@ A change to a rule updates these together:
 - **Checker**: the detection and constants in `mddt.py`, and the code's entries in `rules.toml` and `fixes.toml`.
 - **Summaries**: the overview of `model.md`, which `SKILL.md` and README condense, when what the model covers changes.
 - **Checker reference**: `references/checker.md`, which README, `SKILL.md`, and `--help` point to, when options, file selection, output, or exit statuses change.
+- **Recognized conventions**: `references/conventions.md`, when a convention's recognition or omitted codes change; tests compare its table with the checker.
 - **Restatements**: passages that repeat the rule in other words, such as the examples in `references/examples.md`, the guarantees table in `references/reading.md`, and the limit of seven in `references/writing.md`.
 
 Tests also check that the numbers in `model.md` and in `rules.toml` summaries match the checker's constants, and that the checker reference lists every option.

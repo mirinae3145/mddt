@@ -76,6 +76,7 @@ Some rules apply only when writing, not when judging existing text:
 - **Overviews and summaries last**: When the content settles, rewrite the H1 overview and each topic overview to match it.
   Then rewrite the parent's summary of each document whose H1 overview the task wrote or changed, condensing the settled overview, not the planned summary.
   Work up from the deepest changed documents, because a parent's own overview can change once its summaries do.
+  In a recognized convention, such as a MADR record, its own parts stand in where [recognized conventions](conventions.md) says so.
 
 ## Growing and shrinking
 
