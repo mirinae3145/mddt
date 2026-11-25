@@ -13,7 +13,7 @@ Identify the entry of each independent tree in scope, and introduce from the rep
 Leave out documents that are not meant to follow it, such as user-provided originals, generated material, templates, and fixtures.
 List them in a `.mddtignore`, as the [ignore file](ignore-file.md) describes, so that every check skips them.
 
-Changelogs need no entry, because the checker already applies their [conventions](uses.md#repository-documentation).
+Changelogs and MADR decision records need no entry, because the checker already applies their [conventions](conventions.md).
 The repository's Markdown linter keeps its formatting rules, which mddt does not cover.
 
 ## Contributor guidance

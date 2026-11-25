@@ -57,6 +57,19 @@ Projects that keep the following common roles structure them like this:
 | History | Fact, process | Dated headings or items; dates are a mechanical order, so long lists and parts after topics are fine |
 | Decision | Principle, concept | One decision per topic with the choice and its rationale; alternatives compared in a table; reconsideration conditions as principles |
 
+A project can instead keep each decision in a [MADR](https://adr.github.io/madr/) record, a file in that template's fixed sections.
+Such a record keeps the format of its convention as follows:
+
+- **Title**: The title names the problem and its solution.
+  It stands in for the file overview and for the summary beside a link to the record.
+- **Fixed sections**: The template fixes its sections and their order.
+  Topic overviews, parts after topics, single-child demotion, and single-item lists therefore do not apply.
+- **Options**: Each option's pros and cons form a section of their own, instead of a column in a comparison table.
+- **Other rules**: Heading depth, list and table introductions, and the paragraph and sentence rules still apply.
+  An index document links each record, as any parent links its children.
+
+[Recognized conventions](conventions.md) says how the checker recognizes such records and which findings it omits for them.
+
 ## Agent instructions and skills
 
 Agent instructions and skills are read by agents, often only in part, so their entry documents decide what else gets read.

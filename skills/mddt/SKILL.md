@@ -70,6 +70,9 @@ Read it in these cases:
 - **Scripts**: A script or CI job reads the output or the exit status.
 - **Setup**: uv is not available.
 
+Some documents keep the structure of a convention, such as a changelog or a MADR decision record.
+[Recognized conventions](references/conventions.md) says which conventions the checker recognizes and which findings it omits for them.
+
 A collection can hold documents that do not follow the model, such as a user's originals or generated material.
 A `.mddtignore` file leaves them out of the check, as the [ignore file](references/ignore-file.md) describes.
 

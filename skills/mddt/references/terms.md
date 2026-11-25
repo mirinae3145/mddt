@@ -14,6 +14,7 @@ Each entry says briefly what the term means and points to where it is defined, s
 - **Lateral link**: A link to a related topic outside the reader's downward path, as [links between documents](model.md#links-between-documents) describes.
 - **Name**: A lead-in that says what a list item is about, as [names](model.md#names) describes.
 - **Part**: An H2 without H3 children, or an H3 section of a topic, as [headings and promotion](model.md#headings-and-promotion) describes.
+- **Recognized convention**: A document format, such as a changelog or a MADR decision record, whose fixed structure the checker accommodates, as [recognized conventions](conventions.md) describes.
 - **Sentence unit**: A unit for length checks, separated at sentence endings or punctuation connecting independent clauses, as [paragraphs and sentences](model.md#paragraphs-and-sentences) describes.
 - **Structure**: How files, headings, links, sections, and lists are arranged.
   The checker groups findings about structure apart from findings about lines, paragraphs, and sentences.

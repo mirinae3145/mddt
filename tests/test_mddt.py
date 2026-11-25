@@ -1178,6 +1178,81 @@ class Changelogs(CheckerCase):
             self.assertEqual((data['files'], data['skipped'], data['diagnostics']), ([], [str(path)], []))
 
 
+class MadrRecords(CheckerCase):
+    RECORD = ('# Use MADR for decision records\n\n'
+              '## Context and Problem Statement\n\nWe need one format for decisions.\n\n'
+              '## Considered Options\n\n* MADR\n\n'
+              '## Decision Outcome\n\nChosen option: "MADR", because tools read it.\n\n'
+              '### Consequences\n\n* Good, because tools read it.\n\n'
+              '## Pros and Cons of the Options\n\n### MADR\n\n* Good, because it is known.\n\n'
+              '## More Information\n\nRevisit it when the format changes.\n')
+
+    def inspect(self, text, name='0001-record.md', *options):
+        path = self.write(name, text)
+        result = run('--format', 'json', '--review', *options, str(path))
+        self.assertIn(result.returncode, (0, 1), result.stderr)
+        return json.loads(result.stdout)
+
+    def test_template_sections_need_no_overviews_or_second_items(self):
+        data = self.inspect(self.RECORD)
+        self.assertEqual(data['diagnostics'], [])
+        outline = '\n'.join(data['outlines'][str(self.dir / '0001-record.md')])
+        self.assertNotIn('overview', outline)
+        self.assertIn('H2 Decision Outcome  [8 lines; topic]', outline)
+        self.assertIn('H2 More Information  [3 lines; part', outline)
+
+    def test_both_mandatory_h2s_identify_a_record_whatever_the_name(self):
+        loose = self.RECORD.replace('## Decision Outcome', '##  decision   OUTCOME')
+        self.assertEqual(self.inspect(loose, 'notes.md')['diagnostics'], [])
+        for text in (self.RECORD.replace('## Decision Outcome', '## Outcome'),
+                     self.RECORD.replace('## Context and Problem Statement', '### Context and Problem Statement')):
+            with self.subTest(text=text):
+                codes = {d['code'] for d in self.inspect(text)['diagnostics']}
+                self.assertLessEqual({'h1-overview', 'list-single', 'topic-single-child'}, codes)
+
+    def test_other_rules_remain_checked(self):
+        cases = [
+            ('### MADR\n', '### MADR\n\n#### Detail\n\nText.\n', {'heading-depth'}),
+            ('* MADR\n', '```\nexample\n```\n\n* MADR\n* Other\n', {'list-intro'}),
+            ('We need one format for decisions.\n', 'We need a format. It must last.\n', {'line-sentences'}),
+            ('# Use MADR for decision records\n\n', '# Use MADR for decision records\n\n* a\n* b\n\n',
+             {'list-intro'}),
+        ]
+        for old, new, expected in cases:
+            with self.subTest(new=new):
+                data = self.inspect(self.RECORD.replace(old, new))
+                self.assertEqual({d['code'] for d in data['diagnostics']}, expected)
+
+    def test_tables_where_an_overview_would_go_need_introductions(self):
+        table = '| Option | Cost |\n| --- | --- |\n| MADR | low |\n\n'
+        for old, new in (('# Use MADR for decision records\n\n', '# Use MADR for decision records\n\n' + table),
+                         ('Chosen option: "MADR", because tools read it.\n\n', table)):
+            with self.subTest(new=new):
+                text = self.RECORD.replace(old, new)
+                self.assertEqual({d['code'] for d in self.inspect(text)['diagnostics']}, {'table-intro'})
+        text = self.RECORD.replace('* MADR\n\n## Decision', table + '## Decision')
+        self.assertEqual(self.inspect(text)['diagnostics'], [])
+
+    def test_records_keep_their_place_in_the_tree(self):
+        self.write('README.md', '# Decisions\n\nOverview.\n')
+        data = self.inspect(self.RECORD, '0001-record.md', '--root', str(self.dir))
+        self.assertEqual({d['code'] for d in data['diagnostics']}, {'doc-unlinked'})
+        guide = self.inspect('# Decisions\n\nSee [the options](0001-record.md#considered-options).\n',
+                             'README.md', '--root', str(self.dir))
+        self.assertEqual({d['code'] for d in guide['diagnostics']}, {'anchor-to-part'})
+        # The record's title stands in for a summary beside a link in the index.
+        self.write('notes.md', '# Notes\n\nOverview.\n')
+        index = self.inspect('# Decisions\n\nThe records are these:\n\n'
+                             '- [Use MADR for decision records](0001-record.md)\n- [Notes](notes.md)\n',
+                             'README.md', '--root', str(self.dir))
+        self.assertEqual([(d['code'], d['line']) for d in index['diagnostics']], [('link-without-summary', 6)])
+
+    def test_a_changelog_stays_a_changelog(self):
+        data = self.inspect('# Changelog\n\n## Context and Problem Statement\n\n- **One**: text\n\n'
+                            '## Decision Outcome\n\n- Two: text\n', 'CHANGELOG.md')
+        self.assertEqual(data['diagnostics'], [])
+
+
 class Interface(CheckerCase):
     def test_exit_codes(self):
         ok = self.write('ok.md', '# T\n\nOverview.\n')

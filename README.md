@@ -56,7 +56,7 @@ It decides the rules a parser can see and flags some others for judgment.
 Rules that depend on meaning, such as where content belongs and whether a summary is accurate, stay with the writer.
 A run without findings therefore does not show that a document conforms to the model.
 
-Changelogs are checked with exceptions that preserve their release structure, as [common uses](skills/mddt/references/uses.md#repository-documentation) describes.
+Changelogs and [MADR](https://adr.github.io/madr/) decision records are checked with exceptions that preserve their formats, as [common uses](skills/mddt/references/uses.md) describes.
 Its length checks use a local English parsing model to count independent clauses joined by semicolons, colons, or dashes separately.
 Its numeric thresholds were reviewed against documents written to the model, as [calibration](calibration/README.md) describes, before the length checks counted such clauses separately.
 

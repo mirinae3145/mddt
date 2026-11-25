@@ -66,6 +66,8 @@ ISO_DATE = re.compile(r'(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)')
 COLON_NAME = re.compile(r'^(?P<name>[^:：\n]{1,40}?)[:：](?:\s|$)')
 LINK_NAME_TAIL = re.compile(r'^\s*(?:[:：—–]|-\s)')
 CHANGELOG_NAME = re.compile(r'^changelog(\..*)?$', re.IGNORECASE)
+# MADR's mandatory sections, compared as README closing titles are.
+MADR_SECTIONS = {'context and problem statement', 'decision outcome'}
 # Conventional closing notices and pointers, only as a README's final H2 group.
 # Exact titles keep substantive sections such as "License configuration" out.
 README_CLOSING_TITLES = {
@@ -134,6 +136,36 @@ class Diagnostic:
     end_line: int
     code: str
     detail: str
+
+
+@dataclass(frozen=True)
+class Convention:
+    """A document format whose fixed structure the checker recognizes.
+
+    Such a file keeps its format's structure, so the codes in omitted are not
+    reported in it, and those in incoming are not reported for links into it.
+    Every other rule, including the tree and link rules, still applies.
+    """
+    name: str
+    omitted: frozenset[str]
+    incoming: frozenset[str] = frozenset()
+    # H2s are releases: they scope name forms and have no topic or part roles.
+    releases: bool = False
+
+
+# Release history grows unevenly and keeps its convention's headings.
+CHANGELOG = Convention('changelog', frozenset({
+    'h1-overview', 'topic-overview', 'heading-depth', 'heading-number',
+    'part-after-topic', 'topic-single-child',
+    'list-single', 'list-length', 'section-count', 'sibling-imbalance', 'file-size',
+    'list-intro',
+}), incoming=frozenset({'anchor-to-part'}), releases=True)
+# The title names the problem and its solution, so it stands in for the
+# overview and for the summary beside a link to the record. The other codes
+# fire on the template's fixed sections, such as one argument for an option.
+MADR = Convention('madr', frozenset({
+    'h1-overview', 'topic-overview', 'part-after-topic', 'topic-single-child', 'list-single',
+}), incoming=frozenset({'link-without-summary'}))
 
 
 @dataclass
@@ -537,7 +569,6 @@ def github_slug(text: str) -> str:
 class FileCheck:
     def __init__(self, path: str, text: str):
         self.path = path
-        self.is_changelog = bool(CHANGELOG_NAME.fullmatch(Path(path).name))
         # A byte order mark is not content, and GitHub renders the file without it.
         text = text.removeprefix('﻿')
         self.text = text
@@ -552,8 +583,25 @@ class FileCheck:
         self.blocks = list(self.root.children)
         self.diagnostics: list[Diagnostic] = []
         self.headings = self._headings()
+        self.convention = self._convention()
+
+    def _convention(self) -> Convention | None:
+        """Recognize a changelog by its name and a MADR record by its mandatory H2s."""
+        if CHANGELOG_NAME.fullmatch(Path(self.path).name):
+            return CHANGELOG
+        titles = {' '.join(h.text.casefold().split()) for h in self.headings if h.level == 2}
+        return MADR if MADR_SECTIONS <= titles else None
+
+    def omits(self, code: str) -> bool:
+        return self.convention is not None and code in self.convention.omitted
+
+    @property
+    def releases(self) -> bool:
+        return self.convention is not None and self.convention.releases
 
     def report(self, code: str, node_or_line, detail: str) -> None:
+        if self.omits(code):
+            return
         if isinstance(node_or_line, int):
             line = last = node_or_line
         else:
@@ -587,8 +635,8 @@ class FileCheck:
                 break
             if h.level <= 2:
                 owner = h
-        if owner and owner.level == 2 and (owner.is_topic or self.is_changelog):
-            role = 'release' if self.is_changelog else 'topic'
+        if owner and owner.level == 2 and (owner.is_topic or self.releases):
+            role = 'release' if self.releases else 'topic'
             return f'{role} "{owner.text}"'
         return 'the parent topic'
 
@@ -609,9 +657,6 @@ class FileCheck:
         return groups
 
     def check_sizes(self) -> None:
-        # Release history grows unevenly and keeps its convention's headings.
-        if self.is_changelog:
-            return
         if self.line_count > FILE_MAX_LINES:
             self.report('file-size', 1, f'file has {self.line_count} lines')
         for (owner, level), siblings in self.sibling_groups().items():
@@ -823,8 +868,6 @@ class FileCheck:
                 self.report('heading-skip', h.node,
                             f'H{previous.level} is followed by H{h.level} "{h.text}"')
             previous = h
-        if self.is_changelog:
-            return
         for h in h1s:
             problem = overview_problem(h)
             if problem:
@@ -888,11 +931,15 @@ class FileCheck:
 
     def check_list_intros(self, h: Heading | None, blocks: list[SyntaxTreeNode]) -> None:
         """Check that lists and tables start with an introductory paragraph."""
-        needs_overview = (h is not None and not self.is_changelog
-                          and (h.level == 1 or (h.level == 2 and h.is_topic)))
+        # A convention that waives overviews still needs tables introduced,
+        # unless a leaf section below H1 introduces them.
+        waived = h is not None and (self.omits('h1-overview') if h.level == 1 else
+                                    h.level == 2 and h.is_topic and self.omits('topic-overview'))
+        needs_overview = h is not None and (h.level == 1 or (h.level == 2 and h.is_topic)) and not waived
         for pos, block in enumerate(blocks):
             if block.type in LIST_TYPES:
-                if self.is_changelog:
+                # Without list introductions, a heading need not introduce a list either.
+                if self.omits('list-intro'):
                     continue
                 code, what = 'list-intro', 'list'
             elif block.type == 'table':
@@ -908,9 +955,7 @@ class FileCheck:
                 self.report(code, start_line(block), f'{what} starts the file without an introductory paragraph')
                 continue
             if previous is None:
-                # Changelogs waive overviews, but a table still needs an
-                # introduction unless a leaf section below H1 introduces it.
-                if self.is_changelog and (h.level == 1 or h.has_children):
+                if (waived or self.releases) and (h.level == 1 or h.has_children):
                     self.report(code, start_line(block),
                                 f'{what} follows H{h.level} without an introductory paragraph')
                     continue
@@ -953,11 +998,10 @@ class FileCheck:
         deepest.setdefault(depth, node)
         items = [c for c in node.children if c.type == 'list_item']
         # A single nested item still marks a detail or exception of its parent.
-        if not self.is_changelog:
-            if len(items) == 1 and depth == 1:
-                self.report('list-single', node, 'list has one item')
-            if len(items) > MAX_LIST_ITEMS and not is_mechanically_ordered([item_key(i) for i in items]):
-                self.report('list-length', node, f'{len(items)} items without mechanical order')
+        if len(items) == 1 and depth == 1:
+            self.report('list-single', node, 'list has one item')
+        if len(items) > MAX_LIST_ITEMS and not is_mechanically_ordered([item_key(i) for i in items]):
+            self.report('list-length', node, f'{len(items)} items without mechanical order')
         numbered = node.type == 'ordered_list'
         for item in items:
             # A numbered step's leading UI text is not an item name.
@@ -1018,9 +1062,10 @@ class FileCheck:
         for k, h in enumerate(self.headings):
             label = f'{"  " * (h.level - 1)}H{h.level} {h.text}'
             notes = [f'{self.section_lines(k)} lines']
-            if h.level == 2 and not self.is_changelog:
+            if h.level == 2 and not self.releases:
                 notes.append('topic' if h.is_topic else 'part')
-            if not self.is_changelog and (h.level == 1 or (h.level == 2 and h.is_topic)):
+            overview = 'h1-overview' if h.level == 1 else 'topic-overview' if h.level == 2 and h.is_topic else None
+            if overview and not self.omits(overview):
                 notes.append('no overview' if overview_problem(h) else 'overview')
             stats = region_list_stats(h.region)
             if stats:
@@ -1238,7 +1283,8 @@ class Tree:
                 continue
             if target.suffix.lower() != '.md' or parent_of(target, root) != path:
                 continue
-            if alone:
+            child = self.load(target)
+            if alone and not (child and child.convention and 'link-without-summary' in child.convention.incoming):
                 bare.setdefault(target, line)
             else:
                 summarized.add(target)
@@ -1284,7 +1330,8 @@ class Tree:
             if heading is None:
                 if anchor not in other.html_anchors():
                     check.report('anchor-missing', line, f'no heading in {where} has the anchor #{anchor}')
-            elif (other is not check and not other.is_changelog
+            elif (other is not check
+                  and not (other.convention and 'anchor-to-part' in other.convention.incoming)
                   and (heading.level >= 3 or (heading.level == 2 and not heading.is_topic))):
                 check.report('anchor-to-part', line, f'links to part "{heading.text}" in {where}')
 
