@@ -7,7 +7,11 @@ The model holds the rules, and this document adds only the steps and the rules t
 
 ## Placing a document
 
-Before writing, decide where the content sits in the tree.
+In an existing collection, use the request, contributor guidance, and the affected documents to decide whether and where to apply the model.
+A repository may use mddt for its handbook while another set of documents follows its own template.
+Outside the model's scope, fit the requested edit to the local section order and line wrapping.
+
+For content the model covers, decide where it sits in the tree.
 When adding to an existing document, place only the added content.
 Change the structure around it only where the addition requires it, as [growing and shrinking](#growing-and-shrinking) describes.
 When a task creates several documents, identify the tree each one joins and place them from each entry down.
@@ -140,8 +144,8 @@ Check the result as follows:
    - **Unchanged rendering**: A part or topic whose changes all leave the rendered document as it was needs no reread.
      Such changes include one-sentence line splits and link target updates after a move, but not a blank line, which splits a paragraph.
    - **Requested content changes**: A part or topic that received a content change the task requested is reread, even when the task otherwise only restructures.
-1. Run the checker on the files you created or changed.
-   Run it on the whole collection after adding, removing, moving, or renaming a file, or removing, moving, or renaming a heading.
+1. Run the checker on the files within the model's scope that you created or changed.
+   Check the whole collection when such a change adds, removes, moves, or renames a file, or removes, moves, or renames a heading.
    After adding child documents, add `--review` to see links that lack summaries.
    Information findings rest on approximate detection, so judge each one before acting on it.
    - **Reading the output**: Read the text output whole, since each code's fix guidance says how to apply its findings.

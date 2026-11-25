@@ -35,7 +35,8 @@ When a term such as part or division is unclear, look it up in the [terms](refer
 ## Writing and restructuring
 
 Before creating a document or adding, moving, or removing content in one, read [writing and restructuring](references/writing.md).
-It covers planning a document's place in the tree, choosing forms, and rules for new writing.
+For existing documents, first check which ones the request and the collection's own conventions bring within the model's scope.
+The procedure covers placing content in the tree, choosing forms, and writing new material.
 It also covers growing and shrinking structure, restructuring an existing tree, and checking the result.
 Read the document model as well, since the writing procedure applies it rather than repeating it.
 
@@ -52,7 +53,7 @@ It also shows which reading strategy each guarantee of the model supports.
 
 The checker decides the rules a parser can see and flags some that need judgment.
 It does not replace the reread that [checking](references/writing.md#checking) starts with, where the writer applies the other judgment rules.
-Run it on the Markdown files you created or changed:
+Run it on the new or changed Markdown files covered by the model:
 
 ```bash
 uv run <skill-dir>/scripts/mddt.py FILE...
