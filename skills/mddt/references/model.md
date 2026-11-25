@@ -7,6 +7,7 @@ Writers treat each property as a condition to satisfy, and readers treat it as a
 The checker decides or flags only some of these properties, and [writing and restructuring](writing.md) says how a writer meets and checks the rest.
 What a topic contains and which form each block takes by default are described in [document kinds and information types](kinds.md).
 [Examples](examples.md) show the judgment rules applied to sample text.
+Documents in a recognized convention, such as changelogs and MADR decision records, set some of these properties aside, as [recognized conventions](conventions.md) describes.
 
 ## Files and topics
 

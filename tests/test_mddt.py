@@ -1202,12 +1202,18 @@ class MadrRecords(CheckerCase):
         self.assertIn('H2 Decision Outcome  [8 lines; topic]', outline)
         self.assertIn('H2 More Information  [3 lines; part', outline)
 
-    def test_both_required_h2s_identify_a_record_whatever_the_name(self):
-        loose = self.RECORD.replace('## Decision Outcome', '##  decision   OUTCOME')
+    def test_required_h2s_identify_a_record_whatever_the_name(self):
+        loose = self.RECORD.replace('## Context and Problem Statement', '##  context and problem   STATEMENT')
         self.assertEqual(self.inspect(loose, 'notes.md')['diagnostics'], [])
-        formatted = self.RECORD.replace('## Decision Outcome', '## *Decision* `Outcome`')
+        formatted = self.RECORD.replace('## Context and Problem Statement', '## *Context* and `Problem Statement`')
         self.assertEqual(self.inspect(formatted)['diagnostics'], [])
-        for text in (self.RECORD.replace('## Decision Outcome', '## Outcome'),
+        outcome = ('## Decision Outcome\n\nChosen option: "MADR", because tools read it.\n\n'
+                   '### Consequences\n\n* Good, because tools read it.\n\n')
+        self.assertEqual(self.inspect(self.RECORD.replace(outcome, ''))['diagnostics'], [])
+        # Renamed, the options become a section of the writer's, which keeps the ordinary rules.
+        renamed = self.inspect(self.RECORD.replace('## Considered Options', '## Options'))
+        self.assertEqual([d['code'] for d in renamed['diagnostics']], ['list-single'])
+        for text in (self.RECORD.replace(outcome, '').replace('## Considered Options', '## Options'),
                      self.RECORD.replace('## Context and Problem Statement', '### Context and Problem Statement')):
             with self.subTest(text=text):
                 codes = {d['code'] for d in self.inspect(text)['diagnostics']}

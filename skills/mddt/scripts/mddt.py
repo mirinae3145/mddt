@@ -66,9 +66,11 @@ ISO_DATE = re.compile(r'(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)')
 COLON_NAME = re.compile(r'^(?P<name>[^:：\n]{1,40}?)[:：](?:\s|$)')
 LINK_NAME_TAIL = re.compile(r'^\s*(?:[:：—–]|-\s)')
 CHANGELOG_NAME = re.compile(r'^changelog(\..*)?$', re.IGNORECASE)
-# Two sections that every MADR template requires, compared as README closing
-# titles are; with both among a file's H2s, the file is a MADR record.
-MADR_REQUIRED = {'context and problem statement', 'decision outcome'}
+# Every MADR template requires the context and either section of the second
+# set, compared as README closing titles are. A draft without its outcome
+# still lists its options, so either one identifies a record.
+MADR_CONTEXT = 'context and problem statement'
+MADR_DECISION = {'decision outcome', 'considered options'}
 # The H2s of the MADR templates from 2.1 to 4.0, whose structure the template fixes.
 MADR_SECTIONS = frozenset({
     'context and problem statement', 'decision drivers', 'considered options', 'decision outcome',
@@ -611,7 +613,7 @@ class FileCheck:
         if CHANGELOG_NAME.fullmatch(Path(self.path).name):
             return CHANGELOG
         titles = {title_key(h.text) for h in self.headings if h.level == 2}
-        return MADR if MADR_REQUIRED <= titles else None
+        return MADR if MADR_CONTEXT in titles and titles & MADR_DECISION else None
 
     def omits(self, code: str, line: int | None = None) -> bool:
         """True when the file's convention omits a code, at a line for codes it omits by section."""

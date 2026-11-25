@@ -10,7 +10,8 @@ The checker recognizes the following conventions:
 
 - **Changelogs**: Files whose names match `CHANGELOG` or `CHANGELOG.*`, without regard to case, including `CHANGELOG.md` and `changelog.en.md`.
   Directory searches still select only `.md` files; other matching names can be given explicitly.
-- **MADR decision records**: Other files whose H2s include both "Context and Problem Statement" and "Decision Outcome", two sections that every [MADR](https://adr.github.io/madr/) template requires.
+- **MADR decision records**: Other files whose H2s include "Context and Problem Statement" together with "Considered Options" or "Decision Outcome", sections that every [MADR](https://adr.github.io/madr/) template requires.
+  A draft that has not yet reached its outcome is recognized by its options.
   Their names and folders do not matter.
   Titles are compared without case, and whitespace and inline formatting do not affect matching.
 
@@ -19,7 +20,7 @@ Outlines of changelogs show heading levels and list statistics without topic, pa
 Outlines of MADR records keep topic and part labels and omit overview labels for the template's sections.
 
 Other files use the ordinary document rules.
-Records with translated section titles, and drafts that lack one of the two sections, are such files.
+Records with translated section titles are such files, and so are records that lack those sections.
 Their findings are a conflict between the template and the model, which [combining mddt with other guidance](combining.md) resolves.
 
 ## Omitted findings
