@@ -1261,8 +1261,11 @@ def find_root(path: Path) -> Path | None:
 class Tree:
     """Documents around the checked files, for checks that span files."""
 
-    def __init__(self):
+    def __init__(self, review: bool = False):
         self.cache: dict[Path, FileCheck | None] = {}
+        # Summaries are information shown only in review, and judging them can
+        # parse every child of an index, so a plain run skips them.
+        self.review = review
 
     def load(self, path: Path) -> FileCheck | None:
         if path not in self.cache:
@@ -1278,7 +1281,8 @@ class Tree:
         if root is not None:
             self.check_parent(path, check, root)
             self.check_agent_depth(path, check, root)
-            self.check_summaries(path, check, root)
+            if self.review:
+                self.check_summaries(path, check, root)
 
     def note_agent_tree(self, path: Path, check: FileCheck, root: Path | None) -> None:
         """Name the agent tree and its depth rule in findings whose fix creates a file.
@@ -1792,7 +1796,7 @@ def main(argv: list[str] | None = None) -> int:
 
     diagnostics: list[Diagnostic] = []
     outlines: dict[str, list[str]] = {}
-    tree = Tree()
+    tree = Tree(review=args.review)
     for f, base in files:
         try:
             text = f.read_text(encoding='utf-8')
