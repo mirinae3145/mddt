@@ -28,14 +28,17 @@ Fragments lose the context needed to interpret them, such as the H1 overview, th
 When a file is too large to read at once, divide it at topic boundaries rather than at arbitrary lines.
 Read the H1 overview and the parent's own parts first, then the topic H2s you need.
 
+Changelogs and MADR decision records keep the structure of their [recognized conventions](conventions.md), which set aside the overviews these steps start from.
+Their own headings lead instead.
+In a changelog, find the releases the question concerns by their version or date headings, and divide a large one at those headings.
+Judge a MADR record by its title, which names its problem and, once decided, its solution.
+Its Context and Problem Statement says what it decides, and its Decision Outcome says what was chosen and why.
+
 ## Documents outside the model
 
 External documents, generated files, and long logs do not guarantee this structure.
 Search them for the parts you need instead of reading them whole.
 When it is unclear whether a document follows the model, run the checker on it.
-
-Documents in a recognized convention, such as changelogs and MADR decision records, follow the model only in part.
-[Recognized conventions](conventions.md) lists the rules they set aside, such as overviews, and the guarantees resting on those rules do not hold there.
 
 ## Using the model's guarantees
 
