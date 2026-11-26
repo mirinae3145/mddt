@@ -1784,27 +1784,27 @@ class Registry(unittest.TestCase):
             self.assertIn(phrase, text)
 
     def test_conventions_reference_lists_the_codes_each_convention_omits(self):
+        def codes(value):
+            return {c.value for c in ast.walk(value) if isinstance(c, ast.Constant)} if value else set()
+
         tree = ast.parse((SCRIPTS / 'mddt.py').read_text(encoding='utf-8'))
         omitted = {}
         for node in tree.body:
             if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) \
                     and getattr(node.value.func, 'id', '') == 'Convention':
-                codes = set()
-                values = node.value.args[2:] + [k.value for k in node.value.keywords
-                                                 if k.arg in ('incoming', 'fixed')]
-                for value in values:
-                    codes |= {c.value for c in ast.walk(value) if isinstance(c, ast.Constant)}
-                omitted[node.targets[0].id] = codes
+                keywords = {k.arg: k.value for k in node.value.keywords}
+                # The rows name where a code is omitted: anywhere, inside fixed sections, or on incoming links.
+                omitted[node.targets[0].id] = [codes(node.value.args[2]), codes(keywords.get('fixed')),
+                                               codes(keywords.get('incoming'))]
         self.assertEqual(set(omitted), {'CHANGELOG', 'MADR'})
         text = (SKILL / 'references' / 'conventions.md').read_text(encoding='utf-8')
-        table = re.search(r'^\| Scope \| Changelogs \| MADR decision records \|\n\| --- .*?\n((?:\|.*\n)+)', text, re.M)
-        columns = {'CHANGELOG': set(), 'MADR': set()}
-        for row in table.group(1).splitlines():
-            cells = [c.strip() for c in row.strip('|').split('|')]
-            columns['CHANGELOG'] |= set(re.findall(r'`([a-z0-9-]+)`', cells[1]))
-            columns['MADR'] |= set(re.findall(r'`([a-z0-9-]+)`', cells[2]))
+        table = re.search(r'^\| Where \| Changelogs \| MADR decision records \|\n\| --- .*?\n((?:\|.*\n)+)', text, re.M)
+        rows = [[c.strip() for c in row.strip('|').split('|')] for row in table.group(1).splitlines()]
+        self.assertEqual([row[0].split()[0] for row in rows], ['Anywhere', 'Only', 'On'])
+        columns = {name: [set(re.findall(r'`([a-z0-9-]+)`', row[k])) for row in rows]
+                   for k, name in ((1, 'CHANGELOG'), (2, 'MADR'))}
         # The changelog drops heading-intro for lists through list-intro, not as a code of its own.
-        columns['CHANGELOG'].discard('heading-intro')
+        columns['CHANGELOG'][0].discard('heading-intro')
         self.assertEqual(columns, omitted)
 
     def test_checker_reference_lists_every_option(self):

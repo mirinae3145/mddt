@@ -25,18 +25,15 @@ Their findings are a conflict between the template and the model, which [combini
 
 ## Omitted findings
 
-The following findings are omitted for each convention:
+The following findings are omitted for each convention, by where they would be reported:
 
-| Scope | Changelogs | MADR decision records |
+| Where | Changelogs | MADR decision records |
 | --- | --- | --- |
-| Overviews and heading form | `h1-overview`, `topic-overview`, `heading-depth`, `heading-number` | `h1-overview`, `topic-overview` |
-| Topic organization | `part-after-topic`, `topic-single-child` | `part-after-topic`, `topic-single-child` |
-| Counts and sizes | `list-single`, `list-length`, `section-count`, `sibling-imbalance`, `file-size` | `list-single`, `sibling-imbalance` |
-| List introductions | `list-intro`, and `heading-intro` for lists only | None |
-| Links into the file, regardless of which file contains the link | `anchor-to-part` | `link-without-summary`, for a link whose text is the record's title |
+| Anywhere in the file | `h1-overview`, `topic-overview`, `heading-depth`, `heading-number`, `part-after-topic`, `topic-single-child`, `list-single`, `list-length`, `section-count`, `sibling-imbalance`, `file-size`, `list-intro`, and `heading-intro` for lists only | `h1-overview` |
+| Only inside the template's sections | None | `topic-overview`, `part-after-topic`, `topic-single-child`, `list-single`, `sibling-imbalance` |
+| On links into the file, in whichever file holds the link | `anchor-to-part` | `link-without-summary`, for a link whose text is the record's title |
 
-A changelog omits its findings throughout the file.
-A MADR record omits `h1-overview` for the file and the other codes only inside the H2 sections of the MADR templates from 2.1 to 4.0.
+The template's sections are the H2 sections of the MADR templates from 2.1 to 4.0.
 These are Context and Problem Statement, Decision Drivers, Considered Options, Decision Outcome, Validation, Pros and Cons of the Options, More Information, and Links.
 Sections that a writer adds follow the ordinary rules, and a part that follows a topic is reported unless it is one of these sections.
 
@@ -45,7 +42,7 @@ In a changelog, a table directly under H1 or under a heading with subheadings st
 In a MADR record, a list or table directly under H1 or a template topic H2 needs one as well.
 A paragraph of badges does not count as that introduction.
 
-## Template comments
+## A split pros-and-cons list in MADR 4.0
 
 The MADR 4.0 template puts an HTML comment between the pros and cons of its first option.
 A comment at the start of a line ends the list, so the arguments after it get `list-intro`.
