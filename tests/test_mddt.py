@@ -1140,6 +1140,11 @@ class Changelogs(CheckerCase):
                         self.assertEqual({d['code'] for d in data['diagnostics']}, expected)
                         introduced = heading + 'The changed values are:\n\n' + table + suffix + tail
                         self.assertEqual(self.inspect(introduced)['diagnostics'], [])
+                # Badges do not introduce a table where the section needs an introduction.
+                with self.subTest(level=level, tail=tail, badge=True):
+                    badged = heading + '![Status](https://example.com/b.svg)\n\n' + table + tail
+                    expected = {'table-intro'} if level == 1 or tail else set()
+                    self.assertEqual({d['code'] for d in self.inspect(badged)['diagnostics']}, expected)
 
     def test_link_checks_depend_on_the_target_not_the_source(self):
         self.write('guide.md', '# Guide\n\nOverview.\n\n## Detail\n\nText.\n')

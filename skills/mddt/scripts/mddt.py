@@ -976,6 +976,7 @@ class FileCheck:
         waived = h is not None and (self.omits('h1-overview') if h.level == 1 else
                                     h.level == 2 and h.is_topic and self.omits('topic-overview', h.line))
         needs_overview = h is not None and (h.level == 1 or (h.level == 2 and h.is_topic)) and not waived
+        needs_intro = h is not None and (waived or self.releases) and (h.level == 1 or h.has_children)
         for pos, block in enumerate(blocks):
             if block.type in LIST_TYPES:
                 # Without list introductions, a heading need not introduce a list either.
@@ -987,9 +988,9 @@ class FileCheck:
             else:
                 continue
             previous = blocks[pos - 1] if pos else None
-            # Badges cannot stand in for an overview that a convention waives.
+            # Badges cannot stand in for the introduction such a section still needs.
             if (previous is not None and previous.type == 'paragraph'
-                    and not (waived and is_badge_paragraph(previous))):
+                    and not (needs_intro and is_badge_paragraph(previous))):
                 continue
             if previous is None and needs_overview:
                 continue  # The missing overview is reported for the heading.
@@ -997,7 +998,7 @@ class FileCheck:
                 self.report(code, start_line(block), f'{what} starts the file without an introductory paragraph')
                 continue
             if previous is None:
-                if (waived or self.releases) and (h.level == 1 or h.has_children):
+                if needs_intro:
                     self.report(code, start_line(block),
                                 f'{what} follows H{h.level} without an introductory paragraph')
                     continue
