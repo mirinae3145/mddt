@@ -694,6 +694,9 @@ class FileCheck:
         return groups
 
     def check_sizes(self) -> None:
+        # A changelog omits every finding of this pass, whose comparisons grow with its releases.
+        if all(self.omits(code) for code in ('file-size', 'heading-number', 'section-count', 'sibling-imbalance')):
+            return
         if self.line_count > FILE_MAX_LINES:
             self.report('file-size', 1, f'file has {self.line_count} lines')
         for (owner, level), siblings in self.sibling_groups().items():
