@@ -24,7 +24,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass, field
 import fnmatch
-from functools import cache, lru_cache
+from functools import cache, cached_property, lru_cache
 from html import unescape
 from html.parser import HTMLParser
 import json
@@ -202,6 +202,12 @@ class Heading:
     has_children: bool = False
 
 
+@dataclass
+class DocumentLinks:
+    title_key: str | None
+    outgoing: list[tuple[str, int, bool, str]]
+
+
 class HTMLAnchors(HTMLParser):
     """Collect every id and name attribute on actual HTML elements."""
 
@@ -253,8 +259,8 @@ def parser() -> MarkdownIt:
 def link_parser() -> MarkdownIt:
     """Parse dollar math as GitHub renders it, so formulas such as $[A](z,t)$ hold no links.
 
-    Only link extraction uses it; the other checks keep the plain parse, on
-    which their rules and thresholds were defined.
+    Link labels and the record titles they summarize use this parser. Other
+    checks keep the plain parse on which their rules and thresholds were defined.
     """
     return parser().use(dollarmath_plugin, allow_space=False, allow_digits=False)
 
@@ -278,8 +284,7 @@ def inline_children(block: SyntaxTreeNode) -> list[SyntaxTreeNode]:
 def plain_text(node: SyntaxTreeNode) -> str:
     if node.type in ('text', 'code_inline'):
         return node.content
-    # Only links are parsed with dollar math; its delimiters keep link text
-    # comparable with the same formula in a heading, which the plain parse reads as text.
+    # Keep math delimiters when comparing a link label with a record title.
     if node.type in ('math_inline', 'math_inline_double'):
         return node.markup + node.content + node.markup
     if node.type == 'softbreak':
@@ -604,7 +609,6 @@ class FileCheck:
         self.lines = re.sub(r'\r\n?', '\n', text).split('\n')
         if self.lines[-1] == '':
             self.lines.pop()
-        self._links: list[tuple[str, int, bool, str]] | None = None
         self.line_count = len(self.lines)
         self.root = SyntaxTreeNode(parser().parse(text))
         self.blocks = list(self.root.children)
@@ -832,18 +836,20 @@ class FileCheck:
                 self.report('paragraph-run', run[0], f'{len(run)} paragraphs in a row')
             run = []
 
-    def links(self) -> list[tuple[str, int, bool, str]]:
-        """Return (target, line, alone, text) for every link in the file.
+    @cached_property
+    def link_data(self) -> DocumentLinks:
+        """Read the title and outgoing links with the same math and reference rules.
 
-        A link is alone when nothing but punctuation surrounds it in its
-        paragraph, list item, or table cell, so it carries no summary.
+        Each outgoing link gives (target, line, alone, text). A link is alone
+        when only punctuation surrounds it in its paragraph, list item, or table cell.
         The line is the link's own line, counted through line breaks in its block.
         """
-        if self._links is not None:
-            return self._links
+        root = SyntaxTreeNode(link_parser().parse(self.text))
+        title = next((title_key(block_text(b)) for b in root.children
+                      if b.type == 'heading' and b.tag == 'h1'), None)
         found = []
         line = 1
-        for node in SyntaxTreeNode(link_parser().parse(self.text)).walk():
+        for node in root.walk():
             if not node.is_root and node.map:
                 line = start_line(node)
             if node.type != 'inline':
@@ -857,8 +863,10 @@ class FileCheck:
                     alone = all(o is n or (o.type == 'text' and not re.search(r'\w', o.content))
                                 for o in parts)
                     found.append((n.attrs.get('href', ''), line + offset, alone, plain_text(n).strip()))
-        self._links = found
-        return found
+        return DocumentLinks(title, found)
+
+    def links(self) -> list[tuple[str, int, bool, str]]:
+        return self.link_data.outgoing
 
     def anchors(self) -> dict[str, Heading]:
         """Map GitHub-style heading anchors, with suffixes for duplicates, to headings."""
@@ -1357,8 +1365,7 @@ class Tree:
         child = self.load(target)
         if child is None or child.convention is None or 'link-without-summary' not in child.convention.incoming:
             return False
-        h1 = next((h for h in child.headings if h.level == 1), None)
-        return h1 is not None and title_key(h1.text) == title_key(text)
+        return child.link_data.title_key == title_key(text)
 
     def check_links(self, path: Path, check: FileCheck) -> None:
         """Report relative links whose target or anchor is missing, and anchors to parts.

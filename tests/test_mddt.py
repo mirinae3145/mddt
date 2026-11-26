@@ -1299,16 +1299,37 @@ class MadrRecords(CheckerCase):
             with self.subTest(body=body):
                 data = self.inspect('# Decisions\n\nThe records:\n\n' + body, 'README.md', '--root', str(self.dir))
                 self.assertEqual([(d['code'], d['line']) for d in data['diagnostics']], expected)
-        # A formula in the title matches the same formula in the link text.
-        math = self.RECORD.replace('# Use MADR for decision records', '# Use $O(n)$ and $$x$$ lookups')
-        self.write('0002-math.md', math)
-        data = self.inspect('# Decisions\n\nThe records:\n\n- [Use $O(n)$ and $$x$$ lookups](0002-math.md)\n'
+        # A recognized record without an H1 cannot supply a title for the parent link.
+        self.write('0001-record.md', self.RECORD.removeprefix('# Use MADR for decision records\n\n'))
+        data = self.inspect('# Decisions\n\nThe records:\n\n- [Context and Problem Statement](0001-record.md)\n'
                             '- [Other](other.md): text.\n', 'README.md', '--root', str(self.dir))
-        self.assertEqual(data['diagnostics'], [])
+        self.assertEqual([(d['code'], d['line']) for d in data['diagnostics']], [('link-without-summary', 5)])
         # A record's own children still need summaries.
         record = self.RECORD.replace('Revisit it', 'See\n\n- [Notes](0001-record/notes.md)\n- [x](other.md)\n\nRevisit it')
         data = self.inspect(record, '0001-record.md', '--root', str(self.dir))
         self.assertIn('link-without-summary', {d['code'] for d in data['diagnostics']})
+
+    def test_index_links_preserve_formulas_in_record_titles(self):
+        set_title = r'Use the set $\{x\}$'
+        lookup = 'Use $O(n)$ and $$x$$ lookups'
+        cases = [
+            (lookup, lookup, []),
+            (set_title, set_title, []),
+            (set_title, 'Use the set ${x}$', [('link-without-summary', 5)]),
+            ('Compute *products* with $a*b*c$', 'Compute products with $a*b*c$', []),
+            ('Use [lookups][source] in $O(n)$', 'Use lookups in $O(n)$', []),
+            ('Use [x] with $a*b*c$', 'Use [x] with $a*b*c$', []),
+        ]
+        self.write('other.md', '# Other\n\nOverview.\n')
+        for title, label, expected in cases:
+            with self.subTest(title=title, label=label):
+                record = self.RECORD.replace('# Use MADR for decision records', f'# {title}')
+                # Only the definition outside the math block can resolve a reference in the title.
+                self.write('record.md', record + '\n[source]: https://example.com/lookup\n'
+                                                 '\n$$\n\n[x]: https://example.com/x\n\n$$\n')
+                index = f'# Decisions\n\nThe records:\n\n- [{label}](record.md)\n- [Other](other.md): text.\n'
+                data = self.inspect(index, 'README.md', '--root', str(self.dir))
+                self.assertEqual([(d['code'], d['line']) for d in data['diagnostics']], expected)
 
     def test_titles_are_not_read_through_symbolic_links(self):
         outside = Path(tempfile.mkdtemp())
