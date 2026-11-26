@@ -105,10 +105,12 @@ Scripts read the checker's JSON output and exit status, so part of the output is
 
 The version is raised as follows:
 
-- **Once per change**: A change that touches `skills/mddt/` raises the version once when it enters `main`, through a pull request or a direct merge.
-  The raise and its changelog section come last, in a commit of their own, so earlier commits keep the previous version.
-  Changes outside the folder, such as tests, CI, or repository documents, leave it unchanged.
-  The maintainer decides how much one change bundles and makes sure that changes open at the same time do not claim the same version.
+- **Release scope**: The maintainer groups changes for entry into `main` through a pull request or a direct merge.
+  A contribution keeps the current version while that set is open, even when its major or minor impact is already clear.
+  Changes confined to files outside `skills/mddt/`, such as tests, CI, or repository documents, leave the version unchanged.
+- **Release commit**: Once the set entering `main` is settled, it gets one version increase if it touches `skills/mddt/`.
+  A separate final commit sets the version and adds the changelog section for the whole set.
+  This lets several contributions share a release without claiming its number on competing branches.
 - **Best effort**: Whether a change alters errors is judged without a fixed set of inputs.
   The repository's own documents aim for no findings, so their results cannot show such a change.
 - **Changelog and tag**: Each raise adds a section for its version to [the changelog](CHANGELOG.md), where a major version lists its changes to errors first.

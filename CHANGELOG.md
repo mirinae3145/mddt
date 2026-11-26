@@ -5,6 +5,15 @@
 This file records the changes in each version of the mddt skill, newest first.
 The [contributing guide](CONTRIBUTING.md#versions) says what each number of a version means.
 
+## 1.3 &mdash; 2026-11-25
+
+### Changed
+
+- **Editing existing documents**: The writing procedure now asks which documents use the model before editing begins.
+  Writers follow established conventions outside that scope and run the checker on new or changed documents the model covers.
+- **Preparing a release**: The contributor guide clarifies when a set of changes entering `main` takes a version.
+  A contribution keeps the current version while the set is open, even when its major or minor impact is known.
+
 ## 1.2 &mdash; 2026-11-24
 
 ### Added
