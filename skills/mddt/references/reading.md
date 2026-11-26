@@ -28,11 +28,13 @@ Fragments lose the context needed to interpret them, such as the H1 overview, th
 When a file is too large to read at once, divide it at topic boundaries rather than at arbitrary lines.
 Read the H1 overview and the parent's own parts first, then the topic H2s you need.
 
-Changelogs and MADR decision records keep the structure of their [recognized conventions](conventions.md), which set aside the overviews these steps start from.
-Their own headings lead instead.
-In a changelog, find the releases the question concerns by their version or date headings, and divide a large one at those headings.
-Judge a MADR record by its title, which names its problem and, once decided, its solution.
-Its Context and Problem Statement says what it decides, and its Decision Outcome says what was chosen and why.
+The headings of a recognized convention guide readers when a file or topic has no overview.
+
+- **Changelogs**: Find releases by their version or date headings, and use those headings to divide a large changelog.
+- **MADR decision records**: The title names the problem and, once decided, its solution.
+  Read Context and Problem Statement for the question, including when following a link into an option's subsection.
+  While the decision is open, read Considered Options for the alternatives.
+  Once an option is chosen, read Decision Outcome for the choice and its rationale.
 
 ## Documents outside the model
 
@@ -42,7 +44,9 @@ When it is unclear whether a document follows the model, run the checker on it.
 
 ## Using the model's guarantees
 
-These properties of the model support reading strategies:
+Each reading strategy relies on the property in its row.
+In a [recognized convention](conventions.md#omitted-findings), use a strategy only where the convention retains that property.
+For example, a changelog list can start without an introduction, and option sections in a MADR record can differ greatly in size.
 
 | Property | Reading strategy |
 | --- | --- |
