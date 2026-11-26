@@ -1299,6 +1299,12 @@ class MadrRecords(CheckerCase):
             with self.subTest(body=body):
                 data = self.inspect('# Decisions\n\nThe records:\n\n' + body, 'README.md', '--root', str(self.dir))
                 self.assertEqual([(d['code'], d['line']) for d in data['diagnostics']], expected)
+        # A formula in the title matches the same formula in the link text.
+        math = self.RECORD.replace('# Use MADR for decision records', '# Use $O(n)$ and $$x$$ lookups')
+        self.write('0002-math.md', math)
+        data = self.inspect('# Decisions\n\nThe records:\n\n- [Use $O(n)$ and $$x$$ lookups](0002-math.md)\n'
+                            '- [Other](other.md): text.\n', 'README.md', '--root', str(self.dir))
+        self.assertEqual(data['diagnostics'], [])
         # A record's own children still need summaries.
         record = self.RECORD.replace('Revisit it', 'See\n\n- [Notes](0001-record/notes.md)\n- [x](other.md)\n\nRevisit it')
         data = self.inspect(record, '0001-record.md', '--root', str(self.dir))

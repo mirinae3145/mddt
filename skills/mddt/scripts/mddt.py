@@ -278,6 +278,10 @@ def inline_children(block: SyntaxTreeNode) -> list[SyntaxTreeNode]:
 def plain_text(node: SyntaxTreeNode) -> str:
     if node.type in ('text', 'code_inline'):
         return node.content
+    # Only links are parsed with dollar math; its delimiters keep link text
+    # comparable with the same formula in a heading, which the plain parse reads as text.
+    if node.type in ('math_inline', 'math_inline_double'):
+        return node.markup + node.content + node.markup
     if node.type == 'softbreak':
         return ' '
     return ''.join(plain_text(c) for c in node.children)
