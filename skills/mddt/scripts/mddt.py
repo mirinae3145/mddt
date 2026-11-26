@@ -24,7 +24,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass, field
 import fnmatch
-from functools import cache, lru_cache
+from functools import cache, cached_property, lru_cache
 from html import unescape
 from html.parser import HTMLParser
 import json
@@ -66,6 +66,16 @@ ISO_DATE = re.compile(r'(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)')
 COLON_NAME = re.compile(r'^(?P<name>[^:：\n]{1,40}?)[:：](?:\s|$)')
 LINK_NAME_TAIL = re.compile(r'^\s*(?:[:：—–]|-\s)')
 CHANGELOG_NAME = re.compile(r'^changelog(\..*)?$', re.IGNORECASE)
+# Every MADR template requires the context and either section of the second
+# set, compared as README closing titles are. A draft without its outcome
+# still lists its options, so either one identifies a record.
+MADR_CONTEXT = 'context and problem statement'
+MADR_DECISION = {'decision outcome', 'considered options'}
+# The H2s of the MADR templates from 2.1 to 4.0, whose structure the template fixes.
+MADR_SECTIONS = frozenset({
+    'context and problem statement', 'decision drivers', 'considered options', 'decision outcome',
+    'validation', 'pros and cons of the options', 'more information', 'links',
+})
 # Conventional closing notices and pointers, only as a README's final H2 group.
 # Exact titles keep substantive sections such as "License configuration" out.
 README_CLOSING_TITLES = {
@@ -136,6 +146,49 @@ class Diagnostic:
     detail: str
 
 
+@dataclass(frozen=True)
+class Convention:
+    """A document format whose fixed structure the checker recognizes.
+
+    Such a file keeps its format's structure, so the codes in omitted are not
+    reported in it, and those in incoming are not reported for links into it.
+    The codes in fixed are omitted only inside the H2 sections that the format
+    names in sections, since sections a writer adds follow the ordinary rules.
+    Every other rule, including the tree and link rules, still applies.
+    """
+    name: str
+    label: str
+    omitted: frozenset[str]
+    incoming: frozenset[str] = frozenset()
+    fixed: frozenset[str] = frozenset()
+    sections: frozenset[str] = frozenset()
+    # H2s are releases: they scope name forms and have no topic or part roles.
+    releases: bool = False
+
+
+# Release history grows unevenly and keeps its convention's headings.
+CHANGELOG = Convention('changelog', 'a changelog', frozenset({
+    'h1-overview', 'topic-overview', 'heading-depth', 'heading-number',
+    'part-after-topic', 'topic-single-child',
+    'list-single', 'list-length', 'section-count', 'sibling-imbalance', 'file-size',
+    'list-intro',
+}), incoming=frozenset({'anchor-to-part'}), releases=True)
+# The title names the problem and its solution, so it stands in for the
+# overview, and for the summary beside a link whose text is that title. The
+# other codes fire on the template's sections, such as one argument for an
+# option or long pros and cons beside short sections.
+MADR = Convention('madr', 'a MADR decision record', frozenset({'h1-overview'}),
+                  incoming=frozenset({'link-without-summary'}),
+                  fixed=frozenset({'topic-overview', 'topic-single-child', 'part-after-topic',
+                                   'list-single', 'sibling-imbalance'}),
+                  sections=MADR_SECTIONS)
+
+
+def title_key(text: str) -> str:
+    """Compare titles without case or runs of whitespace."""
+    return ' '.join(text.casefold().split())
+
+
 @dataclass
 class Heading:
     index: int
@@ -147,6 +200,12 @@ class Heading:
     is_topic: bool = False
     h3_count: int = 0
     has_children: bool = False
+
+
+@dataclass
+class DocumentLinks:
+    title_key: str | None
+    outgoing: list[tuple[str, int, bool, str]]
 
 
 class HTMLAnchors(HTMLParser):
@@ -200,8 +259,8 @@ def parser() -> MarkdownIt:
 def link_parser() -> MarkdownIt:
     """Parse dollar math as GitHub renders it, so formulas such as $[A](z,t)$ hold no links.
 
-    Only link extraction uses it; the other checks keep the plain parse, on
-    which their rules and thresholds were defined.
+    Link labels and the record titles they summarize use this parser. Other
+    checks keep the plain parse on which their rules and thresholds were defined.
     """
     return parser().use(dollarmath_plugin, allow_space=False, allow_digits=False)
 
@@ -225,6 +284,9 @@ def inline_children(block: SyntaxTreeNode) -> list[SyntaxTreeNode]:
 def plain_text(node: SyntaxTreeNode) -> str:
     if node.type in ('text', 'code_inline'):
         return node.content
+    # Keep math delimiters when comparing a link label with a record title.
+    if node.type in ('math_inline', 'math_inline_double'):
+        return node.markup + node.content + node.markup
     if node.type == 'softbreak':
         return ' '
     return ''.join(plain_text(c) for c in node.children)
@@ -252,6 +314,8 @@ def is_badge_paragraph(block: SyntaxTreeNode) -> bool:
 
 def block_kind(block: SyntaxTreeNode, what: str) -> str:
     """Name a block next to a list or table, marking one of the same kind."""
+    if block.type == 'paragraph' and is_badge_paragraph(block):
+        return 'a paragraph of badges'
     if block.type == 'table':
         return 'another table' if what == 'table' else 'a table'
     if block.type in LIST_TYPES and what != 'list':
@@ -537,7 +601,6 @@ def github_slug(text: str) -> str:
 class FileCheck:
     def __init__(self, path: str, text: str):
         self.path = path
-        self.is_changelog = bool(CHANGELOG_NAME.fullmatch(Path(path).name))
         # A byte order mark is not content, and GitHub renders the file without it.
         text = text.removeprefix('﻿')
         self.text = text
@@ -546,18 +609,48 @@ class FileCheck:
         self.lines = re.sub(r'\r\n?', '\n', text).split('\n')
         if self.lines[-1] == '':
             self.lines.pop()
-        self._links: list[tuple[str, int, bool]] | None = None
         self.line_count = len(self.lines)
         self.root = SyntaxTreeNode(parser().parse(text))
         self.blocks = list(self.root.children)
         self.diagnostics: list[Diagnostic] = []
         self.headings = self._headings()
+        self.convention = self._convention()
+
+    def _convention(self) -> Convention | None:
+        """Recognize a changelog by its name and a MADR record by its required H2s."""
+        if CHANGELOG_NAME.fullmatch(Path(self.path).name):
+            return CHANGELOG
+        titles = {title_key(h.text) for h in self.headings if h.level == 2}
+        return MADR if MADR_CONTEXT in titles and titles & MADR_DECISION else None
+
+    def omits(self, code: str, line: int | None = None) -> bool:
+        """True when the file's convention omits a code, at a line for codes it omits by section."""
+        c = self.convention
+        if c is None:
+            return False
+        return code in c.omitted or (code in c.fixed and line is not None and self.in_fixed_section(line))
+
+    def in_fixed_section(self, line: int) -> bool:
+        """True when the H2 that holds a line is one of the sections the convention fixes."""
+        owner = None
+        for h in self.headings:
+            if h.line > line:
+                break
+            if h.level <= 2:
+                owner = h
+        return owner is not None and owner.level == 2 and title_key(owner.text) in self.convention.sections
+
+    @property
+    def releases(self) -> bool:
+        return self.convention is not None and self.convention.releases
 
     def report(self, code: str, node_or_line, detail: str) -> None:
         if isinstance(node_or_line, int):
             line = last = node_or_line
         else:
             line, last = start_line(node_or_line), end_line(node_or_line)
+        if self.omits(code, line):
+            return
         self.diagnostics.append(Diagnostic(self.path, line, max(line, last), code, detail))
 
     def _headings(self) -> list[Heading]:
@@ -587,8 +680,8 @@ class FileCheck:
                 break
             if h.level <= 2:
                 owner = h
-        if owner and owner.level == 2 and (owner.is_topic or self.is_changelog):
-            role = 'release' if self.is_changelog else 'topic'
+        if owner and owner.level == 2 and (owner.is_topic or self.releases):
+            role = 'release' if self.releases else 'topic'
             return f'{role} "{owner.text}"'
         return 'the parent topic'
 
@@ -609,8 +702,8 @@ class FileCheck:
         return groups
 
     def check_sizes(self) -> None:
-        # Release history grows unevenly and keeps its convention's headings.
-        if self.is_changelog:
+        # A changelog omits every finding of this pass, whose comparisons grow with its releases.
+        if all(self.omits(code) for code in ('file-size', 'heading-number', 'section-count', 'sibling-imbalance')):
             return
         if self.line_count > FILE_MAX_LINES:
             self.report('file-size', 1, f'file has {self.line_count} lines')
@@ -743,18 +836,20 @@ class FileCheck:
                 self.report('paragraph-run', run[0], f'{len(run)} paragraphs in a row')
             run = []
 
-    def links(self) -> list[tuple[str, int, bool]]:
-        """Return (target, line, alone) for every link in the file.
+    @cached_property
+    def link_data(self) -> DocumentLinks:
+        """Read the title and outgoing links with the same math and reference rules.
 
-        A link is alone when nothing but punctuation surrounds it in its
-        paragraph, list item, or table cell, so it carries no summary.
+        Each outgoing link gives (target, line, alone, text). A link is alone
+        when only punctuation surrounds it in its paragraph, list item, or table cell.
         The line is the link's own line, counted through line breaks in its block.
         """
-        if self._links is not None:
-            return self._links
+        root = SyntaxTreeNode(link_parser().parse(self.text))
+        title = next((title_key(block_text(b)) for b in root.children
+                      if b.type == 'heading' and b.tag == 'h1'), None)
         found = []
         line = 1
-        for node in SyntaxTreeNode(link_parser().parse(self.text)).walk():
+        for node in root.walk():
             if not node.is_root and node.map:
                 line = start_line(node)
             if node.type != 'inline':
@@ -767,9 +862,11 @@ class FileCheck:
                 elif n.type == 'link':
                     alone = all(o is n or (o.type == 'text' and not re.search(r'\w', o.content))
                                 for o in parts)
-                    found.append((n.attrs.get('href', ''), line + offset, alone))
-        self._links = found
-        return found
+                    found.append((n.attrs.get('href', ''), line + offset, alone, plain_text(n).strip()))
+        return DocumentLinks(title, found)
+
+    def links(self) -> list[tuple[str, int, bool, str]]:
+        return self.link_data.outgoing
 
     def anchors(self) -> dict[str, Heading]:
         """Map GitHub-style heading anchors, with suffixes for duplicates, to headings."""
@@ -823,8 +920,6 @@ class FileCheck:
                 self.report('heading-skip', h.node,
                             f'H{previous.level} is followed by H{h.level} "{h.text}"')
             previous = h
-        if self.is_changelog:
-            return
         for h in h1s:
             problem = overview_problem(h)
             if problem:
@@ -864,7 +959,7 @@ class FileCheck:
                         self.report('topic-overview', h.node, f'"{h.text}" {problem}')
                     if h.h3_count == 1:
                         self.report('topic-single-child', h.node, f'"{h.text}" has one H3')
-                elif seen_topic and h.index not in closing:
+                elif seen_topic and h.index not in closing and not self.omits('part-after-topic', h.line):
                     late_parts.append(h)
         self.report_late_parts(late_parts, seen_topic, ordered)
 
@@ -888,11 +983,16 @@ class FileCheck:
 
     def check_list_intros(self, h: Heading | None, blocks: list[SyntaxTreeNode]) -> None:
         """Check that lists and tables start with an introductory paragraph."""
-        needs_overview = (h is not None and not self.is_changelog
-                          and (h.level == 1 or (h.level == 2 and h.is_topic)))
+        # A convention that waives overviews still needs tables introduced,
+        # unless a leaf section below H1 introduces them.
+        waived = h is not None and (self.omits('h1-overview') if h.level == 1 else
+                                    h.level == 2 and h.is_topic and self.omits('topic-overview', h.line))
+        needs_overview = h is not None and (h.level == 1 or (h.level == 2 and h.is_topic)) and not waived
+        needs_intro = h is not None and (waived or self.releases) and (h.level == 1 or h.has_children)
         for pos, block in enumerate(blocks):
             if block.type in LIST_TYPES:
-                if self.is_changelog:
+                # Without list introductions, a heading need not introduce a list either.
+                if self.omits('list-intro'):
                     continue
                 code, what = 'list-intro', 'list'
             elif block.type == 'table':
@@ -900,7 +1000,9 @@ class FileCheck:
             else:
                 continue
             previous = blocks[pos - 1] if pos else None
-            if previous is not None and previous.type == 'paragraph':
+            # Badges cannot stand in for the introduction such a section still needs.
+            if (previous is not None and previous.type == 'paragraph'
+                    and not (needs_intro and is_badge_paragraph(previous))):
                 continue
             if previous is None and needs_overview:
                 continue  # The missing overview is reported for the heading.
@@ -908,9 +1010,7 @@ class FileCheck:
                 self.report(code, start_line(block), f'{what} starts the file without an introductory paragraph')
                 continue
             if previous is None:
-                # Changelogs waive overviews, but a table still needs an
-                # introduction unless a leaf section below H1 introduces it.
-                if self.is_changelog and (h.level == 1 or h.has_children):
+                if needs_intro:
                     self.report(code, start_line(block),
                                 f'{what} follows H{h.level} without an introductory paragraph')
                     continue
@@ -953,11 +1053,10 @@ class FileCheck:
         deepest.setdefault(depth, node)
         items = [c for c in node.children if c.type == 'list_item']
         # A single nested item still marks a detail or exception of its parent.
-        if not self.is_changelog:
-            if len(items) == 1 and depth == 1:
-                self.report('list-single', node, 'list has one item')
-            if len(items) > MAX_LIST_ITEMS and not is_mechanically_ordered([item_key(i) for i in items]):
-                self.report('list-length', node, f'{len(items)} items without mechanical order')
+        if len(items) == 1 and depth == 1:
+            self.report('list-single', node, 'list has one item')
+        if len(items) > MAX_LIST_ITEMS and not is_mechanically_ordered([item_key(i) for i in items]):
+            self.report('list-length', node, f'{len(items)} items without mechanical order')
         numbered = node.type == 'ordered_list'
         for item in items:
             # A numbered step's leading UI text is not an item name.
@@ -1015,12 +1114,16 @@ class FileCheck:
 
     def outline(self) -> list[str]:
         lines = [self.path]
+        if self.convention:
+            # Omitted findings are otherwise invisible, so the outline names the convention.
+            lines.append(f'recognized as {self.convention.label}')
         for k, h in enumerate(self.headings):
             label = f'{"  " * (h.level - 1)}H{h.level} {h.text}'
             notes = [f'{self.section_lines(k)} lines']
-            if h.level == 2 and not self.is_changelog:
+            if h.level == 2 and not self.releases:
                 notes.append('topic' if h.is_topic else 'part')
-            if not self.is_changelog and (h.level == 1 or (h.level == 2 and h.is_topic)):
+            overview = 'h1-overview' if h.level == 1 else 'topic-overview' if h.level == 2 and h.is_topic else None
+            if overview and not self.omits(overview, h.line):
                 notes.append('no overview' if overview_problem(h) else 'overview')
             stats = region_list_stats(h.region)
             if stats:
@@ -1174,8 +1277,11 @@ def find_root(path: Path) -> Path | None:
 class Tree:
     """Documents around the checked files, for checks that span files."""
 
-    def __init__(self):
+    def __init__(self, review: bool = False):
         self.cache: dict[Path, FileCheck | None] = {}
+        # Summaries are information shown only in review, and judging them can
+        # parse every child of an index, so a plain run skips them.
+        self.review = review
 
     def load(self, path: Path) -> FileCheck | None:
         if path not in self.cache:
@@ -1191,7 +1297,8 @@ class Tree:
         if root is not None:
             self.check_parent(path, check, root)
             self.check_agent_depth(path, check, root)
-            self.check_summaries(path, check, root)
+            if self.review:
+                self.check_summaries(path, check, root)
 
     def note_agent_tree(self, path: Path, check: FileCheck, root: Path | None) -> None:
         """Name the agent tree and its depth rule in findings whose fix creates a file.
@@ -1232,13 +1339,13 @@ class Tree:
         """Report children whose every link from this parent lacks a summary."""
         bare: dict[Path, int] = {}
         summarized: set[Path] = set()
-        for href, line, alone in check.links():
+        for href, line, alone, text in check.links():
             target = link_target(path, href)
             if target is None or target == path or not target.is_file():
                 continue
             if target.suffix.lower() != '.md' or parent_of(target, root) != path:
                 continue
-            if alone:
+            if alone and not self.titled_link(path, target, text):
                 bare.setdefault(target, line)
             else:
                 summarized.add(target)
@@ -1246,6 +1353,19 @@ class Tree:
             if target not in summarized:
                 check.report('link-without-summary', line,
                              f'link to child {relative(target, path)} has no summary')
+
+    def titled_link(self, path: Path, target: Path, text: str) -> bool:
+        """True when a link's text is the title of a child whose convention lets the title summarize it.
+
+        A child reached through a symbolic link belongs to another tree, so its
+        headings are not read.
+        """
+        if through_symlink(path, target):
+            return False
+        child = self.load(target)
+        if child is None or child.convention is None or 'link-without-summary' not in child.convention.incoming:
+            return False
+        return child.link_data.title_key == title_key(text)
 
     def check_links(self, path: Path, check: FileCheck) -> None:
         """Report relative links whose target or anchor is missing, and anchors to parts.
@@ -1258,7 +1378,7 @@ class Tree:
         through a symbolic link, such as a linked repository, is checked for
         existence only, since its headings belong to another tree.
         """
-        for href, line, _ in check.links():
+        for href, line, _, _ in check.links():
             if href.startswith('#'):
                 target, other = path, check
             else:
@@ -1284,7 +1404,8 @@ class Tree:
             if heading is None:
                 if anchor not in other.html_anchors():
                     check.report('anchor-missing', line, f'no heading in {where} has the anchor #{anchor}')
-            elif (other is not check and not other.is_changelog
+            elif (other is not check
+                  and not (other.convention and 'anchor-to-part' in other.convention.incoming)
                   and (heading.level >= 3 or (heading.level == 2 and not heading.is_topic))):
                 check.report('anchor-to-part', line, f'links to part "{heading.text}" in {where}')
 
@@ -1297,7 +1418,7 @@ class Tree:
         source = self.load(parent)
         if source is None:
             return
-        if not any(link_target(parent, href) == path for href, _, _ in source.links()):
+        if not any(link_target(parent, href) == path for href, _, _, _ in source.links()):
             check.report('doc-unlinked', 1, f'parent {relative(parent, path)} does not link here')
 
 
@@ -1690,7 +1811,7 @@ def main(argv: list[str] | None = None) -> int:
 
     diagnostics: list[Diagnostic] = []
     outlines: dict[str, list[str]] = {}
-    tree = Tree()
+    tree = Tree(review=args.review)
     for f, base in files:
         try:
             text = f.read_text(encoding='utf-8')

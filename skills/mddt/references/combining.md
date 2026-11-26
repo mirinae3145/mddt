@@ -30,7 +30,7 @@ Search itself does not conflict with mddt, since the reading procedure keeps it 
 
 Resolve a conflict for the documents it concerns with these steps:
 
-1. Check whether the model already accommodates the requirement, as with the changelog exceptions in [repository documentation](uses.md#repository-documentation).
+1. Check whether the model already accommodates the requirement, as with the exceptions for changelogs and MADR decision records in [common uses](uses.md).
 1. Let the instructions that govern the task decide which requirement prevails, such as the user's request or the repository's contributor guidance.
    When they leave the choice open, ask the user which convention to follow.
 1. Apply the prevailing requirement, and apply the model wherever that requirement leaves structure open.

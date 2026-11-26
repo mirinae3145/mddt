@@ -232,6 +232,7 @@ The extra clause boundaries used by length checks do not require new lines.
 link-without-summary = """
 Information for structural review.
 Add a short summary after the link, condensed from the child's overview, so that readers can choose a path without opening every child.
+A MADR decision record has no overview, so use its title as the link text, which serves as the summary, or summarize its decision after the link.
 """
 
 sibling-imbalance = """

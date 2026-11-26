@@ -80,6 +80,8 @@ Some rules apply only when writing, not when judging existing text:
 - **Overviews and summaries last**: When the content settles, rewrite the H1 overview and each topic overview to match it.
   Then rewrite the parent's summary of each document whose H1 overview the task wrote or changed, condensing the settled overview, not the planned summary.
   Work up from the deepest changed documents, because a parent's own overview can change once its summaries do.
+  A MADR record's title stands in for its overview, as [project records](uses.md#project-records) describe.
+  When that title changes, rewrite each parent link whose text is the old title, since that text serves as the link's summary.
 
 ## Growing and shrinking
 

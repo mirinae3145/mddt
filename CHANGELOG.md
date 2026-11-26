@@ -5,6 +5,32 @@
 This file records the changes in each version of the mddt skill, newest first.
 The [contributing guide](CONTRIBUTING.md#versions) says what each number of a version means.
 
+## 2.0 &mdash; 2026-11-26
+
+This version changes errors in two ways:
+
+- **MADR decision records**: Files recognized as MADR records no longer get `h1-overview`.
+  Inside the template's sections, they no longer get `topic-overview` or `list-single` either.
+  A list or table directly under the H1 or a template topic H2 gets `list-intro` or `table-intro` there instead.
+- **Badges**: Where a convention waives overviews but still requires an introduction, a paragraph of badges no longer introduces a list or table.
+  A changelog table after one, directly under the H1 or a heading with subheadings, therefore gets `table-intro`.
+
+### Added
+
+- **MADR decision records**: The checker recognizes [MADR](https://adr.github.io/madr/) records, drafts included.
+  Their H2s include "Context and Problem Statement" with "Considered Options" or "Decision Outcome".
+  Inside the H2 sections of the MADR templates from 2.1 to 4.0, the checker allows the template's heading order and single-item lists.
+  Sections a writer adds keep the ordinary rules.
+  A parent link can use the record's title as its summary, including when the title contains a formula.
+- **Recognized conventions**: The [conventions reference](skills/mddt/references/conventions.md) describes how the checker recognizes changelogs and MADR records and which findings it omits.
+  The reading procedure points to the alternatives in an open draft and the choice and rationale in a decided record.
+  The writing procedure explains when to update a parent link after a record's title changes.
+- **Outline**: The outline of a recognized file names its convention.
+
+### Changed
+
+- **Checker reference**: It points to the recognized conventions instead of listing the changelog's omitted findings itself.
+
 ## 1.3 &mdash; 2026-11-25
 
 ### Changed

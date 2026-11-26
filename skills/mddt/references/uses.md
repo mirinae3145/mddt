@@ -57,6 +57,24 @@ Projects that keep the following common roles structure them like this:
 | History | Fact, process | Dated headings or items; dates are a mechanical order, so long lists and parts after topics are fine |
 | Decision | Principle, concept | One decision per topic with the choice and its rationale; alternatives compared in a table; reconsideration conditions as principles |
 
+A project can instead keep each decision in a [MADR](https://adr.github.io/madr/) record, a file in that template's fixed sections.
+Such a record keeps the format of its convention as follows:
+
+- **Title**: The title of a decided record names the problem and its solution, and it stands in for the file overview.
+  A draft whose options are still open names only the problem, and its title changes once an option is chosen.
+- **Parent link**: The record's parent, which the [folder rule](model.md#files-and-topics) decides, links it as any parent links its children.
+  An example is a decisions index in the records' folder.
+  A link whose text is the record's title needs no summary beside it.
+- **Template sections**: The template fixes its sections and their order.
+  Within them, topic overviews, parts after topics, single-child demotion, single-item lists, and size comparisons do not apply.
+- **Options**: When the record includes detailed pros and cons, each option gets its own subsection under Pros and Cons of the Options.
+  The template uses these subsections instead of a column in a comparison table.
+  A short record can go from its list of options straight to the outcome and its reasons.
+- **Other rules**: Sections a writer adds, heading depth, list and table introductions, and the paragraph and sentence rules follow the ordinary rules.
+
+These exceptions hold where the checker recognizes the record, as [recognized conventions](conventions.md) describes, including which template sections they cover.
+A record it does not recognize, such as one with translated section titles, keeps the ordinary findings.
+
 ## Agent instructions and skills
 
 Agent instructions and skills are read by agents, often only in part, so their entry documents decide what else gets read.

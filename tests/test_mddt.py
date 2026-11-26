@@ -1140,6 +1140,11 @@ class Changelogs(CheckerCase):
                         self.assertEqual({d['code'] for d in data['diagnostics']}, expected)
                         introduced = heading + 'The changed values are:\n\n' + table + suffix + tail
                         self.assertEqual(self.inspect(introduced)['diagnostics'], [])
+                # Badges do not introduce a table where the section needs an introduction.
+                with self.subTest(level=level, tail=tail, badge=True):
+                    badged = heading + '![Status](https://example.com/b.svg)\n\n' + table + tail
+                    expected = {'table-intro'} if level == 1 or tail else set()
+                    self.assertEqual({d['code'] for d in self.inspect(badged)['diagnostics']}, expected)
 
     def test_link_checks_depend_on_the_target_not_the_source(self):
         self.write('guide.md', '# Guide\n\nOverview.\n\n## Detail\n\nText.\n')
@@ -1176,6 +1181,173 @@ class Changelogs(CheckerCase):
             result = run('--format', 'json', '--root', str(self.dir), *options, str(path))
             data = json.loads(result.stdout)
             self.assertEqual((data['files'], data['skipped'], data['diagnostics']), ([], [str(path)], []))
+
+
+class MadrRecords(CheckerCase):
+    RECORD = ('# Use MADR for decision records\n\n'
+              '## Context and Problem Statement\n\nWe need one format for decisions.\n\n'
+              '## Considered Options\n\n* MADR\n\n'
+              '## Decision Outcome\n\nChosen option: "MADR", because tools read it.\n\n'
+              '### Consequences\n\n* Good, because tools read it.\n\n'
+              '## Pros and Cons of the Options\n\n### MADR\n\n* Good, because it is known.\n\n'
+              '## More Information\n\nRevisit it when the format changes.\n')
+
+    def inspect(self, text, name='0001-record.md', *options):
+        path = self.write(name, text)
+        result = run('--format', 'json', '--review', *options, str(path))
+        self.assertIn(result.returncode, (0, 1), result.stderr)
+        return json.loads(result.stdout)
+
+    def test_template_sections_need_no_overviews_or_second_items(self):
+        data = self.inspect(self.RECORD)
+        self.assertEqual(data['diagnostics'], [])
+        outline = '\n'.join(data['outlines'][str(self.dir / '0001-record.md')])
+        self.assertNotIn('overview', outline)
+        self.assertIn('recognized as a MADR decision record', outline)
+        self.assertIn('H2 Decision Outcome  [8 lines; topic]', outline)
+        self.assertIn('H2 More Information  [3 lines; part', outline)
+
+    def test_required_h2s_identify_a_record_whatever_the_name(self):
+        loose = self.RECORD.replace('## Context and Problem Statement', '##  context and problem   STATEMENT')
+        self.assertEqual(self.inspect(loose, 'notes.md')['diagnostics'], [])
+        formatted = self.RECORD.replace('## Context and Problem Statement', '## *Context* and `Problem Statement`')
+        self.assertEqual(self.inspect(formatted)['diagnostics'], [])
+        outcome = ('## Decision Outcome\n\nChosen option: "MADR", because tools read it.\n\n'
+                   '### Consequences\n\n* Good, because tools read it.\n\n')
+        self.assertEqual(self.inspect(self.RECORD.replace(outcome, ''))['diagnostics'], [])
+        # Renamed, the options become a section of the writer's, which keeps the ordinary rules.
+        renamed = self.inspect(self.RECORD.replace('## Considered Options', '## Options'))
+        self.assertEqual([d['code'] for d in renamed['diagnostics']], ['list-single'])
+        for text in (self.RECORD.replace(outcome, '').replace('## Considered Options', '## Options'),
+                     self.RECORD.replace('## Context and Problem Statement', '### Context and Problem Statement')):
+            with self.subTest(text=text):
+                codes = {d['code'] for d in self.inspect(text)['diagnostics']}
+                self.assertLessEqual({'h1-overview', 'list-single', 'topic-single-child'}, codes)
+
+    def test_other_rules_remain_checked(self):
+        cases = [
+            ('### MADR\n', '### MADR\n\n#### Detail\n\nText.\n', {'heading-depth'}),
+            ('* MADR\n', '```\nexample\n```\n\n* MADR\n* Other\n', {'list-intro'}),
+            ('We need one format for decisions.\n', 'We need a format. It must last.\n', {'line-sentences'}),
+            ('# Use MADR for decision records\n\n', '# Use MADR for decision records\n\n* a\n* b\n\n',
+             {'list-intro'}),
+            ('# Use MADR for decision records\n\n',
+             '# Use MADR for decision records\n\n[![badge](https://example.com/b.svg)](https://example.com)\n\n* a\n* b\n\n', {'list-intro'}),
+            ('Chosen option: "MADR", because tools read it.\n', '* MADR\n* Other\n', {'list-intro'}),
+            ('* MADR\n', '* MADR\n* Other\n\nBoth were tried.\n', {'heading-intro'}),
+            ('* MADR\n', ''.join(f'* {name}\n' for name in 'pear apple fig kiwi plum lime date cherry'.split()),
+             {'list-length'}),
+            # The template's comment between arguments ends the first list.
+            ('* Good, because it is known.\n',
+             '* Good, because it is known.\n<!-- neutral arguments -->\n* Neutral, because it is plain.\n',
+             {'list-intro'}),
+        ]
+        for old, new, expected in cases:
+            with self.subTest(new=new):
+                data = self.inspect(self.RECORD.replace(old, new))
+                self.assertEqual({d['code'] for d in data['diagnostics']}, expected)
+
+    def test_tables_where_an_overview_would_go_need_introductions(self):
+        table = '| Option | Cost |\n| --- | --- |\n| MADR | low |\n\n'
+        for old, new in (('# Use MADR for decision records\n\n', '# Use MADR for decision records\n\n' + table),
+                         ('Chosen option: "MADR", because tools read it.\n\n', table)):
+            with self.subTest(new=new):
+                text = self.RECORD.replace(old, new)
+                self.assertEqual({d['code'] for d in self.inspect(text)['diagnostics']}, {'table-intro'})
+        text = self.RECORD.replace('* MADR\n\n## Decision', table + '## Decision')
+        self.assertEqual(self.inspect(text)['diagnostics'], [])
+
+    def test_records_keep_their_place_in_the_tree(self):
+        self.write('README.md', '# Decisions\n\nOverview.\n')
+        data = self.inspect(self.RECORD, '0001-record.md', '--root', str(self.dir))
+        self.assertEqual({d['code'] for d in data['diagnostics']}, {'doc-unlinked'})
+        guide = self.inspect('# Decisions\n\nSee [the options](0001-record.md#considered-options).\n',
+                             'README.md', '--root', str(self.dir))
+        self.assertEqual({d['code'] for d in guide['diagnostics']}, {'anchor-to-part'})
+        # The record's title stands in for a summary beside a link in the index.
+        self.write('notes.md', '# Notes\n\nOverview.\n')
+        index = self.inspect('# Decisions\n\nThe records are these:\n\n'
+                             '- [Use MADR for decision records](0001-record.md)\n- [Notes](notes.md)\n',
+                             'README.md', '--root', str(self.dir))
+        self.assertEqual([(d['code'], d['line']) for d in index['diagnostics']], [('link-without-summary', 6)])
+
+    def test_sections_a_writer_adds_keep_the_ordinary_rules(self):
+        added = self.RECORD.replace('## More Information',
+                                    '## Rollout Plan\n\n### Phase one\n\n* Migrate.\n\n## More Information')
+        self.assertEqual(sorted(d['code'] for d in self.inspect(added)['diagnostics']),
+                         ['list-single', 'topic-overview', 'topic-single-child'])
+        late = self.RECORD + '\n## Notes\n\nA closing note.\n'
+        self.assertEqual([d['code'] for d in self.inspect(late)['diagnostics']], ['part-after-topic'])
+        long_option = '* Good, because it is known:\n\n  ```\n' + '  field\n' * 30 + '  ```'
+        balanced = self.RECORD.replace('* Good, because it is known.', long_option)
+        balanced = balanced.replace('## More Information', '## Decision Drivers\n\nCost.\n\n## More Information')
+        self.assertEqual(self.inspect(balanced)['diagnostics'], [])
+        outline = '\n'.join(self.inspect(added)['outlines'][str(self.dir / '0001-record.md')])
+        self.assertIn('H2 Rollout Plan  [6 lines; topic; no overview]', outline)
+        self.assertIn('H2 Pros and Cons of the Options  [6 lines; topic]', outline)
+
+    def test_index_links_need_the_record_title_or_a_summary(self):
+        self.write('0001-record.md', self.RECORD)
+        (self.dir / '0001-record').mkdir()
+        self.write('0001-record/notes.md', '# Notes\n\nOverview.\n')
+        cases = [
+            ('- [use  MADR for Decision records](0001-record.md)\n- [Other](other.md): text.\n', []),
+            ('- [0001](0001-record.md)\n- [Other](other.md): text.\n', [('link-without-summary', 5)]),
+        ]
+        self.write('other.md', '# Other\n\nOverview.\n')
+        for body, expected in cases:
+            with self.subTest(body=body):
+                data = self.inspect('# Decisions\n\nThe records:\n\n' + body, 'README.md', '--root', str(self.dir))
+                self.assertEqual([(d['code'], d['line']) for d in data['diagnostics']], expected)
+        # A recognized record without an H1 cannot supply a title for the parent link.
+        self.write('0001-record.md', self.RECORD.removeprefix('# Use MADR for decision records\n\n'))
+        data = self.inspect('# Decisions\n\nThe records:\n\n- [Context and Problem Statement](0001-record.md)\n'
+                            '- [Other](other.md): text.\n', 'README.md', '--root', str(self.dir))
+        self.assertEqual([(d['code'], d['line']) for d in data['diagnostics']], [('link-without-summary', 5)])
+        # A record's own children still need summaries.
+        record = self.RECORD.replace('Revisit it', 'See\n\n- [Notes](0001-record/notes.md)\n- [x](other.md)\n\nRevisit it')
+        data = self.inspect(record, '0001-record.md', '--root', str(self.dir))
+        self.assertIn('link-without-summary', {d['code'] for d in data['diagnostics']})
+
+    def test_index_links_preserve_formulas_in_record_titles(self):
+        set_title = r'Use the set $\{x\}$'
+        lookup = 'Use $O(n)$ and $$x$$ lookups'
+        cases = [
+            (lookup, lookup, []),
+            (set_title, set_title, []),
+            (set_title, 'Use the set ${x}$', [('link-without-summary', 5)]),
+            ('Compute *products* with $a*b*c$', 'Compute products with $a*b*c$', []),
+            ('Use [lookups][source] in $O(n)$', 'Use lookups in $O(n)$', []),
+            ('Use [x] with $a*b*c$', 'Use [x] with $a*b*c$', []),
+        ]
+        self.write('other.md', '# Other\n\nOverview.\n')
+        for title, label, expected in cases:
+            with self.subTest(title=title, label=label):
+                record = self.RECORD.replace('# Use MADR for decision records', f'# {title}')
+                # Only the definition outside the math block can resolve a reference in the title.
+                self.write('record.md', record + '\n[source]: https://example.com/lookup\n'
+                                                 '\n$$\n\n[x]: https://example.com/x\n\n$$\n')
+                index = f'# Decisions\n\nThe records:\n\n- [{label}](record.md)\n- [Other](other.md): text.\n'
+                data = self.inspect(index, 'README.md', '--root', str(self.dir))
+                self.assertEqual([(d['code'], d['line']) for d in data['diagnostics']], expected)
+
+    def test_titles_are_not_read_through_symbolic_links(self):
+        outside = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, outside)
+        (outside / 'record.md').write_text(self.RECORD, encoding='utf-8')
+        try:
+            (self.dir / 'linked').symlink_to(outside, target_is_directory=True)
+        except OSError:  # pragma: no cover - symbolic links can be unavailable on Windows
+            self.skipTest('symbolic links are not available')
+        self.write('index.md', '# Decisions\n\nOverview.\n')
+        data = self.inspect('# Decisions\n\nThe records:\n\n- [Use MADR for decision records](linked/record.md)\n'
+                            '- [Index](index.md): the index.\n', 'README.md', '--root', str(self.dir))
+        self.assertEqual([d['code'] for d in data['diagnostics']], ['link-without-summary'])
+
+    def test_a_changelog_stays_a_changelog(self):
+        data = self.inspect('# Changelog\n\n## Context and Problem Statement\n\n- **One**: text\n\n'
+                            '## Decision Outcome\n\n- Two: text\n', 'CHANGELOG.md')
+        self.assertEqual(data['diagnostics'], [])
 
 
 class Interface(CheckerCase):
@@ -1631,6 +1803,30 @@ class Registry(unittest.TestCase):
             (summary['list-depth-3'], f'nested {word[depth]} levels deep'),
         ]:
             self.assertIn(phrase, text)
+
+    def test_conventions_reference_lists_the_codes_each_convention_omits(self):
+        def codes(value):
+            return {c.value for c in ast.walk(value) if isinstance(c, ast.Constant)} if value else set()
+
+        tree = ast.parse((SCRIPTS / 'mddt.py').read_text(encoding='utf-8'))
+        omitted = {}
+        for node in tree.body:
+            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) \
+                    and getattr(node.value.func, 'id', '') == 'Convention':
+                keywords = {k.arg: k.value for k in node.value.keywords}
+                # The rows name where a code is omitted: anywhere, inside fixed sections, or on incoming links.
+                omitted[node.targets[0].id] = [codes(node.value.args[2]), codes(keywords.get('fixed')),
+                                               codes(keywords.get('incoming'))]
+        self.assertEqual(set(omitted), {'CHANGELOG', 'MADR'})
+        text = (SKILL / 'references' / 'conventions.md').read_text(encoding='utf-8')
+        table = re.search(r'^\| Where \| Changelogs \| MADR decision records \|\n\| --- .*?\n((?:\|.*\n)+)', text, re.M)
+        rows = [[c.strip() for c in row.strip('|').split('|')] for row in table.group(1).splitlines()]
+        self.assertEqual([row[0].split()[0] for row in rows], ['Anywhere', 'Only', 'On'])
+        columns = {name: [set(re.findall(r'`([a-z0-9-]+)`', row[k])) for row in rows]
+                   for k, name in ((1, 'CHANGELOG'), (2, 'MADR'))}
+        # The changelog drops heading-intro for lists through list-intro, not as a code of its own.
+        columns['CHANGELOG'][0].discard('heading-intro')
+        self.assertEqual(columns, omitted)
 
     def test_checker_reference_lists_every_option(self):
         source = (SCRIPTS / 'mddt.py').read_text(encoding='utf-8')
